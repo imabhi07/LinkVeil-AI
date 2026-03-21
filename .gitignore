@@ -1,0 +1,57 @@
+# Environments
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+mlruns/
+
+# Node
+node_modules/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database
+*.db
+*.sqlite3
+
+# IDEs
+.vscode/
+.idea/
+.cursorrules
+.windsurfrules
+
+# AI and Agents
+.agent/
+.claude/
+.kiro/
+.code-review-graph/
+.opencode.json
+.mcp.json
+.planning/
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+
+# System
+.DS_Store
+Thumbs.db
