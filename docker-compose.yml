@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: phishguard-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app/backend
+    environment:
+      - ALLOWED_ORIGINS=http://localhost:5173,http://frontend:5173
+      # Provide dummy tokens for local build, ideally override in .env
+      - HF_TOKEN=${HF_TOKEN:-dummy}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-dummy}
+    networks:
+      - phishguard-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: phishguard-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    networks:
+      - phishguard-net
+
+networks:
+  phishguard-net:
+    driver: bridge
