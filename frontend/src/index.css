@@ -1,0 +1,77 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
+/* ── Theme: CSS custom properties for glass-panel ── */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --glass-bg: rgba(255, 255, 255, 0.9);
+  --glass-border: rgba(0, 0, 0, 0.1);
+  --glass-blur: 12px;
+}
+.dark {
+  --glass-bg: rgba(10, 10, 10, 0.6);
+  --glass-border: rgba(57, 255, 20, 0.15);
+}
+
+/* ── Global ── */
+html, body {
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+::selection {
+  background-color: rgba(16, 185, 129, 0.3);
+}
+
+/* ── Glass panel ── */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+}
+
+/* ── Custom scrollbar (webkit) ── */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #050505;
+}
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #39FF14;
+}
+
+/* ── Fade-in animation ── */
+.animate-fade-in {
+  animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Animation delay utility ── */
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+/* ── Neon glow utilities ── */
+@utility neon-glow-safe {
+  filter: drop-shadow(0 0 8px rgba(52, 211, 153, 0.6));
+}
+
+@utility neon-glow-suspicious {
+  filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.6));
+}
+
+@utility neon-glow-malicious {
+  filter: drop-shadow(0 0 12px rgba(251, 113, 133, 0.8));
+}
