@@ -60,3 +60,10 @@ Thumbs.db
 recreate_history*.py
 venv/
 .venv/
+
+# Large Model Weights
+*.pt
+*.bin
+*.h5
+*.pkl
+ml/models/distilbert-phish/pytorch_model.pt
