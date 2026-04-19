@@ -50,7 +50,7 @@ def _get_client():
     return _client
 
 
-SYSTEM_INSTRUCTION = """You are "PhishGuard Agent", an AI Cyber-Analyst specializing in URL threat assessment.
+SYSTEM_INSTRUCTION = """You are "LinkVeil Agent", an AI Cyber-Analyst specializing in URL threat assessment.
 
 IMPORTANT: You do NOT browse the web. You do NOT perform active probing or credential injection.
 A separate real-time Playwright agent handles live probing. Your job is strictly URL pattern analysis and visual forensics prediction.

@@ -20,7 +20,7 @@ logging.basicConfig(
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title="PhishGuard API",
+    title="LinkVeil API",
     description="Backend service for Hybrid Phishing Detection",
     version="1.1.0",
     docs_url="/docs",

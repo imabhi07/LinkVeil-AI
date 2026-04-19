@@ -86,7 +86,7 @@ function mapToAnalysisResult(raw: BackendScanResponse): AnalysisResult {
   const agentReport = {
     activeProbing: {
       performed: true,
-      credentialsUsed: 'test_admin@phishguard.local / ●●●●●●●●',
+      credentialsUsed: 'test_admin@linkveil.local / ●●●●●●●●',
       outcome: riskLevel === 'MALICIOUS'
         ? 'Accepted fake credentials — redirected to data harvest page'
         : riskLevel === 'SUSPICIOUS'
@@ -159,7 +159,7 @@ function App() {
   const [currentResult, setCurrentResult] = useState<AnalysisResult | null>(null);
   const [history, setHistory] = useState<ScanHistoryItem[]>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('phishguard_history');
+      const saved = localStorage.getItem('linkveil_history');
       if (saved) {
         try {
           return JSON.parse(saved);
@@ -220,7 +220,7 @@ function App() {
   // Save history on update (debounced via requestIdleCallback for perf)
   useEffect(() => {
     const id = requestIdleCallback(() => {
-      localStorage.setItem('phishguard_history', JSON.stringify(history));
+      localStorage.setItem('linkveil_history', JSON.stringify(history));
     });
     return () => cancelIdleCallback(id);
   }, [history]);
@@ -321,7 +321,7 @@ function App() {
                <Shield className="w-5 h-5 fill-current" />
              </div>
             <span className="text-xl font-bold tracking-tight text-zinc-900 dark:text-white">
-              PhishGuard AI
+              LinkVeil AI
             </span>
           </div>
 

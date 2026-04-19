@@ -44,7 +44,7 @@ def _normalize_url(raw: str) -> str:
 @router.post("/scan", response_model=ScanResponse)
 async def scan_url(request: URLRequest, db: Session = Depends(get_db)):
     """
-    Submits a URL to the PhishGuard XGBoost + LLM engines concurrently.
+    Submits a URL to the LinkVeil XGBoost + LLM engines concurrently.
     Fuses the results via the rule engine and returns the final verdict.
     """
     url_str = _normalize_url(str(request.url))

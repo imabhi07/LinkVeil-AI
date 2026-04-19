@@ -5,7 +5,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: phishguard-backend
+    container_name: linkveil-backend
     ports:
       - "8000:8000"
     volumes:
@@ -16,20 +16,20 @@ services:
       - HF_TOKEN=${HF_TOKEN:-dummy}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-dummy}
     networks:
-      - phishguard-net
+      - linkveil-net
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: phishguard-frontend
+    container_name: linkveil-frontend
     ports:
       - "5173:80"
     depends_on:
       - backend
     networks:
-      - phishguard-net
+      - linkveil-net
 
 networks:
-  phishguard-net:
+  linkveil-net:
     driver: bridge

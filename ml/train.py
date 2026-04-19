@@ -178,7 +178,7 @@ def main():
 
     os.makedirs('mlruns', exist_ok=True)
     mlflow.set_tracking_uri(r'sqlite:///mlruns/mlflow.db')
-    mlflow.set_experiment("PhishGuard-DistilBERT")
+    mlflow.set_experiment("LinkVeil-DistilBERT")
 
     with mlflow.start_run():
         mlflow.log_params({

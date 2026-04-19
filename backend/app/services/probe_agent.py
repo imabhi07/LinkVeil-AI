@@ -1,5 +1,5 @@
 """
-probe_agent.py — PhishGuard Real Active Probe Agent
+probe_agent.py — LinkVeil Real Active Probe Agent
 ====================================================
 Performs actual headless browser probing of URLs using Playwright.
 
@@ -24,7 +24,7 @@ from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
-FAKE_USER = "test_admin@phishguard.local"
+FAKE_USER = "test_admin@linkveil.local"
 FAKE_PASS = "Phish@Guard#Fake!2024"
 
 NAVIGATION_TIMEOUT_MS = 20000   # increased from 10s for heavy WAF-protected sites

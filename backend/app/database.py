@@ -5,7 +5,7 @@ from sqlalchemy.pool import QueuePool
 
 # Use absolute path for DB to prevent schema errors when run from different directories
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(os.path.dirname(BASE_DIR), "phishguard.db")
+DB_PATH = os.path.abspath(os.path.join(os.path.dirname(BASE_DIR), "..", "data", "linkveil.db"))
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DB_PATH}")
 
 engine = create_engine(

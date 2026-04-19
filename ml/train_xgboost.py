@@ -110,7 +110,7 @@ def main():
     # -- MLflow tracking --
     os.makedirs("mlruns", exist_ok=True)
     mlflow.set_tracking_uri(r"sqlite:///mlruns/mlflow.db")
-    mlflow.set_experiment("PhishGuard-XGBoost")
+    mlflow.set_experiment("LinkVeil-XGBoost")
 
     with mlflow.start_run():
         mlflow.log_params({**XGB_PARAMS, "early_stopping_rounds": EARLY_STOPPING_ROUNDS})
