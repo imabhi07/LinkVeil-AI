@@ -66,4 +66,3 @@ venv/
 *.bin
 *.h5
 *.pkl
-ml/models/distilbert-phish/pytorch_model.pt
