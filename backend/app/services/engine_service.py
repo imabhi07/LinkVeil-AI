@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 
 from backend.app.services.xgb_service import xgb_service
 from backend.app.services.llm_service import analyze_url
-from backend.app.services.probe_agent import run_probe, probe_result_to_dict
+from backend.app.services.probe_agent import run_probe_async, probe_result_to_dict, FAKE_USER
 from backend.app.features.url_features import extract_features
 from backend.app.models.db_models import ScanResult
 
@@ -27,12 +27,14 @@ KNOWN_SAFE_DOMAINS = frozenset({
     "wikipedia.org", "reddit.com", "stackoverflow.com",
     "paypal.com", "yahoo.com", "bing.com", "whatsapp.com",
     "zoom.us", "slack.com", "dropbox.com", "spotify.com",
+    "paytm.com", "flipkart.com", "razorpay.com", "phonepe.com",
+    "uber.com", "airbnb.com", "stripe.com", "twitch.tv",
 })
 
 # ── Timeout guards ──
 XGB_TIMEOUT_S = 5
 LLM_TIMEOUT_S = 25
-PROBE_TIMEOUT_S = 20
+PROBE_TIMEOUT_S = 30
 
 
 def _root_domain(url: str) -> str:
@@ -115,11 +117,8 @@ async def evaluate_url(url: str, db: Session) -> dict:
         )
 
     async def _probe_with_timeout():
-        if _should_skip_probe(url):
-            logger.info(f"Skipping probe for known-safe domain: {_root_domain(url)}")
-            return None
         return await asyncio.wait_for(
-            asyncio.to_thread(run_probe, url),
+            run_probe_async(url),
             timeout=PROBE_TIMEOUT_S,
         )
 
@@ -203,17 +202,69 @@ async def evaluate_url(url: str, db: Session) -> dict:
         "agentReport": llm_result.get("agentReport"),
     }
 
-    # 4b. Override fake LLM activeProbing with real probe result
-    if probe_result is not None:
+    # 4b. ALWAYS override activeProbing with REAL data — never show LLM hallucinations
+    agent_report = verdict.get("agentReport") or {}
+
+    # Capture probe error message before we convert exception to None
+    probe_error_msg = None
+    if isinstance(probe_result, Exception):
+        probe_error_msg = str(probe_result)
+        # Already logged above, probe_result is already set to None
+
+    cred_string = f"{FAKE_USER} / ••••••••"
+
+    if probe_result == "SKIPPED":
+        # Known safe domain — no real probe was needed
+        agent_report["activeProbing"] = {
+            "performed": False,
+            "credentialsUsed": cred_string,
+            "outcome": (
+                f"Live probe skipped — '{_root_domain(url)}' is a verified legitimate domain. "
+                "Active probing is not performed against known-safe sites to avoid "
+                "unnecessary load and false positives."
+            ),
+            "behaviorRisk": "Low",
+            "reachable": None,
+            "loginFormFound": None,
+            "fieldsFilled": False,
+            "acceptedFakeCredentials": False,
+            "postSubmitRedirect": None,
+            "pageTitle": None,
+            "finalUrl": None,
+            "error": None,
+        }
+    elif probe_result is not None and not isinstance(probe_result, Exception):
+        # Real probe completed successfully
         real_probe_dict = probe_result_to_dict(probe_result)
         logger.info(
             f"Real probe completed — reachable={probe_result.reachable}, "
             f"loginFormFound={probe_result.login_form_found}, "
             f"behaviorRisk={probe_result.behavior_risk}"
         )
-        agent_report = verdict.get("agentReport") or {}
         agent_report["activeProbing"] = real_probe_dict
-        verdict["agentReport"] = agent_report
+    else:
+        # Probe crashed or timed out — show honest error, NOT LLM fiction
+        agent_report["activeProbing"] = {
+            "performed": True,
+            "credentialsUsed": cred_string,
+            "outcome": (
+                f"Live probe failed — the headless browser could not complete the analysis. "
+                f"Error: {probe_error_msg or 'Unknown error'}. "
+                "This may be due to anti-bot protections (WAF/Cloudflare), network issues, "
+                "or the site blocking automated browsers."
+            ),
+            "behaviorRisk": "Unknown",
+            "reachable": False,
+            "loginFormFound": None,
+            "fieldsFilled": False,
+            "acceptedFakeCredentials": False,
+            "postSubmitRedirect": None,
+            "pageTitle": None,
+            "finalUrl": None,
+            "error": probe_error_msg,
+        }
+
+    verdict["agentReport"] = agent_report
 
     # ── Cache the result ──
     _set_cache(url, verdict)

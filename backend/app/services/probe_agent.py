@@ -13,9 +13,11 @@ SETUP (one-time):
     playwright install chromium
 """
 
+import asyncio
 import logging
 import re
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 from dataclasses import dataclass
 from urllib.parse import urlparse
@@ -25,7 +27,7 @@ logger = logging.getLogger(__name__)
 FAKE_USER = "test_admin@phishguard.local"
 FAKE_PASS = "Phish@Guard#Fake!2024"
 
-NAVIGATION_TIMEOUT_MS = 10000   # reduced from 12s
+NAVIGATION_TIMEOUT_MS = 20000   # increased from 10s for heavy WAF-protected sites
 FORM_WAIT_MS = 2500             # reduced from 3s
 
 TRUSTED_REDIRECT_DOMAINS = {
@@ -34,6 +36,9 @@ TRUSTED_REDIRECT_DOMAINS = {
     "apple.com", "appleid.apple.com",
     "facebook.com", "github.com", "twitter.com", "x.com",
     "linkedin.com", "amazon.com", "yahoo.com",
+    "netflix.com", "paytm.com", "flipkart.com", "spotify.com",
+    "dropbox.com", "uber.com", "airbnb.com", "pinterest.com",
+    "razorpay.com", "phonepe.com",
 }
 
 
@@ -200,15 +205,46 @@ def run_probe(url: str) -> ProbeResult:
             result.error = str(e)
             return result
 
-        # --- Step 2: Detect login forms ---
+        # --- Step 2: Detect login forms (handles multi-step flows) ---
+        # Many legitimate sites (Netflix, Google, Microsoft) split login:
+        # Step 1: email/phone → click Continue → Step 2: password appears.
         password_fields = page.query_selector_all('input[type="password"]')
         text_fields = page.query_selector_all(
             'input[type="text"], input[type="email"], input[type="tel"], input:not([type])'
         )
-        submit_buttons = page.query_selector_all(
-            'button[type="submit"], input[type="submit"], button:has-text("login"), '
-            'button:has-text("sign in"), button:has-text("submit"), button:has-text("continue")'
-        )
+        multi_step = False
+
+        # Multi-step detection: no password field yet but text/email fields exist
+        if not password_fields and text_fields:
+            logger.info("No password field initially — probing for multi-step login flow")
+            visible_text = [f for f in text_fields if f.is_visible()]
+            if visible_text:
+                try:
+                    visible_text[0].fill(FAKE_USER)
+                    page.wait_for_timeout(500)
+
+                    step1_buttons = page.query_selector_all(
+                        'button[type="submit"], input[type="submit"], '
+                        'button:has-text("continue"), button:has-text("next"), '
+                        'button:has-text("sign in"), button:has-text("log in"), '
+                        'button:has-text("submit"), button:has-text("proceed")'
+                    )
+                    visible_btns = [b for b in step1_buttons if b.is_visible()]
+                    if visible_btns:
+                        visible_btns[0].click()
+                    else:
+                        visible_text[0].press("Enter")
+
+                    # Wait for step 2 to render (JS-heavy forms need time)
+                    page.wait_for_timeout(3000)
+
+                    # Re-check for password field after advancing
+                    password_fields = page.query_selector_all('input[type="password"]')
+                    if password_fields:
+                        multi_step = True
+                        logger.info("Multi-step login confirmed — password field appeared after email step")
+                except Exception as e:
+                    logger.warning(f"Multi-step login probe failed: {e}")
 
         result.login_form_found = len(password_fields) > 0
 
@@ -223,13 +259,18 @@ def run_probe(url: str) -> ProbeResult:
             return result
 
         # --- Step 3: Fill credentials ---
-        logger.info(f"Probe: found {len(password_fields)} password field(s), attempting fill")
+        logger.info(
+            f"Probe: found {len(password_fields)} password field(s), "
+            f"attempting fill (multi_step={multi_step})"
+        )
 
         try:
-            if text_fields:
-                visible_text = [f for f in text_fields if f.is_visible()]
-                if visible_text:
-                    visible_text[0].fill(FAKE_USER)
+            # Fill email/username ONLY if not already done in multi-step step 1
+            if not multi_step:
+                if text_fields:
+                    visible_text = [f for f in text_fields if f.is_visible()]
+                    if visible_text:
+                        visible_text[0].fill(FAKE_USER)
 
             visible_pass = [f for f in password_fields if f.is_visible()]
             if visible_pass:
@@ -240,7 +281,7 @@ def run_probe(url: str) -> ProbeResult:
 
         if not result.fields_filled:
             result.outcome = (
-                "Login form detected but fields were not interactable "
+                "Login form detected but password field was not interactable "
                 "(possibly hidden or JavaScript-gated). "
                 "This is suspicious — phishing kits sometimes hide forms until JS loads."
             )
@@ -250,6 +291,11 @@ def run_probe(url: str) -> ProbeResult:
         pre_submit_url = page.url
 
         # --- Step 4: Submit ---
+        # Re-detect submit buttons (page may have changed in multi-step flow)
+        submit_buttons = page.query_selector_all(
+            'button[type="submit"], input[type="submit"], button:has-text("login"), '
+            'button:has-text("sign in"), button:has-text("submit"), button:has-text("continue")'
+        )
         try:
             if submit_buttons:
                 visible_buttons = [b for b in submit_buttons if b.is_visible()]
@@ -283,8 +329,9 @@ def run_probe(url: str) -> ProbeResult:
             "couldn't find", "doesn't match"
         ]
         success_keywords = [
-            "welcome", "dashboard", "logout", "sign out", "account",
-            "profile", "inbox", "success", "verified", "you're in"
+            "welcome back", "dashboard", "logout", "sign out",
+            "my profile", "inbox", "success", "verified", "you're in",
+            "logged in", "my account"
         ]
 
         showed_error = any(kw in page_text for kw in error_keywords)
@@ -366,6 +413,20 @@ def run_probe(url: str) -> ProbeResult:
                 context.close()
             except Exception:
                 pass
+
+
+# ── Dedicated single-thread executor for Playwright ──
+# Playwright's sync API has strict thread affinity: the browser must always
+# be accessed from the SAME thread it was created on. asyncio.to_thread()
+# dispatches to random pool threads, causing "Cannot switch to a different
+# thread" crashes. This executor pins ALL probe work to one persistent thread.
+_probe_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="pw-probe")
+
+
+async def run_probe_async(url: str) -> ProbeResult:
+    """Async wrapper that always dispatches to the dedicated Playwright thread."""
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(_probe_executor, run_probe, url)
 
 
 def probe_result_to_dict(r: ProbeResult) -> dict:
