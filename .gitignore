@@ -55,3 +55,8 @@ GEMINI.md
 # System
 .DS_Store
 Thumbs.db
+
+# Scripts & Virtualenvs
+recreate_history*.py
+venv/
+.venv/
