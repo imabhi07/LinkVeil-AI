@@ -2,10 +2,16 @@
 
 **The ultimate real-time phishing detection system powered by Hybrid AI.**
 
-[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![React](https://img.shields.io/badge/React-18+-61DAFB.svg)](https://react.dev/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-v0.100+-009688.svg)](https://fastapi.tiangolo.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB.svg?style=flat-square&logo=python&logoColor=white)](https://www.python.org/downloads/)
+[![React](https://img.shields.io/badge/React-18+-61DAFB.svg?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-v5+-3178C6.svg?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4+-06B6D4.svg?style=flat-square&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-v0.100+-009688.svg?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+
+[![Gemini AI](https://img.shields.io/badge/Gemini_AI-Sentinel_Engine-8E75B2.svg?style=flat-square&logo=google-gemini&logoColor=white)](https://ai.google.dev/)
+[![Playwright](https://img.shields.io/badge/Playwright-Deep_Probe-2EAD33.svg?style=flat-square&logo=playwright&logoColor=white)](https://playwright.dev/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-DistilBERT-EE4C2C.svg?style=flat-square&logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
 LinkVeil-AI is an advanced, multi-layered security platform that provides real-time protection against sophisticated phishing attacks. By orchestrating Deep Learning, Gradient Boosting, LLMs, and Active Browser Probing, LinkVeil delivers high-accuracy verdicts with human-readable explanations.
 

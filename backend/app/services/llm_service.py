@@ -14,6 +14,18 @@ logger = logging.getLogger(__name__)
 _llm_cache: dict[str, tuple[float, dict]] = {}
 LLM_CACHE_TTL = 600  # 10 minutes — LLM results change less often than probe results
 
+# ── Gemini Model Rotation Stack ──
+# If one model hits quota limits (429), we fall back through the list
+AVAILABLE_MODELS = [
+    "gemini-3.1-flash-lite",
+    "gemini-3-flash",
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+    "gemini-1.5-flash-8b",
+]
+
 
 class RiskAnalysis(BaseModel):
     """
@@ -28,6 +40,8 @@ class RiskAnalysis(BaseModel):
     brand_name: Optional[str] = Field(default=None)
     verdictTitle: Optional[str] = Field(default=None)
     technicalDetails: Optional[dict] = Field(default=None)
+    forensicData: Optional[dict] = Field(default=None)
+    mitigationAdvice: Optional[list[str]] = Field(default=None)
     agentReport: Optional[dict] = Field(default=None)
 
     def model_post_init(self, __context):
@@ -50,38 +64,53 @@ def _get_client():
     return _client
 
 
-SYSTEM_INSTRUCTION = """You are "LinkVeil Agent", an AI Cyber-Analyst specializing in URL threat assessment.
+SYSTEM_INSTRUCTION = """You are "LinkVeil Sentinel", a Tier-3 AI Cybersecurity Forensic Analyst. Your mission is to provide surgical, data-driven URL threat assessments.
 
-IMPORTANT: You do NOT browse the web. You do NOT perform active probing or credential injection.
-A separate real-time Playwright agent handles live probing. Your job is strictly URL pattern analysis and visual forensics prediction.
+Tone: Professional, clinical, precise, and authoritative. Use terminology like "Entropy", "TLD Variance", "Heuristic Mismatch", "SSL Stripping Potential", and "Credential Harvester".
 
-Tasks:
-1. **URL Structure Analysis**: Examine the URL for phishing patterns — typosquatting, homoglyph attacks, suspicious subdomains, deceptive paths, excessive hyphens, random strings, login/verify/confirm keywords in paths.
-2. **Visual Forensics**: Based on URL patterns and known phishing kit behavior, predict the likely visual appearance of the page. Does the URL imply brand impersonation? Is there a hosting mismatch between the apparent brand and actual domain?
-3. **Brand Verification**: CRITICAL — If the URL IS the official domain of a major brand (google.com, paypal.com, paytm.com, amazon.com etc.), classify as "Low" risk. ONLY flag impersonators and typosquats as dangerous.
-4. **Free Hosting Platform Abuse** (CRITICAL):
-   The following are FREE hosting platforms where ANYONE can publish content. Pages hosted on these are NOT inherently trustworthy, even though the parent company is legitimate:
-   - github.io, github.com (user pages/repos)
-   - netlify.app, vercel.app, pages.dev (Cloudflare Pages)
-   - herokuapp.com, render.com, railway.app
-   - firebaseapp.com, web.app (Firebase Hosting)
-   - appspot.com (Google App Engine)
-   - sites.google.com (Google Sites)
-   - blogspot.com, wordpress.com
-   A login/verification page hosted on these platforms is HIGHLY SUSPICIOUS (Medium or High risk) because legitimate companies host login pages on their OWN domains, not on free hosting.
-   Example: "paypal-login.github.io" = High risk (brand impersonation on free hosting).
-   Example: "dappsolutions.github.io/dapps.html" = Medium/High risk (unknown entity using free hosting for what could be a phishing page).
-5. **Risk Classification**:
-   - "Low": Official brand domains, well-known legitimate sites on their own infrastructure
-   - "Medium": URL shorteners, uncommon TLDs, pages on free hosting platforms with ambiguous intent, unfamiliar entities
-   - "High": Active brand impersonation, typosquatting, homoglyph attacks, login pages on free hosting platforms, known phishing patterns
+TASKS:
+1. **DEEP URL ANALYSIS**:
+   - Calculate perceived "visual entropy" (too many random chars/dots).
+   - Check for Typosquatting (roblox -> robioox).
+   - Check for Homoglyph attacks (googIe.com vs google.com).
+   - Identify suspicious subdomains (login.secure.verify.amazon.com.ru).
+2. **HEURISTIC VISUAL FORENSICS**:
+   - Predict if the page uses known "Phishing Kits" (e.g., Evilginx, Phishlet).
+   - Identify "Brand Shadowing" where a legitimate service name is used in a path on a completely unrelated domain.
+3. **ACTOR TACTICS (TTPs)**:
+   - Identify likely Social Engineering hooks (Urgency, Reward, Verification).
+   - Analyze query parameters for tracking IDs or base64 encoded user emails (common in spearphishing).
+4. **FREE HOSTING & CLOUD ABUSE**:
+   - Legitimate brands host login/auth on dedicated private infrastructure.
+   - Any login portal on github.io, netlify.app, vercel.app, firebaseapp.com, web.app, etc., should be flagged as HIGH RISK brand impersonation unless it is the developer's own site.
 
-CRITICAL: Do NOT generate fake or simulated active probing results. Do NOT include an "activeProbing" section — that data comes from the real Playwright probe agent.
-
-Output: Return a valid JSON object (no markdown fences). riskScore MUST be a number 0-100. Include 4-5 detailed bullet points in explanation. technicalDetails fields must be full paragraphs.
+OUTPUT FORMAT:
+Return a valid JSON object.
+- riskScore: 0-100 (Integer).
+- risk_level: "Low" | "Medium" | "High".
+- explanation: A professional, 6-8 bullet point summary of core findings.
+- technicalDetails:
+    - "urlDeepDive": Expert analysis of the URL's structure and entropy.
+    - "domainForensics": Analysis of the TLD, registrar patterns, and impersonation intent.
+    - "socialEngineering": Detailed breakdown of the psychological manipulation used.
+- forensicData:
+    - "threatTactics": Analysis of the likely phishing kit or redirection chain.
+    - "visualPrediction": Description of expected UI elements (favicon spoofing, fake SSL badges).
+- mitigationAdvice: List of 3-4 actionable steps for the end-user.
 
 JSON structure:
-{"riskScore": number(0-100), "risk_level": "Low"|"Medium"|"High", "explanation": "string", "brand_impersonation": boolean, "brand_name": string|null, "verdictTitle": string, "technicalDetails": {"urlStructure": string, "domainReputation": string, "socialEngineeringTricks": string}, "agentReport": {"visualForensics": {"analyzed": true, "brandImpersonation": string, "hostingMismatch": string}}}"""
+{
+  "riskScore": number,
+  "risk_level": "High/Medium/Low",
+  "explanation": "Expert summary...",
+  "brand_impersonation": boolean,
+  "brand_name": "Target Brand Name",
+  "verdictTitle": "The Cyber Verdict",
+  "technicalDetails": {"urlDeepDive": "...", "domainForensics": "...", "socialEngineering": "..."},
+  "forensicData": {"threatTactics": "...", "visualPrediction": "..."},
+  "mitigationAdvice": ["Step 1", "Step 2", "Step 3"],
+  "agentReport": {"visualForensics": {"analyzed": true, "brandImpersonation": "...", "hostingMismatch": "..."}}
+}"""
 
 
 async def analyze_url(url: str, features: dict) -> dict:
@@ -114,70 +143,75 @@ async def analyze_url(url: str, features: dict) -> dict:
 
     prompt = f'Investigate this URL: "{url}". Features: {json.dumps(features)}. Perform active probing simulation and visual forensics analysis.'
 
-    # ── Retry with exponential backoff (handles transient 429/5xx) ──
-    max_retries = 2
-    for attempt in range(max_retries + 1):
-        try:
-            response = await client.aio.models.generate_content(
-                model='gemini-2.5-flash-lite',
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=SYSTEM_INSTRUCTION,
-                    temperature=0.1,
-                ),
-            )
+    # ── Model Rotation & Retry Loop ──
+    for model_name in AVAILABLE_MODELS:
+        # Retry with exponential backoff (handles transient 429/5xx)
+        max_retries = 1
+        for attempt in range(max_retries + 1):
+            try:
+                logger.debug(f"Attempting analysis with {model_name} (attempt {attempt + 1})")
+                response = await client.aio.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        system_instruction=SYSTEM_INSTRUCTION,
+                        temperature=0.1,
+                    ),
+                )
 
-            if response.text:
-                text = response.text.strip()
-                if text.startswith("```json"):
-                    text = text[7:]
-                elif text.startswith("```"):
-                    text = text[3:]
-                if text.endswith("```"):
-                    text = text[:-3]
+                if response.text:
+                    text = response.text.strip()
+                    if text.startswith("```json"):
+                        text = text[7:]
+                    elif text.startswith("```"):
+                        text = text[3:]
+                    if text.endswith("```"):
+                        text = text[:-3]
 
-                raw = json.loads(text.strip())
-                validated = RiskAnalysis(**raw)
-                result = validated.model_dump()
+                    raw = json.loads(text.strip())
+                    validated = RiskAnalysis(**raw)
+                    result = validated.model_dump()
 
-                # Cache the result
-                _llm_cache[url] = (time.time(), result)
-                # Evict if too large
-                if len(_llm_cache) > 100:
-                    oldest = min(_llm_cache, key=lambda k: _llm_cache[k][0])
-                    del _llm_cache[oldest]
+                    # Cache the result
+                    _llm_cache[url] = (time.time(), result)
+                    # Evict if too large
+                    if len(_llm_cache) > 100:
+                        oldest = min(_llm_cache, key=lambda k: _llm_cache[k][0])
+                        del _llm_cache[oldest]
 
-                return result
-            else:
-                logger.error("Empty response from LLM.")
-                return fallback
+                    return result
+                else:
+                    logger.error(f"Empty response from {model_name}.")
+                    break # Try next model
 
-        except json.JSONDecodeError as e:
-            logger.error(f"LLM returned non-JSON (attempt {attempt + 1}): {e}")
-            if attempt < max_retries:
-                await asyncio.sleep(1)
-                continue
-            return fallback
+            except json.JSONDecodeError as e:
+                logger.error(f"LLM returned non-JSON (model {model_name}, attempt {attempt + 1}): {e}")
+                if attempt < max_retries:
+                    await asyncio.sleep(1)
+                    continue
+                break # Try next model
 
-        except ValidationError as e:
-            logger.error(f"LLM response failed Pydantic validation: {e}")
-            return fallback
+            except ValidationError as e:
+                logger.error(f"LLM response failed Pydantic validation: {e}")
+                break # Try next model
 
-        except Exception as e:
-            error_msg = str(e)
-            is_retryable = any(kw in error_msg for kw in ["429", "RESOURCE_EXHAUSTED", "503", "UNAVAILABLE"])
+            except Exception as e:
+                error_msg = str(e)
+                is_quota_error = any(kw in error_msg for kw in ["429", "RESOURCE_EXHAUSTED", "QUOTA_EXHAUSTED"])
+                
+                if is_quota_error:
+                    logger.warning(f"Quota exhausted for {model_name}. Falling back to next model if available.")
+                    break # Immediately try next model in AVAILABLE_MODELS
+                
+                is_retryable = any(kw in error_msg for kw in ["503", "UNAVAILABLE", "deadline", "timeout"])
 
-            if is_retryable and attempt < max_retries:
-                wait = 2 ** attempt  # 1s, 2s
-                logger.warning(f"Retryable LLM error (attempt {attempt + 1}), waiting {wait}s: {error_msg[:100]}")
-                await asyncio.sleep(wait)
-                continue
+                if is_retryable and attempt < max_retries:
+                    wait = 2 ** attempt
+                    logger.warning(f"Retryable error for {model_name} (attempt {attempt + 1}), waiting {wait}s: {error_msg[:100]}")
+                    await asyncio.sleep(wait)
+                    continue
 
-            logger.error(f"LLM Error during analyze_url: {e}")
-            if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
-                fallback["explanation"] = "LLM Contextual Analysis temporarily unavailable: API Rate Limit Exceeded. Please wait 1 minute and scan again."
-            else:
-                fallback["explanation"] = f"API Error: {error_msg}"
-            return fallback
+                logger.error(f"Critical error during LLM analysis with {model_name}: {e}")
+                break # Try next model
 
     return fallback

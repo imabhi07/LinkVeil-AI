@@ -110,27 +110,79 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result }) => 
           </div>
         )}
 
-        {/* Reasoning Section */}
-        <div className="glass-panel rounded-3xl p-8 border border-zinc-200 dark:border-white/10 transition-colors relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-3 opacity-5">
-              <Activity className="w-32 h-32" />
+        {/* Left Column: Insight & Action */}
+        <div className="space-y-6">
+          {/* Reasoning Section / Key Findings */}
+          <div className="glass-panel rounded-3xl p-8 border border-zinc-200 dark:border-white/10 transition-colors relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-3 opacity-5">
+                <Activity className="w-32 h-32" />
+            </div>
+            <h3 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2 mb-6 uppercase tracking-wider">
+              <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+              Key Findings
+            </h3>
+            <ul className="space-y-4">
+              {result.reasoning.map((reason, idx) => (
+                <li key={idx} className="flex items-start gap-4 text-zinc-700 dark:text-zinc-300 group">
+                  <ArrowRight className="w-4 h-4 text-zinc-400 dark:text-zinc-600 mt-1 flex-shrink-0 group-hover:text-emerald-500 dark:group-hover:text-ornex-green transition-colors" />
+                  <span className="text-sm leading-relaxed">{reason}</span>
+                </li>
+              ))}
+            </ul>
           </div>
-          <h3 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2 mb-6 uppercase tracking-wider">
-            <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
-            Key Findings
-          </h3>
-          <ul className="space-y-4">
-            {result.reasoning.map((reason, idx) => (
-              <li key={idx} className="flex items-start gap-4 text-zinc-700 dark:text-zinc-300 group">
-                <ArrowRight className="w-4 h-4 text-zinc-400 dark:text-zinc-600 mt-1 flex-shrink-0 group-hover:text-emerald-500 dark:group-hover:text-ornex-green transition-colors" />
-                <span className="text-sm leading-relaxed">{reason}</span>
-              </li>
-            ))}
-          </ul>
+
+          {/* FORENSIC INSIGHTS BOX */}
+          <div className="glass-panel rounded-3xl p-8 border border-zinc-200 dark:border-white/10 transition-colors relative overflow-hidden">
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                   <div className="flex items-center gap-2 text-xs font-mono text-emerald-600 dark:text-ornex-green mb-1 uppercase tracking-wider">
+                     <Activity className="w-4 h-4" />
+                     <span>Forensic Tactics</span>
+                   </div>
+                   <p className="text-sm text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-black/40 p-4 rounded-xl border border-zinc-200 dark:border-white/5 font-mono">
+                     {result.technicalDetails.forensicDeepDive || "Standard heuristic patterns observed."}
+                   </p>
+                </div>
+                <div className="space-y-3">
+                   <div className="flex items-center gap-2 text-xs font-mono text-blue-500 mb-1 uppercase tracking-wider">
+                     <Eye className="w-4 h-4" />
+                     <span>Visual Prediction</span>
+                   </div>
+                   <p className="text-sm text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-black/40 p-4 rounded-xl border border-zinc-200 dark:border-white/5 font-mono">
+                     {result.technicalDetails.visualPrediction || "Generic layout impersonation detected."}
+                   </p>
+                </div>
+             </div>
+          </div>
+
+          {/* MITIGATION ADVICE SECTION (MOVED UNDER KEY FINDINGS) */}
+          {result.mitigationAdvice && result.mitigationAdvice.length > 0 && (
+            <div className="glass-panel rounded-3xl p-8 border border-emerald-500/30 bg-emerald-500/5 dark:bg-ornex-green/5 shadow-[0_0_40px_rgba(16,185,129,0.05)] relative overflow-hidden">
+               <div className="absolute top-0 right-0 p-4 opacity-5">
+                  <ShieldCheck className="w-32 h-32 text-emerald-500" />
+               </div>
+               <h3 className="text-sm font-bold text-emerald-800 dark:text-ornex-green flex items-center gap-2 mb-6 uppercase tracking-wider">
+                 <ShieldCheck className="w-5 h-5" />
+                 Sentinel Mitigation Advice
+               </h3>
+               <div className="grid grid-cols-1 gap-4">
+                  {result.mitigationAdvice.map((advice, idx) => (
+                    <div key={idx} className="flex items-start gap-3 p-4 rounded-2xl bg-white/50 dark:bg-black/40 border border-emerald-500/20 backdrop-blur-sm">
+                       <div className="w-6 h-6 rounded-full bg-emerald-500/10 dark:bg-ornex-green/10 flex items-center justify-center flex-shrink-0 text-emerald-600 dark:text-ornex-green font-bold text-xs">
+                          {idx + 1}
+                       </div>
+                       <p className="text-sm text-zinc-700 dark:text-zinc-300 leading-snug">
+                          {advice}
+                       </p>
+                    </div>
+                  ))}
+               </div>
+            </div>
+          )}
         </div>
 
-        {/* Technical Details Section */}
-        <div className="glass-panel rounded-3xl p-8 border border-zinc-200 dark:border-white/10 space-y-6 transition-colors">
+        {/* Right Column: Technical Details Section */}
+        <div className="glass-panel rounded-3xl p-8 border border-zinc-200 dark:border-white/10 space-y-6 transition-colors h-full">
           <h3 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2 uppercase tracking-wider">
             <span className="w-1.5 h-1.5 bg-purple-500 rounded-full"></span>
             Technical Analysis
@@ -166,17 +218,18 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result }) => 
                 {result.technicalDetails.socialEngineeringTricks}
               </p>
             </div>
+
           </div>
         </div>
 
-        {/* Verification Sources Section */}
+        {/* Verification Sources Section - Bottom Full Width */}
         {result.webSources && result.webSources.length > 0 && (
           <div className="lg:col-span-2 glass-panel rounded-3xl p-8 border border-zinc-200 dark:border-white/10 transition-colors">
             <h3 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2 mb-6 uppercase tracking-wider">
               <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span>
               Verification Sources
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {result.webSources.map((source, idx) => (
                 <a
                   key={idx}
@@ -198,6 +251,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result }) => 
             </div>
           </div>
         )}
+
       </div>
     </div>
   );
