@@ -4,6 +4,8 @@ export interface AnalysisDetails {
   urlStructure: string;
   domainReputation: string;
   socialEngineeringTricks: string;
+  forensicDeepDive?: string;
+  visualPrediction?: string;
 }
 
 export interface WebSource {
@@ -32,6 +34,7 @@ export interface AnalysisResult {
   verdictTitle: string;
   reasoning: string[];
   technicalDetails: AnalysisDetails;
+  mitigationAdvice?: string[];
   agentReport: AgentReport;
   webSources: WebSource[];
   timestamp: number;
