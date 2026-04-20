@@ -13,6 +13,7 @@ class ScanResponse(BaseModel):
     brand_name: Optional[str] = None
     verdictTitle: dict | str | None = None
     technicalDetails: dict | None = None
+    mitigationAdvice: list[str] = []
     agentReport: dict | None = None
     
     model_config = {

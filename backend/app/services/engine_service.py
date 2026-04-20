@@ -190,6 +190,19 @@ async def evaluate_url(url: str, db: Session) -> dict:
             final_risk_level = "Low"
             risk_score = min(risk_score, 34.0)
 
+    # 4. Construct final verdict with mapping for frontend compatibility
+    llm_tech = llm_result.get("technicalDetails") or {}
+    llm_forensics = llm_result.get("forensicData") or {}
+    
+    # Map new high-fidelity fields to existing frontend keys
+    tech_details = {
+        "urlStructure": llm_tech.get("urlDeepDive") or llm_tech.get("urlStructure", "Analysis pending..."),
+        "domainReputation": llm_tech.get("domainForensics") or llm_tech.get("domainReputation", "Reputation check in progress..."),
+        "socialEngineeringTricks": llm_tech.get("socialEngineering") or llm_tech.get("socialEngineeringTricks", "Checking for deception markers..."),
+        "forensicDeepDive": llm_forensics.get("threatTactics") or "Heuristic analysis complete.",
+        "visualPrediction": llm_forensics.get("visualPrediction") or "Standard layout expected."
+    }
+
     verdict = {
         "url": url,
         "risk_score": round(risk_score, 2),
@@ -197,8 +210,9 @@ async def evaluate_url(url: str, db: Session) -> dict:
         "explanation": llm_result.get("explanation", ""),
         "brand_impersonation": llm_result.get("brand_impersonation", False),
         "brand_name": llm_result.get("brand_name", None),
-        "verdictTitle": llm_result.get("verdictTitle"),
-        "technicalDetails": llm_result.get("technicalDetails"),
+        "verdictTitle": llm_result.get("verdictTitle") or f"{final_risk_level} Risk Detected",
+        "technicalDetails": tech_details,
+        "mitigationAdvice": llm_result.get("mitigationAdvice") or [],
         "agentReport": llm_result.get("agentReport"),
     }
 
