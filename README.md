@@ -35,6 +35,34 @@ LinkVeil-AI is an advanced, multi-layered security platform that provides real-t
 
 ---
 
+## 📂 Project Structure
+
+```bash
+.
+├── backend/                # FastAPI High-Performance Backend
+│   ├── app/
+│   │   ├── models/         # Pydantic Schemas & DB Models
+│   │   ├── routes/         # API Scanning Endpoints
+│   │   ├── services/       # AI Engines: Gemini, Playwright, XGBoost
+│   │   └── main.py         # Entry Point
+│   └── requirements.txt    # Python Dependencies
+├── frontend/               # React + Vite Forensic Dashboard
+│   ├── src/
+│   │   ├── components/     # UI/UX Glassmorphic Components
+│   │   ├── types.ts        # Global Forensic Types
+│   │   └── App.tsx         # Dashboard Orchestrator
+│   └── tailwind.config.js  # Premium Design Tokens
+├── ml/                     # Machine Learning Lab
+│   ├── datasets/           # Pre-processing & Feature Extraction
+│   ├── models/             # Local Weights for XGBoost & DistilBERT
+│   └── train.py            # Model Training Orchestation
+├── data/                   # Persistent Storage (SQLite)
+├── docs/                   # Technical Assets & Diagrams
+└── docker-compose.yml      # Containerized Deployment
+```
+
+---
+
 ## 🚀 Quick Start Instructions
 
 ### 1. Prerequisites
