@@ -97,6 +97,7 @@ Return a valid JSON object.
     - "threatTactics": Analysis of the likely phishing kit or redirection chain.
     - "visualPrediction": Description of expected UI elements (favicon spoofing, fake SSL badges).
 - mitigationAdvice: List of 3-4 actionable steps for the end-user.
+- **verdictTitle**: A short, punchy forensic summary (3-5 words) that summarizes the core finding (e.g., "Credential Harvester Detected", "Legitimate Domain Verified", "Suspicious Homoglyph Pattern").
 
 JSON structure:
 {
@@ -105,7 +106,7 @@ JSON structure:
   "explanation": "Expert summary...",
   "brand_impersonation": boolean,
   "brand_name": "Target Brand Name",
-  "verdictTitle": "The Cyber Verdict",
+  "verdictTitle": "Dynamic Forensic Title",
   "technicalDetails": {"urlDeepDive": "...", "domainForensics": "...", "socialEngineering": "..."},
   "forensicData": {"threatTactics": "...", "visualPrediction": "..."},
   "mitigationAdvice": ["Step 1", "Step 2", "Step 3"],

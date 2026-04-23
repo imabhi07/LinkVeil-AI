@@ -210,7 +210,7 @@ async def evaluate_url(url: str, db: Session) -> dict:
         "explanation": llm_result.get("explanation", ""),
         "brand_impersonation": llm_result.get("brand_impersonation", False),
         "brand_name": llm_result.get("brand_name", None),
-        "verdictTitle": llm_result.get("verdictTitle") or f"{final_risk_level} Risk Detected",
+        "verdictTitle": llm_result.get("verdictTitle") or f"{final_risk_level} Risk Analysis",
         "technicalDetails": tech_details,
         "mitigationAdvice": llm_result.get("mitigationAdvice") or [],
         "agentReport": llm_result.get("agentReport"),
