@@ -38,9 +38,9 @@ export const RiskGauge: React.FC<RiskGaugeProps> = memo(({ score, level }) => {
 
   switch (level) {
     case 'SAFE':
-      colorClass = 'text-emerald-600 dark:text-ornex-green drop-shadow-[0_0_8px_rgba(16,185,129,0.5)] dark:drop-shadow-[0_0_8px_rgba(57,255,20,0.8)]';
-      strokeClass = 'stroke-emerald-500 dark:stroke-[#39FF14]';
-      shadowColor = 'rgba(57, 255, 20, 0.4)';
+      colorClass = 'text-cyber-light-accent-data dark:text-ornex-green drop-shadow-[0_0_8px_rgba(0,168,70,0.3)] dark:drop-shadow-[0_0_8px_rgba(57,255,20,0.8)]';
+      strokeClass = 'stroke-cyber-light-accent dark:stroke-[#39FF14]';
+      shadowColor = 'rgba(0, 168, 70, 0.2)';
       break;
     case 'SUSPICIOUS':
       colorClass = 'text-amber-500 dark:text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]';
@@ -67,7 +67,7 @@ export const RiskGauge: React.FC<RiskGaugeProps> = memo(({ score, level }) => {
             cy="60"
             r={radius}
             fill="none"
-            className="stroke-zinc-200 dark:stroke-white/10 transition-colors duration-300"
+            className="stroke-cyber-light-border dark:stroke-white/10 transition-colors duration-300"
             strokeWidth="8"
           />
           <circle
@@ -86,7 +86,7 @@ export const RiskGauge: React.FC<RiskGaugeProps> = memo(({ score, level }) => {
       </div>
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
         <span className={`text-4xl font-bold font-mono tracking-tighter ${colorClass}`}>{displayScore}</span>
-        <span className="text-[10px] text-zinc-500 dark:text-zinc-500 uppercase tracking-widest font-bold mt-1">Risk Score</span>
+        <span className="text-[10px] text-cyber-light-text dark:text-zinc-500 uppercase tracking-widest font-bold mt-1">Risk Score</span>
       </div>
     </div>
   );
