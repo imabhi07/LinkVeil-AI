@@ -101,6 +101,8 @@ npm install
 npm run dev
 ```
 
+> **Windows shortcut**: After creating the `.env` file, double-click `start.bat` to launch both servers simultaneously.
+
 ---
 
 ## 🧪 Manual Model Training (Developer Mode)

@@ -55,7 +55,7 @@ The **Probe Agent** is the most advanced part of LinkVeil-AI.
 
 ## 5. The Cyber Analyst (Gemini AI)
 Once the ML engines have their scores, the **Gemini AI** LLM is fed the raw evidence:
-- "The Deep Learning model is 92% sure this is phishing."
+- "The XGBoost model scores this URL at 87% phishing probability."
 - "The Probe Agent found a login form on a suspicious domain."
 - "The URL contains the brand 'Netflix' but is not hosted on netflix.com."
 

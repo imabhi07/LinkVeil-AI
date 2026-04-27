@@ -20,7 +20,7 @@ npm install
 # Start dev server (http://localhost:5173)
 npm run dev
 
-# Type-check without emitting
+# Production build (type-check + bundle)
 npm run build   # tsc -b && vite build
 
 # Lint
@@ -29,7 +29,7 @@ npm run lint
 
 ## Environment
 
-Copy `.env.example` to `.env.local` and set the API base URL:
+Create a `.env.local` file in this directory and set the API base URL:
 
 ```env
 VITE_API_BASE_URL=http://localhost:8000
