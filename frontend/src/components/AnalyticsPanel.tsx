@@ -22,85 +22,61 @@ interface AnalyticsData {
   filter_days: number;
 }
 
-function ScanListPopover({ scans, loading, filterLabel, color, onClose }: {
+// Scan list item for the expanded card view
+function ScanListInline({ scans, loading, riskLevelColor }: {
   scans: ScanListItem[];
   loading: boolean;
-  filterLabel: string;
   color: string;
-  onClose: () => void;
+  riskLevelColor: string;
 }) {
-  // Close on Escape key
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [onClose]);
-
   return (
-    <div className="scan-popover absolute top-full left-0 right-0 mt-2 z-[110] animate-in slide-in-from-top-2 duration-200">
-      {/* Arrow pointer */}
-      <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 
-                      bg-white dark:bg-zinc-800 border-l border-t border-zinc-200 dark:border-white/10 rotate-45" />
+    <div className="mt-6 pt-6 border-t border-white/10 overflow-hidden">
+      <div className="flex items-center justify-between mb-4 px-1">
+        <div className="flex items-center gap-2">
+           <div className={`w-1.5 h-1.5 rounded-full ${riskLevelColor} animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.3)]`} />
+           <h4 className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
+             Forensic Log
+           </h4>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[8px] text-zinc-600 font-mono uppercase tracking-tighter opacity-50">Pulse</span>
+          <div className="w-1 h-1 rounded-full bg-emerald-500/50" />
+        </div>
+      </div>
       
-      {/* Bubble body */}
-      <div className="bg-white dark:bg-zinc-800/95 backdrop-blur-xl border border-zinc-200 dark:border-white/10 
-                      rounded-2xl shadow-2xl overflow-hidden max-h-80">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-black/20">
-          <span className={`text-xs font-bold uppercase tracking-wider ${color}`}>
-            {filterLabel} — {scans.length} results
-          </span>
-          <button onClick={onClose} className="text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-        
-        {/* Scan list */}
-        <div className="overflow-y-auto max-h-64 divide-y divide-white/5 custom-scrollbar">
-          {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="w-6 h-6 border-2 border-emerald-500/20 
-                              border-t-emerald-500 rounded-full animate-spin" />
-            </div>
-          ) : scans.length === 0 ? (
-            <div className="py-8 text-center text-zinc-500 text-xs">
-              No scans in this category
-            </div>
-          ) : (
-            scans.map((scan, i) => (
-              <div key={i} className="px-4 py-3 flex items-center justify-between 
-                                      hover:bg-white/[0.02] transition-colors group/item">
-                <div className="flex items-center gap-3 min-w-0">
-                  {/* Risk dot */}
-                  <div className={`w-2 h-2 rounded-full shrink-0 ${
-                    scan.risk_level === 'High' || scan.risk_level === 'Malicious'
-                      ? 'bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.5)]' 
-                      : 'bg-cyber-light-accent-deep dark:bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]'
-                  }`} />
-                  <div className="min-w-0">
-                    <div className="text-xs text-zinc-900 dark:text-white truncate max-w-[250px] group-hover/item:text-emerald-600 dark:group-hover/item:text-emerald-400 transition-colors">
-                      {scan.url}
-                    </div>
-                    <div className="text-[9px] text-zinc-500 flex items-center gap-1.5 mt-0.5">
-                      <span className="font-bold">Score: {Math.round(scan.risk_score)}</span>
-                      {scan.brand_name && (
-                        <>
-                          <span className="text-zinc-700">•</span>
-                          <span className="italic text-zinc-400">{scan.brand_name}</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
+      <div className="space-y-2 max-h-[280px] overflow-y-auto custom-scrollbar pr-2">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-12 gap-3">
+            <RefreshCw className="w-6 h-6 text-emerald-500/20 animate-spin" />
+            <span className="text-[8px] text-zinc-600 font-mono animate-pulse uppercase tracking-[0.2em]">Syncing...</span>
+          </div>
+        ) : scans.length === 0 ? (
+          <div className="py-12 text-center">
+            <p className="text-[9px] text-zinc-600 uppercase tracking-widest font-black">Secure</p>
+          </div>
+        ) : (
+          scans.map((scan, i) => (
+            <div key={i} className="group/item relative p-3 bg-zinc-950/40 dark:bg-black/30 border border-white/5 rounded-xl flex items-center justify-between hover:bg-zinc-900/60 dark:hover:bg-white/[0.03] hover:border-white/10 transition-all duration-200">
+              <div className="min-w-0 flex-1 pr-3">
+                <div className="text-[11px] text-zinc-800 dark:text-zinc-300 truncate font-mono group-hover/item:text-emerald-400 transition-colors tracking-tight">
+                  {scan.url}
                 </div>
-                <span className="text-[9px] text-zinc-600 font-mono shrink-0 ml-3">
-                  {new Date(scan.timestamp).toLocaleDateString(undefined, {
-                    month: 'short', day: 'numeric'
-                  })}
-                </span>
+                <div className="flex items-center gap-3 mt-1.5">
+                   <div className="flex items-center gap-1 px-1.5 py-0.5 bg-black/30 rounded border border-white/5">
+                      <span className={`text-[9px] font-mono font-bold ${riskLevelColor.replace('bg-', 'text-')}`}>
+                        {Math.round(scan.risk_score)}
+                      </span>
+                   </div>
+                   <span className="text-[8px] text-zinc-600 font-mono">{new Date(scan.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
               </div>
-            ))
-          )}
-        </div>
+              <div className={`w-0.5 h-6 rounded-full opacity-30 group-hover/item:opacity-80 transition-opacity ${
+                scan.risk_level === 'High' || scan.risk_level === 'Malicious' ? 'bg-rose-500' : 
+                scan.risk_level === 'Medium' ? 'bg-amber-500' : 'bg-emerald-500'
+              }`} />
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
@@ -119,8 +95,8 @@ export function AnalyticsPanel({ onClose }: { onClose: () => void }) {
   const [scanListLoading, setScanListLoading] = useState(false);
 
   const fetchAnalytics = useCallback(async (isSilent = false) => {
-    if (!data) setLoading(true);
-    setIsRefreshing(true);
+    if (!data && !isSilent) setLoading(true);
+    if (!isSilent) setIsRefreshing(true);
     setError(false);
     
     try {
@@ -130,11 +106,11 @@ export function AnalyticsPanel({ onClose }: { onClose: () => void }) {
         const json = await response.json();
         setData(json);
       } else {
-        setError(true);
+        if (!isSilent) setError(true);
       }
     } catch (err) {
       console.error("Failed to fetch analytics:", err);
-      setError(true);
+      if (!isSilent) setError(true);
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -204,10 +180,17 @@ export function AnalyticsPanel({ onClose }: { onClose: () => void }) {
       },
       { 
         label: 'Malicious', 
-        value: (dist['high'] || 0) + (dist['malicious'] || 0) + (dist['medium'] || 0) + (dist['unknown'] || 0), 
+        value: (dist['high'] || 0) + (dist['malicious'] || 0), 
         icon: ShieldAlert, 
         color: 'text-rose-500',
         filterKey: 'malicious'
+      },
+      { 
+        label: 'Suspicious', 
+        value: dist['medium'] || 0, 
+        icon: AlertTriangle, 
+        color: 'text-amber-500',
+        filterKey: 'suspicious'
       },
       { 
         label: 'Safe', 
@@ -304,42 +287,67 @@ export function AnalyticsPanel({ onClose }: { onClose: () => void }) {
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 custom-scrollbar relative">
           
-          {/* Stats Grid */}
-          <div className="grid grid-cols-3 gap-4 relative z-[106]">
-            {stats.map((stat, i) => (
-              <div key={i} className="relative">
+          {/* Stats Flex Accordion */}
+          <div className="flex flex-col md:flex-row gap-4 relative z-[106] min-h-[140px]">
+            {stats.map((stat, i) => {
+              const isActive = activeFilter === stat.filterKey;
+              const riskColor = stat.color.replace('text-', 'bg-');
+              
+              return (
+                <div 
+                  key={i} 
+                  className={`transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${isActive ? 'flex-[4]' : 'flex-1'} min-w-0 group`}
+                >
                   <div 
                     onClick={() => handleCardClick(stat.filterKey)}
-                    className={`stat-card p-5 border rounded-2xl cursor-pointer transition-all duration-300 relative overflow-hidden group
-                      ${activeFilter === stat.filterKey 
-                        ? 'bg-emerald-500/10 border-emerald-500/40 ring-1 ring-emerald-500/20' 
-                        : 'bg-white/40 dark:bg-white/5 border-cyber-light-border dark:border-white/5 hover:border-cyber-light-accent hover:bg-white/60 dark:hover:border-white/10 dark:hover:bg-white/[0.07]'}`}
+                    className={`stat-card relative p-6 border rounded-3xl cursor-pointer transition-all duration-500 overflow-hidden flex flex-col h-full
+                      ${isActive 
+                        ? 'bg-zinc-900 dark:bg-zinc-950/90 border-emerald-500/30 shadow-[0_15px_40px_rgba(0,0,0,0.4)]' 
+                        : 'bg-white/40 dark:bg-white/[0.02] border-zinc-200/50 dark:border-white/[0.04] hover:bg-white/60 dark:hover:bg-white/[0.05]'}`}
                   >
-                    {/* Subtle active indicator at top */}
-                    {activeFilter === stat.filterKey && (
-                      <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-500 animate-in slide-in-from-top-1" />
-                    )}
+                    {/* Background Glow Effect */}
+                    <div className={`absolute -top-20 -right-20 w-40 h-40 rounded-full blur-[80px] transition-opacity duration-700 ${isActive ? 'opacity-10' : 'opacity-0'} ${riskColor}`} />
                     
-                    <stat.icon className={`w-5 h-5 ${stat.color} mb-4 group-hover:scale-110 transition-transform`} />
-                    <div className="text-3xl font-bold text-cyber-light-accent-data dark:text-white mb-1 tracking-tight">{stat.value}</div>
-                    <div className="text-[10px] text-cyber-light-text font-bold uppercase tracking-widest flex items-center justify-between">
-                      {stat.label}
-                      {activeFilter === stat.filterKey && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
+                    <div className={`flex flex-col h-full ${!isActive ? 'justify-center items-center text-center' : ''}`}>
+                      <div className={`flex items-center justify-between ${isActive ? 'mb-6' : 'mb-3'}`}>
+                        <div className={`p-2.5 rounded-xl ${isActive ? 'bg-white/5 border border-white/10' : ''}`}>
+                          <stat.icon className={`w-5 h-5 ${stat.color} transition-all duration-500 ${!isActive ? 'group-hover:scale-110' : ''}`} />
+                        </div>
+                        {isActive && (
+                          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500/10 rounded-full border border-emerald-500/20">
+                             <span className="text-[7px] font-black text-emerald-400 uppercase tracking-widest animate-pulse">Live</span>
+                             <div className="w-1 h-1 rounded-full bg-emerald-400" />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="relative">
+                        <div className={`font-black text-cyber-light-accent-data dark:text-white tracking-tighter transition-all duration-500 leading-none
+                          ${isActive ? 'text-5xl mb-2' : 'text-2xl mb-1'}`}>
+                          {stat.value}
+                        </div>
+                        <div className={`font-bold uppercase tracking-[0.2em] transition-all duration-500
+                          ${isActive ? 'text-[10px] text-emerald-500/70' : 'text-[8px] text-zinc-500'}`}>
+                          {stat.label}
+                        </div>
+                      </div>
+
+                      {/* Smooth height-transitioned content */}
+                      <div className={`grid transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${isActive ? 'grid-rows-[1fr] opacity-100 mt-4' : 'grid-rows-[0fr] opacity-0 mt-0'}`}>
+                        <div className="overflow-hidden">
+                          <ScanListInline 
+                            scans={isActive ? scanList : []}
+                            loading={isActive ? scanListLoading : false}
+                            color={stat.color}
+                            riskLevelColor={riskColor}
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
-
-                {/* Popover anchored to this specific card */}
-                {activeFilter === stat.filterKey && (
-                  <ScanListPopover 
-                    scans={scanList}
-                    loading={scanListLoading}
-                    filterLabel={stat.label}
-                    color={stat.color}
-                    onClose={() => setActiveFilter(null)}
-                  />
-                )}
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
 
           {/* Scan Volume Chart */}
