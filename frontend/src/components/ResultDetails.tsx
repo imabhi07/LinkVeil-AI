@@ -26,8 +26,8 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result }) => 
   const getBorderColor = () => {
     switch (result.riskLevel) {
       case 'SAFE': return 'border-emerald-200 dark:border-ornex-green/30 bg-emerald-50/50 dark:bg-ornex-green/5 shadow-[0_0_30px_rgba(16,185,129,0.1)] dark:shadow-[0_0_30px_rgba(57,255,20,0.05)]';
-      case 'SUSPICIOUS': return 'border-amber-500/30 bg-amber-500/5 shadow-[0_0_30px_rgba(245,158,11,0.05)]';
-      case 'MALICIOUS': return 'border-rose-500/30 bg-rose-500/5 shadow-[0_0_30px_rgba(244,63,94,0.05)]';
+      case 'SUSPICIOUS': return 'border-amber-500/30 bg-amber-500/10 shadow-[0_0_30px_rgba(245,158,11,0.05)]';
+      case 'MALICIOUS': return 'border-rose-500/30 bg-rose-500/10 shadow-[0_0_30px_rgba(244,63,94,0.05)]';
       default: return 'border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/5';
     }
   };
@@ -36,6 +36,32 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result }) => 
 
   return (
     <div className="w-full space-y-6">
+      {/* Dynamic Recommendation Header */}
+      {result.recommendation && (
+        <div className={`p-5 rounded-2xl border flex items-center gap-4 animate-in slide-in-from-top-4 duration-500 ${
+          result.riskLevel === 'SAFE' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-ornex-green' :
+          result.riskLevel === 'SUSPICIOUS' ? 'bg-amber-500/10 border-amber-500/20 text-amber-600' :
+          result.riskLevel === 'MALICIOUS' ? 'bg-rose-500/10 border-rose-500/20 text-rose-600' :
+          'bg-zinc-500/10 border-zinc-500/20 text-zinc-600 dark:text-zinc-400'
+        }`}>
+          <div className={`p-2 rounded-lg ${
+            result.riskLevel === 'SAFE' ? 'bg-emerald-500/20' :
+            result.riskLevel === 'SUSPICIOUS' ? 'bg-amber-500/20' :
+            result.riskLevel === 'MALICIOUS' ? 'bg-rose-500/20' :
+            'bg-zinc-500/20'
+          }`}>
+            {result.riskLevel === 'SAFE' ? <ShieldCheck className="w-5 h-5" /> :
+             result.riskLevel === 'SUSPICIOUS' ? <AlertTriangle className="w-5 h-5" /> :
+             result.riskLevel === 'MALICIOUS' ? <ShieldX className="w-5 h-5" /> :
+             <Activity className="w-5 h-5" />}
+          </div>
+          <div>
+            <p className="text-xs font-mono uppercase tracking-widest opacity-70 mb-0.5">Sentinel Recommendation</p>
+            <p className="text-lg font-bold tracking-tight">{result.recommendation}</p>
+          </div>
+        </div>
+      )}
+
       {/* Header Card */}
       <div className={`p-8 rounded-3xl border glass-panel flex flex-col md:flex-row items-center justify-between gap-8 transition-all ${getBorderColor()}`}>
         <div className="flex items-center gap-6">
