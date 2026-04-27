@@ -7,9 +7,15 @@ from urllib.parse import urlparse
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 
+import json
+import tldextract
 from backend.app.services.xgb_service import xgb_service
 from backend.app.services.llm_service import analyze_url
 from backend.app.services.probe_agent import run_probe_async, probe_result_to_dict, FAKE_USER
+from backend.app.services.threat_intel_service import threat_intel_service
+from backend.app.services.whois_service import whois_service
+from backend.app.services.brand_service import detect_brand_mismatch
+from backend.app.services.vision_service import vision_service
 from backend.app.features.url_features import extract_features
 from backend.app.models.db_models import ScanResult
 
@@ -29,7 +35,16 @@ KNOWN_SAFE_DOMAINS = frozenset({
     "zoom.us", "slack.com", "dropbox.com", "spotify.com",
     "paytm.com", "flipkart.com", "razorpay.com", "phonepe.com",
     "uber.com", "airbnb.com", "stripe.com", "twitch.tv",
+    "perplexity.ai", "chatgpt.com", "openai.com"
 })
+
+SUSPICIOUS_TLDS = frozenset({
+    "cf", "tk", "ml", "ga", "gq",  # Freenom free TLDs
+    "buzz", "top", "xyz", "club", "work", "loan", "click",
+    "info", "cam", "icu", "monster", "rest", "surf", "casa"
+})
+
+LOGIN_KEYWORDS = ["/login", "/signin", "/verify", "/account", "/secure", "/auth", "/webscr", "/ebayisapi"]
 
 # ── Timeout guards ──
 XGB_TIMEOUT_S = 5
@@ -75,237 +90,223 @@ def _set_cache(url: str, result: dict):
 
 async def evaluate_url(url: str, db: Session) -> dict:
     """
-    Evaluates a URL by running the XGBoost model, Gemini LLM, and the real
-    Playwright probe concurrently. Fuses the XGB + LLM results for the risk verdict.
-    The probe result replaces the fake agentReport.activeProbing section only —
-    it has NO influence on riskScore or risk_level.
-
-    Optimizations:
-      - In-memory result cache (5 min TTL)
-      - Timeout guards on each parallel task
-      - Skip probe for well-known safe domains
-      - Structured timing logs
+    Hybrid evaluation pipeline:
+    1. Cache check
+    2. Threat Intel short-circuit
+    3. Parallel execution (XGB, LLM, Probe, WHOIS, Brand detect)
+    4. Vision analysis (if screenshot captured)
+    5. Fusion logic with boosts
+    6. Persistence and caching
     """
     t0 = time.perf_counter()
     logger.info(f"Starting hybrid evaluation for URL: {url}")
 
-    # ── Check cache first ──
+    # ── 1. Check cache ──
     cached = _get_cached(url)
     if cached is not None:
-        # Still persist to DB for history
         _save_to_db(cached, db)
         return cached
 
-    # 1. Extract lexical features for LLM context
-    try:
-        features = extract_features(url)
-    except Exception as e:
-        logger.error(f"Failed to extract features for {url}: {e}")
-        features = {}
-
-    # 2. Build tasks with timeout guards
-    async def _xgb_with_timeout():
-        return await asyncio.wait_for(
-            asyncio.to_thread(xgb_service.predict, url),
-            timeout=XGB_TIMEOUT_S,
-        )
-
-    async def _llm_with_timeout():
-        return await asyncio.wait_for(
-            analyze_url(url, features),
-            timeout=LLM_TIMEOUT_S,
-        )
-
-    async def _probe_with_timeout():
-        return await asyncio.wait_for(
-            run_probe_async(url),
-            timeout=PROBE_TIMEOUT_S,
-        )
-
-    # 3. Run all three in parallel
-    dl_prob, llm_result, probe_result = await asyncio.gather(
-        _xgb_with_timeout(),
-        _llm_with_timeout(),
-        _probe_with_timeout(),
-        return_exceptions=True,
-    )
-
-    t_parallel = time.perf_counter()
-
-    # ── Handle failures ──
-    if isinstance(dl_prob, Exception):
-        logger.error(f"XGB failed ({type(dl_prob).__name__}): {dl_prob}")
-        dl_prob = 0.5
-    if isinstance(llm_result, Exception):
-        logger.error(f"LLM failed ({type(llm_result).__name__}): {llm_result}")
-        llm_result = {
-            "riskScore": 50.0,
-            "risk_level": "Unknown",
-            "explanation": "Failed to analyze.",
+    # ── 2. Threat Intel (Short-circuit) ──
+    threat_result = await threat_intel_service.check(url)
+    if threat_result["is_known_malicious"] and not _should_skip_probe(url):
+        verdict = {
+            "url": url,
+            "risk_score": 95.0,
+            "risk_level": "High",
+            "explanation": f"⚠️ Threat Intel Match: This URL is found in the {threat_result['source']} blacklist.",
             "brand_impersonation": False,
             "brand_name": None,
+            "verdictTitle": "Known Malicious URL",
+            "technicalDetails": {"domainReputation": f"Blacklisted by {threat_result['source']}"},
+            "mitigationAdvice": ["Do not interact with this page.", "Report to security team."],
+            "agentReport": {"activeProbing": {"performed": False, "outcome": "Short-circuited by threat intel."}},
+            "threat_intel": threat_result
         }
-    if isinstance(probe_result, Exception):
-        logger.error(f"Probe failed ({type(probe_result).__name__}): {probe_result}")
-        probe_result = None
+        _save_to_db(verdict, db)
+        return verdict
 
-    # 3. Fusion logic
-    raw_dl_score = dl_prob * 100
-    llm_level = llm_result.get("risk_level", "Unknown").strip().capitalize()
-    llm_has_analysis = llm_level in ("Low", "Medium", "High")
-    llm_score = llm_result.get("riskScore")
+    # If threat intel matched but domain is known-safe, demote to advisory
+    if threat_result["is_known_malicious"] and _should_skip_probe(url):
+        logger.warning(f"Threat intel matched {url} but domain is known-safe — ignoring short-circuit")
+        threat_result["is_known_malicious"] = False
+        threat_result["note"] = "Suppressed: domain is in KNOWN_SAFE_DOMAINS"
 
+    # ── 3. Parallel Analysis ──
+    lexical_features = extract_features(url)
+    tasks = [
+        asyncio.to_thread(xgb_service.predict, url),
+        analyze_url(url, lexical_features),
+        run_probe_async(url) if not _should_skip_probe(url) else asyncio.sleep(0, result="SKIPPED"),
+        whois_service.lookup(_root_domain(url)),
+        asyncio.to_thread(detect_brand_mismatch, url)
+    ]
+
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    t_parallel = time.perf_counter()
+
+    xgb_prob = results[0] if not isinstance(results[0], Exception) else 0.5
+    llm_result = results[1] if not isinstance(results[1], Exception) else {}
+    probe_result = results[2] if not isinstance(results[2], Exception) else None
+    whois_result = results[3] if not isinstance(results[3], Exception) else {}
+    brand_result = results[4] if not isinstance(results[4], Exception) else {}
+
+    # ── 4. Vision Analysis ──
+    visual_result = None
+    if probe_result and hasattr(probe_result, "screenshot_path") and probe_result.screenshot_path:
+        visual_result = await vision_service.analyze_screenshot(probe_result.screenshot_path)
+
+    # ── 5. Fusion Logic ──
+    raw_xgb_score = xgb_prob * 100
+    llm_score = llm_result.get("riskScore", 50.0)
     if isinstance(llm_score, str):
-        try:
-            llm_score = float(llm_score)
-        except ValueError:
-            llm_score = None
+        try: llm_score = float(llm_score)
+        except: llm_score = 50.0
 
-    if llm_has_analysis and isinstance(llm_score, (int, float)):
-        risk_score = (float(llm_score) * 0.7) + (raw_dl_score * 0.3)
-        logger.info(f"Fusion: LLM={llm_score:.1f} XGB={raw_dl_score:.1f} → blended={risk_score:.1f}")
-    else:
-        risk_score = raw_dl_score
-        logger.info(f"LLM unavailable. Using XGB score only: {risk_score:.1f}")
-
-    # 4. Determine final risk level
-    if llm_has_analysis:
-        if llm_level == "Low":
-            final_risk_level = "Low"
-            risk_score = min(risk_score, 34.0)
-        elif llm_level == "High":
-            final_risk_level = "High"
-            risk_score = max(risk_score, 65.0)
-        else:
-            final_risk_level = "Medium"
-            risk_score = max(35.0, min(64.0, risk_score))
-    else:
-        if dl_prob >= 0.65:
-            final_risk_level = "High"
-            risk_score = max(risk_score, 65.0)
-        elif dl_prob >= 0.35:
-            final_risk_level = "Medium"
-            risk_score = max(35.0, min(64.0, risk_score))
-        else:
-            final_risk_level = "Low"
-            risk_score = min(risk_score, 34.0)
-
-    # 4. Construct final verdict with mapping for frontend compatibility
-    llm_tech = llm_result.get("technicalDetails") or {}
-    llm_forensics = llm_result.get("forensicData") or {}
+    # Base blend (70% LLM, 30% XGB)
+    risk_score = (llm_score * 0.7) + (raw_xgb_score * 0.3)
     
-    # Map new high-fidelity fields to existing frontend keys
-    tech_details = {
-        "urlStructure": llm_tech.get("urlDeepDive") or llm_tech.get("urlStructure", "Analysis pending..."),
-        "domainReputation": llm_tech.get("domainForensics") or llm_tech.get("domainReputation", "Reputation check in progress..."),
-        "socialEngineeringTricks": llm_tech.get("socialEngineering") or llm_tech.get("socialEngineeringTricks", "Checking for deception markers..."),
-        "forensicDeepDive": llm_forensics.get("threatTactics") or "Heuristic analysis complete.",
-        "visualPrediction": llm_forensics.get("visualPrediction") or "Standard layout expected."
-    }
+    # WHOIS Boosts
+    whois_boost = 0
+    domain_age = whois_result.get("domain_age_days")
+    if whois_result.get("is_new_domain"): whois_boost += 20
+    elif domain_age is not None and domain_age < 90: whois_boost += 10
+    if whois_result.get("has_privacy"): whois_boost += 5
+    
+    # Brand Mismatch Boost
+    brand_boost = 0
+    if brand_result.get("is_mismatch"): brand_boost += 25
+    
+    # Vision Boost
+    vision_boost = 0
+    if visual_result and visual_result["visual_score"] > 0.7:
+        # Only apply vision boost if corroborated by brand_service OR probe found login form
+        has_brand_mismatch = brand_result.get("is_mismatch", False)
+        probe_found_login = probe_result and hasattr(probe_result, "login_form_found") and probe_result.login_form_found
+        if has_brand_mismatch or probe_found_login:
+            vision_boost += 30
+            logger.info(f"Vision Boost: +30 (corroborated by brand={has_brand_mismatch}, login_form={probe_found_login})")
+        else:
+            logger.info(f"Vision Boost: SUPPRESSED (visual_score={visual_result['visual_score']:.2f} but no brand mismatch and no login form)")
 
+    # ── New Heuristic Boosts (Bug #7) ──
+    tld_boost = 0
+    extracted = tldextract.extract(url)
+    tld = extracted.suffix.lower()
+    if tld in SUSPICIOUS_TLDS:
+        tld_boost += 15
+        logger.info(f"TLD Boost: +15 for .{tld}")
+
+    login_boost = 0
+    path = urlparse(url).path.lower()
+    if any(kw in path for kw in LOGIN_KEYWORDS):
+        # Only boost if it's not a known safe domain
+        if not _should_skip_probe(url):
+            login_boost += 10
+            logger.info(f"Login Path Boost: +10 for sensitive path '{path}'")
+
+    # ── Probe Behavioral Adjustment (Bug #5) ──
+    probe_adjustment = 0
+    if probe_result and hasattr(probe_result, "performed") and probe_result.performed:
+        final_url = getattr(probe_result, "final_url", url)
+        
+        if getattr(probe_result, "accepted_fake_creds", False):
+            probe_adjustment = +35  # Severe penalty for credential harvesting
+            logger.info("Probe Penalty: +35 (Confirmed Credential Harvester)")
+        elif final_url and final_url != url and _root_domain(final_url) in KNOWN_SAFE_DOMAINS:
+            probe_adjustment = -100 # Massive dampener: safely redirects to known brand
+            logger.info(f"Probe Dampener: -100 (Safe Redirect to {final_url})")
+        elif getattr(probe_result, "behavior_risk", "") == "High":
+            probe_adjustment = +20
+            logger.info("Probe Penalty: +20 (High Behavioral Risk)")
+        elif getattr(probe_result, "behavior_risk", "") == "Low":
+            if getattr(probe_result, "login_form_found", False):
+                probe_adjustment = -15  # Good sign: rejected fake creds
+                logger.info("Probe Dampener: -15 (Correctly rejected creds)")
+            else:
+                probe_adjustment = -20  # Strong exculpatory: page reachable, no cred harvesting at all
+                logger.info("Probe Dampener: -20 (No login form found — not a credential harvester)")
+    
+    risk_score = risk_score + whois_boost + brand_boost + vision_boost + tld_boost + login_boost + probe_adjustment
+    risk_score = max(0.0, min(100.0, risk_score))
+    
+    # Final Level Assignment
+    if risk_score >= 40: final_level = "High"
+    else: final_level = "Low"
+
+    # Construct Verdict
     verdict = {
         "url": url,
         "risk_score": round(risk_score, 2),
-        "risk_level": final_risk_level,
-        "explanation": llm_result.get("explanation", ""),
-        "brand_impersonation": llm_result.get("brand_impersonation", False),
-        "brand_name": llm_result.get("brand_name", None),
-        "verdictTitle": llm_result.get("verdictTitle") or f"{final_risk_level} Risk Analysis",
-        "technicalDetails": tech_details,
-        "mitigationAdvice": llm_result.get("mitigationAdvice") or [],
-        "agentReport": llm_result.get("agentReport"),
+        "risk_level": final_level,
+        "explanation": llm_result.get("explanation", "Analysis complete."),
+        "brand_impersonation": brand_result.get("is_mismatch", False) or llm_result.get("brand_impersonation", False),
+        "brand_name": brand_result.get("brand_detected") or llm_result.get("brand_name"),
+        "verdictTitle": f"{final_level} Risk Analysis",
+        "technicalDetails": llm_result.get("technicalDetails", {}),
+        "mitigationAdvice": llm_result.get("mitigationAdvice", []),
+        "agentReport": {"summary": llm_result.get("explanation", "")},
+        "whois_info": whois_result,
+        "threat_intel": threat_result,
+        "visual_forensics": visual_result,
+        "fusion_trace": {
+            "xgb_score": raw_xgb_score,
+            "llm_score": llm_score,
+            "whois_boost": whois_boost,
+            "brand_boost": brand_boost,
+            "vision_boost": vision_boost,
+            "tld_boost": tld_boost,
+            "login_boost": login_boost,
+            "probe_adjustment": probe_adjustment,
+            "final_score": risk_score
+        }
     }
 
-    # 4b. ALWAYS override activeProbing with REAL data — never show LLM hallucinations
-    agent_report = verdict.get("agentReport") or {}
-
-    # Capture probe error message before we convert exception to None
-    probe_error_msg = None
-    if isinstance(probe_result, Exception):
-        probe_error_msg = str(probe_result)
-        # Already logged above, probe_result is already set to None
-
-    cred_string = f"{FAKE_USER} / ••••••••"
-
+    # Integrate Probe artifacts
+    # Integrate Probe results (Bug #8 fix - flatten into agentReport)
     if probe_result == "SKIPPED":
-        # Known safe domain — no real probe was needed
-        agent_report["activeProbing"] = {
-            "performed": False,
-            "credentialsUsed": cred_string,
-            "outcome": (
-                f"Live probe skipped — '{_root_domain(url)}' is a verified legitimate domain. "
-                "Active probing is not performed against known-safe sites to avoid "
-                "unnecessary load and false positives."
-            ),
-            "behaviorRisk": "Low",
-            "reachable": None,
-            "loginFormFound": None,
-            "fieldsFilled": False,
-            "acceptedFakeCredentials": False,
-            "postSubmitRedirect": None,
-            "pageTitle": None,
-            "finalUrl": None,
-            "error": None,
-        }
-    elif probe_result is not None and not isinstance(probe_result, Exception):
-        # Real probe completed successfully
-        real_probe_dict = probe_result_to_dict(probe_result)
-        logger.info(
-            f"Real probe completed — reachable={probe_result.reachable}, "
-            f"loginFormFound={probe_result.login_form_found}, "
-            f"behaviorRisk={probe_result.behavior_risk}"
-        )
-        agent_report["activeProbing"] = real_probe_dict
-    else:
-        # Probe crashed or timed out — show honest error, NOT LLM fiction
-        agent_report["activeProbing"] = {
-            "performed": True,
-            "credentialsUsed": cred_string,
-            "outcome": (
-                f"Live probe failed — the headless browser could not complete the analysis. "
-                f"Error: {probe_error_msg or 'Unknown error'}. "
-                "This may be due to anti-bot protections (WAF/Cloudflare), network issues, "
-                "or the site blocking automated browsers."
-            ),
-            "behaviorRisk": "Unknown",
-            "reachable": False,
-            "loginFormFound": None,
-            "fieldsFilled": False,
-            "acceptedFakeCredentials": False,
-            "postSubmitRedirect": None,
-            "pageTitle": None,
-            "finalUrl": None,
-            "error": probe_error_msg,
+        verdict["agentReport"].update({"performed": False, "outcome": "Skipped for trusted domain."})
+    elif probe_result:
+        # Map probe_result to dict and merge into agentReport top-level
+        probe_data = probe_result_to_dict(probe_result)
+        verdict["agentReport"].update(probe_data)
+        
+        verdict["probe_artifacts"] = {
+            "redirect_chain": getattr(probe_result, "redirect_chain", []),
+            "form_fields": getattr(probe_result, "form_fields", {}),
+            "final_url": getattr(probe_result, "final_url", url),
+            "page_title": getattr(probe_result, "page_title", "")
         }
 
-    verdict["agentReport"] = agent_report
-
-    # ── Cache the result ──
     _set_cache(url, verdict)
-
-    # 5. Save to database
     _save_to_db(verdict, db)
-
-    elapsed = (time.perf_counter() - t0) * 1000
-    logger.info(
-        f"✅ Evaluation complete for {url} — "
-        f"risk={verdict['risk_score']} ({verdict['risk_level']}) "
-        f"parallel={((t_parallel - t0) * 1000):.0f}ms total={elapsed:.0f}ms"
-    )
-
     return verdict
 
 
 def _save_to_db(verdict: dict, db: Session):
-    """Persist scan result to the database."""
+    """Persist all forensic and analytical data to DB."""
     try:
+        probe_art = verdict.get("probe_artifacts", {})
+        whois = verdict.get("whois_info", {})
+        vision = verdict.get("visual_forensics", {})
+        
         db_scan = ScanResult(
             url=verdict["url"],
             risk_score=verdict["risk_score"],
             risk_level=verdict["risk_level"],
             explanation=verdict["explanation"],
             brand_impersonation=verdict["brand_impersonation"],
-            brand_name=verdict["brand_name"],
+            brand_name=str(verdict["brand_name"]).title() if verdict.get("brand_name") else None,
+            screenshot_path=vision.get("screenshot_path") if vision else None,
+            visual_score=vision.get("visual_score") if vision else None,
+            brand_logo_guess=vision.get("brand_logo_guess") if vision else None,
+            probe_artifacts=json.dumps(probe_art) if probe_art else None,
+            domain_age_days=whois.get("domain_age_days"),
+            registrar=whois.get("registrar"),
+            whois_privacy=whois.get("has_privacy"),
+            threat_intel_match=verdict.get("threat_intel", {}).get("is_known_malicious", False),
+            threat_intel_source=verdict.get("threat_intel", {}).get("source"),
+            fusion_trace=json.dumps(verdict.get("fusion_trace")),
             timestamp=datetime.now(timezone.utc),
         )
         db.add(db_scan)

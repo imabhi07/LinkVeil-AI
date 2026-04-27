@@ -1,6 +1,10 @@
-import React, { memo } from 'react';
+import React, { memo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { AnalysisResult } from '../types';
-import { ShieldCheck, ShieldAlert, ShieldX, Activity, Globe, AlertTriangle, ExternalLink, ArrowRight, Bot, Eye, Terminal } from 'lucide-react';
+import { 
+  ShieldCheck, ShieldAlert, ShieldX, Activity, Globe, AlertTriangle, 
+  ExternalLink, ArrowRight, Bot, Eye, Terminal, Zap, Image as ImageIcon, Info, X
+} from 'lucide-react';
 import { RiskGauge } from './RiskGauge';
 
 interface ResultDetailsProps {
@@ -8,6 +12,8 @@ interface ResultDetailsProps {
 }
 
 export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result }) => {
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+
   const getIcon = () => {
     switch (result.riskLevel) {
       case 'SAFE': return <ShieldCheck className="w-10 h-10 text-emerald-500 dark:text-ornex-green" />;
@@ -26,6 +32,8 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result }) => 
     }
   };
 
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
   return (
     <div className="w-full space-y-6">
       {/* Header Card */}
@@ -35,9 +43,17 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result }) => 
             {getIcon()}
           </div>
           <div>
-            <h2 className="text-xs font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest mb-1">Analysis Verdict</h2>
-            <h1 className="text-3xl md:text-4xl font-bold text-zinc-900 dark:text-white tracking-tight uppercase">{result.verdictTitle}</h1>
-            <p className="text-zinc-600 dark:text-zinc-400 mt-2 font-mono text-xs break-all opacity-80">{result.url}</p>
+            <div className="flex items-center gap-3 mb-1">
+              <h2 className="text-xs font-bold text-cyber-light-text dark:text-zinc-500 uppercase tracking-widest">Analysis Verdict</h2>
+              {result.threat_intel?.is_known_malicious && (
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-500 text-[10px] font-bold border border-rose-500/20 uppercase tracking-tighter animate-pulse">
+                  <Zap className="w-3 h-3" />
+                  Intel Match: {result.threat_intel.source}
+                </span>
+              )}
+            </div>
+            <h1 className="text-3xl md:text-4xl font-bold text-cyber-light-heading dark:text-white tracking-tight uppercase">{result.verdictTitle}</h1>
+            <p className="text-cyber-light-text dark:text-zinc-400 mt-2 font-mono text-xs break-all opacity-80">{result.url}</p>
           </div>
         </div>
         <div className="flex-shrink-0">
@@ -49,35 +65,46 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result }) => 
 
         {/* Agent Investigation Report */}
         {result.agentReport && (
-          <div className="lg:col-span-2 glass-panel rounded-3xl p-8 border border-emerald-200 dark:border-ornex-green/20 bg-emerald-50/20 dark:bg-ornex-green/5 overflow-hidden relative">
+          <div className="lg:col-span-2 glass-panel rounded-3xl p-8 dark:border-ornex-green/20 dark:bg-ornex-green/5 overflow-hidden relative">
             <div className="absolute top-0 right-0 p-4 opacity-10">
-               <Bot className="w-32 h-32 text-emerald-500 dark:text-ornex-green" />
+               <Bot className="w-32 h-32 text-cyber-light-accent dark:text-ornex-green" />
             </div>
-            <h3 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2 mb-6 uppercase tracking-wider">
-              <span className="w-1.5 h-1.5 bg-emerald-500 dark:bg-ornex-green rounded-full animate-pulse"></span>
-              Agent Investigation Log
-            </h3>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-sm font-bold text-cyber-light-heading dark:text-white flex items-center gap-2 uppercase tracking-[0.05em] border-l-[3px] border-cyber-light-accent pl-3">
+                <span className="w-1.5 h-1.5 bg-cyber-light-accent dark:bg-ornex-green rounded-full animate-pulse"></span>
+                Agent Investigation Log
+              </h3>
+              <div className="flex gap-2">
+                {result.agentReport.activeProbing.reachable ? (
+                   <span className="px-2 py-1 rounded-md bg-cyber-light-accent-bg dark:bg-emerald-500/10 text-cyber-light-accent-deep dark:text-ornex-green text-[10px] font-bold border border-cyber-light-accent/20">LIVE</span>
+                ) : (
+                   <span className="px-2 py-1 rounded-md bg-zinc-500/10 text-zinc-500 text-[10px] font-bold border border-zinc-500/20">OFFLINE</span>
+                )}
+              </div>
+            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                {/* Active Probing Section */}
                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-xs font-mono text-emerald-700 dark:text-ornex-green uppercase tracking-wider mb-1">
+                  <div className="flex items-center gap-2 text-xs font-mono text-cyber-light-accent dark:text-ornex-green uppercase tracking-wider mb-1">
                      <Terminal className="w-4 h-4" />
-                     <span>Active Probing (The Trap)</span>
+                     <span>Active Probing</span>
                   </div>
-                  <div className="bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/10 rounded-xl p-4 font-mono text-xs space-y-2">
-                     <div className="flex justify-between border-b border-zinc-200 dark:border-white/10 pb-2 mb-2">
-                        <span className="text-zinc-500">Method:</span>
-                        <span className="text-zinc-800 dark:text-zinc-200">Credential Injection</span>
+                  <div className="bg-white/40 dark:bg-black/40 border border-cyber-light-border dark:border-white/10 rounded-xl p-4 font-mono text-xs space-y-2 h-full">
+                     <div className="flex justify-between border-b border-cyber-light-border dark:border-white/10 pb-2 mb-2">
+                        <span className="text-cyber-light-text dark:text-zinc-500">Form:</span>
+                        <span className={result.agentReport.activeProbing.loginFormFound ? "text-amber-500" : "text-zinc-400"}>
+                          {result.agentReport.activeProbing.loginFormFound ? "DETECTED" : "NONE"}
+                        </span>
                      </div>
-                     <div className="space-y-1">
-                        <p className="text-zinc-500 mb-1">Payload:</p>
-                        <p className="text-emerald-600 dark:text-ornex-green">{result.agentReport?.activeProbing?.credentialsUsed || 'N/A'}</p>
-                     </div>
-                     <div className="mt-2 pt-2 border-t border-zinc-200 dark:border-white/10">
-                        <p className="text-zinc-500 mb-1">Result:</p>
-                        <p className={`font-bold ${result.agentReport?.activeProbing?.behaviorRisk === 'HIGH' ? 'text-rose-500' : 'text-zinc-700 dark:text-zinc-300'}`}>
-                           {result.agentReport?.activeProbing?.outcome || 'Active Probing Failed'}
+                      <div className="space-y-1">
+                        <p className="text-cyber-light-text dark:text-zinc-500 mb-1">Payload Trace:</p>
+                        <p className="text-cyber-light-accent-code dark:text-ornex-green truncate bg-cyber-light-accent/5 dark:bg-transparent px-2 py-0.5 rounded font-mono">{result.agentReport?.activeProbing?.credentialsUsed || 'N/A'}</p>
+                      </div>
+                     <div className="mt-2 pt-2 border-t border-cyber-light-border dark:border-white/10">
+                        <p className="text-cyber-light-text dark:text-zinc-500 mb-1">Outcome:</p>
+                        <p className={`font-bold ${result.agentReport?.activeProbing?.behaviorRisk === 'HIGH' ? 'text-rose-500' : 'text-cyber-light-heading dark:text-zinc-300'}`}>
+                           {result.agentReport?.activeProbing?.outcome || 'Session Terminated'}
                         </p>
                      </div>
                   </div>
@@ -85,174 +112,190 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result }) => 
 
                {/* Visual Forensics Section */}
                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-xs font-mono text-emerald-700 dark:text-ornex-green uppercase tracking-wider mb-1">
+                  <div className="flex items-center gap-2 text-xs font-mono text-cyber-light-accent dark:text-ornex-green uppercase tracking-wider mb-1">
                      <Eye className="w-4 h-4" />
-                     <span>Visual Forensics (The Eyes)</span>
+                     <span>Visual Forensic</span>
                   </div>
-                  <div className="bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/10 rounded-xl p-4 font-mono text-xs space-y-2">
-                     <div className="flex justify-between border-b border-zinc-200 dark:border-white/10 pb-2 mb-2">
-                        <span className="text-zinc-500">Analysis:</span>
-                        <span className="text-zinc-800 dark:text-zinc-200">Brand & Hosting</span>
+                  <div className="bg-white/40 dark:bg-black/40 border border-cyber-light-border dark:border-white/10 rounded-xl p-4 font-mono text-xs space-y-2 h-full">
+                     <div className="flex justify-between border-b border-cyber-light-border dark:border-white/10 pb-2 mb-2">
+                        <span className="text-cyber-light-text dark:text-zinc-500">AI Brand Match:</span>
+                        <span className="text-cyber-light-heading dark:text-zinc-200">
+                          {result.visual_forensics?.brand_match ? `${Math.round(result.visual_forensics.score * 100)}%` : '0%'}
+                        </span>
                      </div>
                      <div className="space-y-1">
-                        <p className="text-zinc-500 mb-1">Brand Detected:</p>
-                        <p className="text-zinc-800 dark:text-zinc-200">{result.agentReport?.visualForensics?.brandImpersonation || 'LLM Qualitative Engine Offline'}</p>
+                        <p className="text-cyber-light-text dark:text-zinc-500 mb-1">Identity Guess:</p>
+                        <p className="text-cyber-light-heading dark:text-zinc-200 font-bold uppercase tracking-tighter">
+                          {result.visual_forensics?.brand_match || 'UNKNOWN'}
+                        </p>
                      </div>
-                     <div className="mt-2 pt-2 border-t border-zinc-200 dark:border-white/10">
-                        <p className="text-zinc-500 mb-1">Infrastructure:</p>
-                        <p className="text-zinc-700 dark:text-zinc-300">
-                           {result.agentReport?.visualForensics?.hostingMismatch || 'Awaiting LLM availability.'}
+                     <div className="mt-2 pt-2 border-t border-cyber-light-border dark:border-white/10">
+                        <p className="text-cyber-light-text dark:text-zinc-500 mb-1">Visual Evidence:</p>
+                        <p className="text-cyber-light-heading dark:text-zinc-300">
+                           {result.visual_forensics?.brand_match 
+                              ? `Detected high-fidelity impersonation of ${result.visual_forensics.brand_match}` 
+                              : "No significant visual impersonation detected."}
                         </p>
                      </div>
                   </div>
                </div>
+
+               {/* Screenshot Section */}
+               <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-mono text-cyber-light-accent dark:text-ornex-green uppercase tracking-wider mb-1">
+                     <ImageIcon className="w-4 h-4" />
+                     <span>Evidence Capture</span>
+                  </div>
+                  <div className="relative group overflow-hidden rounded-xl border border-cyber-light-border dark:border-white/10 bg-black aspect-video cursor-zoom-in">
+                    {result.agentReport.activeProbing.screenshotPath ? (
+                      <img 
+                        src={`${API_BASE_URL}/${result.agentReport.activeProbing.screenshotPath}`} 
+                        alt="Phishing Page Screenshot"
+                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                        onClick={() => setIsImageModalOpen(true)}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center text-zinc-600 gap-2">
+                        <ImageIcon className="w-8 h-8 opacity-20" />
+                        <span className="text-[10px] uppercase font-bold tracking-widest opacity-40">No Image Data</span>
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3 pointer-events-none">
+                      <p className="text-[10px] text-white font-mono flex items-center gap-1">
+                        <ExternalLink className="w-3 h-3" /> CLICK TO VIEW FULLSCREEN
+                      </p>
+                    </div>
+                  </div>
+               </div>
             </div>
           </div>
         )}
-
-        {/* Left Column: Insight & Action */}
-        <div className="space-y-6">
-          {/* Reasoning Section / Key Findings */}
-          <div className="glass-panel rounded-3xl p-8 border border-zinc-200 dark:border-white/10 transition-colors relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-3 opacity-5">
-                <Activity className="w-32 h-32" />
-            </div>
-            <h3 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2 mb-6 uppercase tracking-wider">
-              <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
-              Key Findings
-            </h3>
-            <ul className="space-y-4">
-              {result.reasoning.map((reason, idx) => (
-                <li key={idx} className="flex items-start gap-4 text-zinc-700 dark:text-zinc-300 group">
-                  <ArrowRight className="w-4 h-4 text-zinc-400 dark:text-zinc-600 mt-1 flex-shrink-0 group-hover:text-emerald-500 dark:group-hover:text-ornex-green transition-colors" />
-                  <span className="text-sm leading-relaxed">{reason}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* FORENSIC INSIGHTS BOX */}
-          <div className="glass-panel rounded-3xl p-8 border border-zinc-200 dark:border-white/10 transition-colors relative overflow-hidden">
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-3">
-                   <div className="flex items-center gap-2 text-xs font-mono text-emerald-600 dark:text-ornex-green mb-1 uppercase tracking-wider">
-                     <Activity className="w-4 h-4" />
-                     <span>Forensic Tactics</span>
-                   </div>
-                   <p className="text-sm text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-black/40 p-4 rounded-xl border border-zinc-200 dark:border-white/5 font-mono">
-                     {result.technicalDetails.forensicDeepDive || "Standard heuristic patterns observed."}
-                   </p>
-                </div>
-                <div className="space-y-3">
-                   <div className="flex items-center gap-2 text-xs font-mono text-blue-500 mb-1 uppercase tracking-wider">
-                     <Eye className="w-4 h-4" />
-                     <span>Visual Prediction</span>
-                   </div>
-                   <p className="text-sm text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-black/40 p-4 rounded-xl border border-zinc-200 dark:border-white/5 font-mono">
-                     {result.technicalDetails.visualPrediction || "Generic layout impersonation detected."}
-                   </p>
-                </div>
-             </div>
-          </div>
-
-          {/* MITIGATION ADVICE SECTION (MOVED UNDER KEY FINDINGS) */}
-          {result.mitigationAdvice && result.mitigationAdvice.length > 0 && (
-            <div className="glass-panel rounded-3xl p-8 border border-emerald-500/30 bg-emerald-500/5 dark:bg-ornex-green/5 shadow-[0_0_40px_rgba(16,185,129,0.05)] relative overflow-hidden">
-               <div className="absolute top-0 right-0 p-4 opacity-5">
-                  <ShieldCheck className="w-32 h-32 text-emerald-500" />
-               </div>
-               <h3 className="text-sm font-bold text-emerald-800 dark:text-ornex-green flex items-center gap-2 mb-6 uppercase tracking-wider">
-                 <ShieldCheck className="w-5 h-5" />
-                 Sentinel Mitigation Advice
-               </h3>
-               <div className="grid grid-cols-1 gap-4">
-                  {result.mitigationAdvice.map((advice, idx) => (
-                    <div key={idx} className="flex items-start gap-3 p-4 rounded-2xl bg-white/50 dark:bg-black/40 border border-emerald-500/20 backdrop-blur-sm">
-                       <div className="w-6 h-6 rounded-full bg-emerald-500/10 dark:bg-ornex-green/10 flex items-center justify-center flex-shrink-0 text-emerald-600 dark:text-ornex-green font-bold text-xs">
-                          {idx + 1}
-                       </div>
-                       <p className="text-sm text-zinc-700 dark:text-zinc-300 leading-snug">
-                          {advice}
-                       </p>
-                    </div>
-                  ))}
-               </div>
-            </div>
-          )}
-        </div>
 
         {/* Right Column: Technical Details Section */}
-        <div className="glass-panel rounded-3xl p-8 border border-zinc-200 dark:border-white/10 space-y-6 transition-colors h-full">
-          <h3 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2 uppercase tracking-wider">
-            <span className="w-1.5 h-1.5 bg-purple-500 rounded-full"></span>
-            Technical Analysis
-          </h3>
+        <div className="space-y-6">
+          <div className="glass-panel rounded-3xl p-8 dark:border-white/10 space-y-6 transition-colors h-full">
+            <h3 className="text-sm font-bold text-cyber-light-heading dark:text-white flex items-center gap-2 uppercase tracking-[0.05em] border-l-[3px] border-purple-500 pl-3">
+              <span className="w-1.5 h-1.5 bg-purple-500 rounded-full"></span>
+              Technical Analysis
+            </h3>
 
-          <div className="space-y-5">
-            <div>
-              <div className="flex items-center gap-2 text-xs font-mono text-zinc-500 dark:text-zinc-500 mb-2 uppercase tracking-wider">
-                <Globe className="w-3 h-3" />
-                <span>URL Structure</span>
+            <div className="space-y-5">
+              <div>
+                <div className="flex items-center gap-2 text-xs font-mono text-cyber-light-text dark:text-zinc-500 mb-2 uppercase tracking-wider">
+                  <Globe className="w-3 h-3" />
+                  <span>URL Structure</span>
+                </div>
+                <p className="text-sm text-cyber-light-heading dark:text-zinc-300 bg-white/40 dark:bg-black/40 p-4 rounded-xl border border-cyber-light-border dark:border-white/5 font-mono">
+                  {result.technicalDetails.urlStructure}
+                </p>
               </div>
-              <p className="text-sm text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-black/40 p-4 rounded-xl border border-zinc-200 dark:border-white/5 font-mono">
-                {result.technicalDetails.urlStructure}
-              </p>
-            </div>
 
-            <div>
-               <div className="flex items-center gap-2 text-xs font-mono text-zinc-500 dark:text-zinc-500 mb-2 uppercase tracking-wider">
-                <ShieldCheck className="w-3 h-3" />
-                <span>Domain Reputation</span>
+              <div>
+                <div className="flex items-center gap-2 text-xs font-mono text-cyber-light-text dark:text-zinc-500 mb-2 uppercase tracking-wider">
+                  <ShieldCheck className="w-3 h-3" />
+                  <span>Domain Reputation</span>
+                </div>
+                <p className="text-sm text-cyber-light-heading dark:text-zinc-300 bg-white/40 dark:bg-black/40 p-4 rounded-xl border border-cyber-light-border dark:border-white/5 font-mono">
+                  {result.technicalDetails.domainReputation}
+                </p>
               </div>
-              <p className="text-sm text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-black/40 p-4 rounded-xl border border-zinc-200 dark:border-white/5 font-mono">
-                {result.technicalDetails.domainReputation}
-              </p>
-            </div>
 
-            <div>
-               <div className="flex items-center gap-2 text-xs font-mono text-zinc-500 dark:text-zinc-500 mb-2 uppercase tracking-wider">
-                <AlertTriangle className="w-3 h-3" />
-                <span>Social Engineering</span>
+              <div>
+                <div className="flex items-center gap-2 text-xs font-mono text-cyber-light-text dark:text-zinc-500 mb-2 uppercase tracking-wider">
+                  <AlertTriangle className="w-3 h-3" />
+                  <span>Social Engineering</span>
+                </div>
+                <p className="text-sm text-cyber-light-heading dark:text-zinc-300 bg-white/40 dark:bg-black/40 p-4 rounded-xl border border-cyber-light-border dark:border-white/5 font-mono">
+                  {result.technicalDetails.socialEngineeringTricks}
+                </p>
               </div>
-              <p className="text-sm text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-black/40 p-4 rounded-xl border border-zinc-200 dark:border-white/5 font-mono">
-                {result.technicalDetails.socialEngineeringTricks}
-              </p>
             </div>
-
           </div>
+
+
         </div>
 
-        {/* Verification Sources Section - Bottom Full Width */}
-        {result.webSources && result.webSources.length > 0 && (
-          <div className="lg:col-span-2 glass-panel rounded-3xl p-8 border border-zinc-200 dark:border-white/10 transition-colors">
-            <h3 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2 mb-6 uppercase tracking-wider">
-              <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span>
-              Verification Sources
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {result.webSources.map((source, idx) => (
-                <a
-                  key={idx}
-                  href={source.uri}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-4 p-4 rounded-xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/5 hover:border-emerald-500/50 dark:hover:border-ornex-green/50 hover:bg-zinc-100 dark:hover:bg-white/10 transition-all group"
-                >
-                  <div className="p-2.5 rounded-lg bg-white dark:bg-black text-zinc-400 group-hover:text-emerald-500 dark:group-hover:text-ornex-green transition-colors border border-zinc-100 dark:border-white/10">
-                    <Globe className="w-4 h-4" />
-                  </div>
-                  <div className="overflow-hidden flex-1">
-                    <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200 truncate group-hover:text-emerald-500 dark:group-hover:text-ornex-green transition-colors" title={source.title}>{source.title}</p>
-                    <p className="text-xs font-mono text-zinc-500 truncate" title={source.uri}>{source.uri}</p>
-                  </div>
-                  <ExternalLink className="w-4 h-4 text-zinc-300 dark:text-zinc-700 ml-auto group-hover:text-emerald-500 dark:group-hover:text-ornex-green" />
-                </a>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Right Column: Advice & Findings */}
+        <div className="space-y-6">
+           {/* Key Findings */}
+           <div className="glass-panel rounded-3xl p-8 dark:border-white/10 transition-colors relative overflow-hidden">
+             <div className="absolute top-0 right-0 p-3 opacity-5">
+                 <Activity className="w-32 h-32" />
+             </div>
+             <h3 className="text-sm font-bold text-cyber-light-heading dark:text-white flex items-center gap-2 mb-6 uppercase tracking-[0.05em] border-l-[3px] border-blue-500 pl-3">
+               <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+               Core Forensic Indicators
+             </h3>
+             <ul className="space-y-4">
+               {result.reasoning.map((reason, idx) => (
+                 <li key={idx} className="flex items-start gap-4 text-cyber-light-text dark:text-zinc-300 group">
+                   <ArrowRight className="w-4 h-4 text-cyber-light-text/50 dark:text-zinc-600 mt-1 flex-shrink-0 group-hover:text-cyber-light-accent dark:group-hover:text-ornex-green transition-colors" />
+                   <span className="text-sm leading-relaxed">{reason}</span>
+                 </li>
+               ))}
+             </ul>
+           </div>
+
+           {/* Advice */}
+           <div className="glass-panel rounded-3xl p-8 border border-cyber-light-accent/30 bg-cyber-light-accent/5 dark:bg-ornex-green/5 shadow-[0_0_40px_rgba(0,200,83,0.05)] relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-4 opacity-5">
+                 <ShieldCheck className="w-32 h-32 text-cyber-light-accent" />
+              </div>
+              <h3 className="text-sm font-bold text-cyber-light-accent-deep dark:text-ornex-green flex items-center gap-2 mb-6 uppercase tracking-[0.05em] border-l-[3px] border-cyber-light-accent pl-3">
+                <ShieldCheck className="w-5 h-5" />
+                Sentinel Mitigation Advice
+              </h3>
+              <div className="grid grid-cols-1 gap-4">
+                 {(result.mitigationAdvice && result.mitigationAdvice.length > 0) ? result.mitigationAdvice.map((advice, idx) => (
+                   <div key={idx} className="flex items-start gap-3 p-4 rounded-2xl bg-white/40 dark:bg-black/40 border border-cyber-light-accent/20 backdrop-blur-sm">
+                      <div className="w-6 h-6 rounded-full bg-cyber-light-accent/10 dark:bg-ornex-green/10 flex items-center justify-center flex-shrink-0 text-cyber-light-accent dark:text-ornex-green font-bold text-xs">
+                         {idx + 1}
+                      </div>
+                      <p className="text-sm text-cyber-light-text dark:text-zinc-300 leading-snug">
+                         {advice}
+                      </p>
+                   </div>
+                 )) : (
+                    <div className="flex items-center gap-3 p-4 rounded-2xl bg-white/40 dark:bg-black/40 border border-cyber-light-accent/20 backdrop-blur-sm">
+                      <Info className="w-4 h-4 text-cyber-light-accent" />
+                      <p className="text-sm text-cyber-light-text/70 italic">No specific mitigation required at this time.</p>
+                    </div>
+                 )}
+              </div>
+           </div>
+        </div>
 
       </div>
+
+      {/* Image Modal */}
+      {isImageModalOpen && result.agentReport.activeProbing.screenshotPath && createPortal(
+        <div 
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 backdrop-blur-sm p-4 md:p-8"
+          onClick={() => setIsImageModalOpen(false)}
+        >
+          {/* Close Button - Truly fixed to the viewport */}
+          <button 
+            className="fixed top-6 right-6 z-[10000] p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors backdrop-blur-md border border-white/10 shadow-xl cursor-pointer"
+            onClick={(e) => { e.stopPropagation(); setIsImageModalOpen(false); }}
+            title="Close Preview"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          
+          {/* Scrollable Content Area */}
+          <div 
+            className="w-full max-w-6xl max-h-full overflow-y-auto custom-scrollbar animate-in zoom-in-95 duration-300 rounded-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img 
+              src={`${API_BASE_URL}/${result.agentReport.activeProbing.screenshotPath}`} 
+              alt="Fullscreen Evidence Screenshot"
+              className="w-full h-auto rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-white/5 cursor-default"
+            />
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 });

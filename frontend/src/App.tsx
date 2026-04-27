@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef, memo } from 'react';
-import { Search, AlertCircle, Shield, Globe, Terminal, Moon, Sun, ArrowRight, Bot } from 'lucide-react';
-import type { AnalysisResult, ScanHistoryItem, RiskLevel } from './types';
+import { Search, AlertCircle, Shield, Globe, Terminal, Moon, Sun, ArrowRight, Bot, BarChart3 } from 'lucide-react';
+import type { AnalysisResult, ScanHistoryItem, RiskLevel, BackendScanResponse, AgentReport } from './types';
 import { ResultDetails } from './components/ResultDetails';
 import { HistorySidebar } from './components/HistorySidebar';
+import { AnalyticsPanel } from './components/AnalyticsPanel';
 import { BackgroundPaths } from './components/ui/background-paths';
 import './App.css';
 
@@ -35,17 +36,6 @@ const AGENT_STEPS = [
 // ---------------------------------------------------------------------------
 // Map the backend's ScanResponse → prototype's AnalysisResult
 // ---------------------------------------------------------------------------
-interface BackendScanResponse {
-  url: string;
-  risk_score: number;
-  risk_level: string;
-  explanation: string;
-  brand_impersonation: boolean;
-  brand_name: string | null;
-  verdictTitle?: string;
-  technicalDetails?: any;
-  agentReport?: any;
-}
 
 function mapToAnalysisResult(raw: BackendScanResponse): AnalysisResult {
   let riskLevel: RiskLevel;
@@ -82,25 +72,18 @@ function mapToAnalysisResult(raw: BackendScanResponse): AnalysisResult {
     ? raw.explanation.split(/\n+/).filter((s: string) => s.trim().length > 0)
     : ['No detailed findings available.'];
 
-  const brandName = raw.brand_name || 'None detected';
-  const agentReport = {
+  // Map backend agent report - Stop fabricating outcomes
+  const rawAgentData = raw.agentReport || {};
+  const activeProbing = rawAgentData.activeProbing || rawAgentData; // Handle both nested and flat for compatibility during transition
+  
+  const mappedAgentReport: AgentReport = {
     activeProbing: {
-      performed: true,
-      credentialsUsed: 'test_admin@linkveil.local / ●●●●●●●●',
-      outcome: riskLevel === 'MALICIOUS'
-        ? 'Accepted fake credentials — redirected to data harvest page'
-        : riskLevel === 'SUSPICIOUS'
-          ? 'Form accepted credentials but no redirect detected'
-          : 'No login form detected on target page',
-      behaviorRisk: (riskLevel === 'MALICIOUS' ? 'HIGH' : riskLevel === 'SUSPICIOUS' ? 'MEDIUM' : 'LOW') as 'HIGH' | 'MEDIUM' | 'LOW',
-    },
-    visualForensics: {
-      analyzed: true,
-      brandImpersonation: raw.brand_impersonation ? brandName : 'None — no brand impersonation detected',
-      hostingMismatch: raw.brand_impersonation
-        ? `Claiming ${brandName} but hosted on unrelated infrastructure`
-        : 'Hosting infrastructure matches expected domain registrar',
-    },
+      performed: !!activeProbing.performed,
+      credentialsUsed: activeProbing.credentialsUsed || 'test_admin@linkveil.local / ●●●●●●●●',
+      outcome: activeProbing.outcome || 'No outcome reported by agent.',
+      behaviorRisk: (activeProbing.behaviorRisk || 'Unknown') as any,
+      ...activeProbing
+    }
   };
 
   let urlStructure = raw.url;
@@ -109,16 +92,17 @@ function mapToAnalysisResult(raw: BackendScanResponse): AnalysisResult {
     urlStructure = `Protocol: ${u.protocol} | Host: ${u.hostname} | Path: ${u.pathname}`;
   } catch { /* use raw url */ }
 
-  const technicalDetails = raw.technicalDetails || {
+  const technicalDetails = {
     urlStructure,
-    domainReputation: riskLevel === 'SAFE'
-      ? 'Domain has been registered for an extended period with a reputable registrar.'
-      : riskLevel === 'SUSPICIOUS'
-        ? 'Domain was recently registered or uses a privacy service — warrants caution.'
-        : 'Domain is flagged in multiple threat databases.',
+    domainReputation: raw.whois_info?.domain_age_days != null
+      ? `Domain age: ${raw.whois_info.domain_age_days} days. Registrar: ${raw.whois_info.registrar || 'Unknown'}.${raw.whois_info.is_new_domain ? ' ⚠️ Recently registered.' : ''}${raw.whois_info.has_privacy ? ' ⚠️ Uses privacy protection.' : ''}`
+      : (riskLevel === 'SAFE' ? 'Domain registration appears legitimate.' : 'Domain reputation check inconclusive.'),
     socialEngineeringTricks: raw.brand_impersonation
-      ? `Impersonates ${brandName} branding to trick users into submitting credentials.`
+      ? `Impersonates ${raw.brand_name} branding to trick users into submitting credentials.`
       : reasoning[0] || 'No social engineering patterns detected.',
+    visualPrediction: raw.visual_forensics?.brand_match 
+      ? `Visual match for ${raw.visual_forensics.brand_match} logo detected (score: ${raw.visual_forensics.score})`
+      : 'No visual logo matches detected.'
   };
 
   return {
@@ -128,9 +112,14 @@ function mapToAnalysisResult(raw: BackendScanResponse): AnalysisResult {
     verdictTitle,
     reasoning,
     technicalDetails,
-    agentReport: raw.agentReport || agentReport,
-    webSources: [],
+    agentReport: mappedAgentReport,
     timestamp: Date.now(),
+    whois_info: raw.whois_info,
+    threat_intel: raw.threat_intel,
+    visual_forensics: raw.visual_forensics,
+    fusion_trace: raw.fusion_trace,
+    mitigationAdvice: raw.mitigationAdvice,
+    probe_artifacts: raw.probe_artifacts
   };
 }
 
@@ -138,12 +127,12 @@ function mapToAnalysisResult(raw: BackendScanResponse): AnalysisResult {
 // Memoized FeatureCard — prevents re-renders when parent state changes
 // ---------------------------------------------------------------------------
 const FeatureCard = memo(({ icon, title, desc }: { icon: React.ReactNode, title: string, desc: string }) => (
-  <div className="p-6 rounded-2xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/5 hover:border-emerald-500/30 dark:hover:border-ornex-green/30 transition-all hover:bg-zinc-100 dark:hover:bg-white/10 group h-full">
-    <div className="mb-4 p-3 bg-zinc-200 dark:bg-black w-fit rounded-lg border border-zinc-300 dark:border-white/10 group-hover:border-emerald-500/50 dark:group-hover:border-ornex-green/50 transition-colors shadow-lg">
+  <div className="p-6 rounded-2xl glass-panel dark:bg-white/5 dark:border-white/5 hover:border-cyber-light-accent/30 dark:hover:border-ornex-green/30 transition-all hover:bg-white/80 dark:hover:bg-white/10 group h-full">
+    <div className="mb-4 p-3 bg-cyber-light-bg dark:bg-black w-fit rounded-lg border border-cyber-light-border dark:border-white/10 group-hover:border-cyber-light-accent/50 dark:group-hover:border-ornex-green/50 transition-colors shadow-lg">
       {icon}
     </div>
-    <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-2 font-mono uppercase tracking-tight">{title}</h3>
-    <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">{desc}</p>
+    <h3 className="text-lg font-bold text-cyber-light-heading dark:text-white mb-2 font-mono uppercase tracking-tight">{title}</h3>
+    <p className="text-sm text-cyber-light-text dark:text-zinc-400 leading-relaxed">{desc}</p>
   </div>
 ));
 FeatureCard.displayName = 'FeatureCard';
@@ -171,6 +160,7 @@ function App() {
     return [];
   });
   const [currentTip, setCurrentTip] = useState("");
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     if (typeof window !== 'undefined') {
@@ -299,44 +289,53 @@ function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-ornex-black text-zinc-900 dark:text-zinc-100 font-sans selection:bg-emerald-300 dark:selection:bg-ornex-green selection:text-emerald-900 dark:selection:text-ornex-black pb-20 transition-colors duration-300 relative">
+    <div className="min-h-screen bg-cyber-light-bg dark:bg-ornex-black text-cyber-light-heading dark:text-zinc-100 font-sans pb-20 transition-colors duration-300 relative">
 
       {/* Background Glows */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-[20%] -left-[10%] w-[800px] h-[800px] bg-emerald-400/20 dark:bg-ornex-green/10 rounded-full blur-[120px] animate-blob mix-blend-multiply dark:mix-blend-screen opacity-60"></div>
-        <div className="absolute top-[40%] -right-[10%] w-[600px] h-[600px] bg-emerald-500/10 rounded-full blur-[100px] animate-blob animation-delay-2000 mix-blend-multiply dark:mix-blend-screen opacity-40"></div>
+        <div className="absolute -top-[20%] -left-[10%] w-[800px] h-[800px] bg-cyber-light-accent/15 dark:bg-ornex-green/10 rounded-full blur-[120px] animate-blob mix-blend-multiply dark:mix-blend-screen opacity-60"></div>
+        <div className="absolute top-[40%] -right-[10%] w-[600px] h-[600px] bg-cyber-light-accent/10 dark:bg-ornex-green/5 rounded-full blur-[100px] animate-blob animation-delay-2000 mix-blend-multiply dark:mix-blend-screen opacity-40"></div>
       </div>
 
       {/* Animated SVG paths — full bleed */}
       <div className="absolute inset-x-0 top-0 h-[900px] pointer-events-none overflow-hidden opacity-50 dark:opacity-35 z-0">
         <BackgroundPaths />
-        <div className="absolute inset-x-0 bottom-0 h-64 bg-gradient-to-t from-slate-50 dark:from-ornex-black to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-64 bg-gradient-to-t from-cyber-light-bg dark:from-ornex-black to-transparent" />
       </div>
 
       {/* Navbar */}
-      <nav className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4">
-        <div className="w-full max-w-7xl bg-white dark:bg-[#0a0a0a] border border-zinc-200 dark:border-white/10 rounded-full px-6 h-16 flex items-center justify-between shadow-2xl shadow-black/5 dark:shadow-black/20">
+      <nav className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
+        <div className="w-full max-w-7xl glass-panel dark:bg-[#0a0a0a] dark:border-white/10 rounded-full px-6 h-16 flex items-center justify-between shadow-2xl shadow-black/5 dark:shadow-black/20 pointer-events-auto">
           <div className="flex items-center gap-3">
-             <div className="w-8 h-8 rounded bg-emerald-500 dark:bg-ornex-green flex items-center justify-center text-white dark:text-ornex-black shadow-[0_0_15px_rgba(16,185,129,0.4)] dark:shadow-[0_0_15px_rgba(57,255,20,0.5)]">
+             <div className="w-8 h-8 rounded bg-cyber-light-accent dark:bg-ornex-green flex items-center justify-center text-white dark:text-ornex-black shadow-[0_0_15px_rgba(0,200,83,0.4)] dark:shadow-[0_0_15px_rgba(57,255,20,0.5)]">
                <Shield className="w-5 h-5 fill-current" />
              </div>
-            <span className="text-xl font-bold tracking-tight text-zinc-900 dark:text-white">
+            <span className="text-xl font-bold tracking-tight text-cyber-light-heading dark:text-white">
               LinkVeil AI
             </span>
           </div>
 
           <div className="flex items-center gap-4">
-            <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-mono text-emerald-600 dark:text-zinc-500 uppercase tracking-wider">
-              <span className="w-2 h-2 bg-emerald-600 dark:bg-ornex-green rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)] dark:shadow-[0_0_8px_#39FF14]"></span>
+            <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-mono text-cyber-light-accent dark:text-zinc-500 uppercase tracking-wider">
+              <span className="w-2 h-2 bg-cyber-light-accent dark:bg-ornex-green rounded-full animate-pulse shadow-[0_0_8px_rgba(0,200,83,0.5)] dark:shadow-[0_0_8px_#39FF14]"></span>
               System Active
             </span>
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-full bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-white/10 transition-colors border border-transparent dark:border-white/5"
-              aria-label="Toggle theme"
-            >
-              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setShowAnalytics(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-cyber-light-accent/10 hover:bg-cyber-light-accent/20 text-cyber-light-accent dark:text-ornex-green border border-cyber-light-accent/20 rounded-full transition-all text-sm font-medium"
+              >
+                <BarChart3 className="w-4 h-4" />
+                <span>Analytics</span>
+              </button>
+              <button
+                onClick={toggleTheme}
+                className="p-2 rounded-full bg-cyber-light-bg dark:bg-white/5 text-cyber-light-text dark:text-zinc-400 hover:bg-white dark:hover:bg-white/10 transition-colors border border-transparent dark:border-white/5"
+                aria-label="Toggle theme"
+              >
+                {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
         </div>
       </nav>
@@ -349,27 +348,27 @@ function App() {
 
             {/* Hero / Input Section */}
             <div className="text-center space-y-8 flex flex-col items-center relative z-10">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-emerald-200 bg-emerald-100 text-emerald-700 dark:border-ornex-green/30 dark:bg-ornex-green/10 dark:text-ornex-green text-xs font-mono tracking-widest uppercase transition-colors">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cyber-light-accent/30 bg-cyber-light-accent/10 text-cyber-light-accent dark:border-ornex-green/30 dark:bg-ornex-green/10 dark:text-ornex-green text-xs font-mono tracking-widest uppercase transition-colors">
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-600 dark:bg-ornex-green opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600 dark:bg-ornex-green"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyber-light-accent dark:bg-ornex-green opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-cyber-light-accent dark:bg-ornex-green"></span>
                 </span>
                 Defend Yourself From Phishing
               </div>
 
-              <h1 className="text-5xl md:text-7xl font-bold tracking-tighter text-zinc-900 dark:text-white leading-[0.95] uppercase">
+              <h1 className="text-5xl md:text-7xl font-bold tracking-tighter text-cyber-light-heading dark:text-white leading-[0.95] uppercase">
                 Cyber Defense <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-zinc-500 to-zinc-800 dark:from-zinc-400 dark:to-zinc-700">That Evolves</span> <br />
-                <span className="text-emerald-500 dark:text-ornex-green drop-shadow-[0_0_15px_rgba(16,185,129,0.2)] dark:drop-shadow-[0_0_15px_rgba(57,255,20,0.4)]">Daily.</span>
+                <span className="text-cyber-light-accent dark:text-ornex-green drop-shadow-[0_0_15px_rgba(0,200,83,0.25)] dark:drop-shadow-[0_0_15px_rgba(57,255,20,0.4)]">Daily.</span>
               </h1>
 
-              <p className="text-zinc-600 dark:text-zinc-400 max-w-xl text-lg leading-relaxed">
+              <p className="text-cyber-light-text dark:text-zinc-400 max-w-xl text-lg leading-relaxed">
                 AI-driven protection that learns, adapts, and grows stronger every single day—so you stay one step ahead of every digital threat.
               </p>
 
               <form onSubmit={handleAnalyze} className="max-w-2xl w-full relative group mt-8">
-                <div className="relative flex items-center p-2 bg-white dark:bg-black/40 backdrop-blur-sm rounded-full border border-zinc-200 dark:border-white/15 shadow-xl transition-all duration-300 hover:border-emerald-500/50 dark:hover:border-ornex-green/50 hover:shadow-[0_0_30px_rgba(16,185,129,0.1)] dark:hover:shadow-[0_0_30px_rgba(57,255,20,0.1)]">
-                  <div className="pl-6 text-zinc-500 dark:text-zinc-500">
+                <div className="relative flex items-center p-2 glass-panel dark:bg-black/40 rounded-full dark:border-white/15 transition-all duration-300 hover:border-cyber-light-accent/50 dark:hover:border-ornex-green/50 hover:shadow-[0_0_30px_rgba(0,200,83,0.15)] dark:hover:shadow-[0_0_30px_rgba(57,255,20,0.1)]">
+                  <div className="pl-6 text-cyber-light-text dark:text-zinc-500">
                     <Search className="w-5 h-5" />
                   </div>
                   <input
@@ -377,7 +376,7 @@ function App() {
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
                     placeholder="ENTER TARGET URL..."
-                    className="flex-1 w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 ring-0 shadow-none appearance-none py-3 px-4 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-600 text-base font-mono tracking-wide"
+                    className="flex-1 w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 ring-0 shadow-none appearance-none py-3 px-4 text-cyber-light-heading dark:text-white placeholder-cyber-light-text/60 dark:placeholder-zinc-600 text-base font-mono tracking-wide"
                     autoComplete="off"
                     id="url-input"
                   />
@@ -388,10 +387,10 @@ function App() {
                     id="scan-button"
                     className={`px-8 py-3 font-bold rounded-full transition-all flex items-center gap-2 
                       ${loading
-                        ? 'bg-emerald-500 dark:bg-ornex-green text-white dark:text-ornex-black cursor-wait shadow-[0_0_15px_rgba(16,185,129,0.4)] dark:shadow-[0_0_15px_rgba(57,255,20,0.4)]'
+                        ? 'bg-cyber-light-accent dark:bg-ornex-green text-white dark:text-ornex-black cursor-wait shadow-[0_0_15px_rgba(0,200,83,0.4)] dark:shadow-[0_0_15px_rgba(57,255,20,0.4)]'
                         : !url
-                          ? 'bg-zinc-200 text-zinc-400 dark:bg-white/10 dark:text-zinc-600 cursor-not-allowed'
-                          : 'bg-emerald-500 hover:bg-emerald-400 dark:bg-ornex-green dark:hover:bg-[#32e010] text-white dark:text-ornex-black hover:shadow-[0_0_25px_rgba(16,185,129,0.6)] dark:hover:shadow-[0_0_25px_rgba(57,255,20,0.6)] hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(16,185,129,0.4)] dark:shadow-[0_0_15px_rgba(57,255,20,0.4)]'
+                          ? 'bg-[#E0E8E0] text-[#8CA58C] dark:bg-white/10 dark:text-zinc-600 cursor-not-allowed'
+                          : 'bg-cyber-light-accent hover:bg-cyber-light-accentHover dark:bg-ornex-green dark:hover:bg-[#32e010] text-white dark:text-ornex-black hover:shadow-[0_0_25px_rgba(0,200,83,0.6)] dark:hover:shadow-[0_0_25px_rgba(57,255,20,0.6)] hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(0,200,83,0.4)] dark:shadow-[0_0_15px_rgba(57,255,20,0.4)]'
                       }`}
                   >
                     {loading ? (
@@ -479,13 +478,13 @@ function App() {
              {/* Info Panel */}
              <div className="glass-panel p-6 rounded-2xl transition-colors relative overflow-hidden group">
                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                  <Shield className="w-24 h-24 text-emerald-500 dark:text-ornex-green" />
+                  <Shield className="w-24 h-24 text-cyber-light-accent dark:text-ornex-green" />
                </div>
-               <h3 className="text-xs font-bold text-emerald-600 dark:text-ornex-green uppercase tracking-widest mb-4 flex items-center gap-2">
-                 <span className="w-1.5 h-1.5 bg-emerald-500 dark:bg-ornex-green rounded-full"></span>
+               <h3 className="text-xs font-bold text-cyber-light-accent dark:text-ornex-green uppercase tracking-widest mb-4 flex items-center gap-2">
+                 <span className="w-1.5 h-1.5 bg-cyber-light-accent dark:bg-ornex-green rounded-full"></span>
                  Security Intel
                </h3>
-               <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed font-mono">
+               <p className="text-sm text-cyber-light-text dark:text-zinc-400 leading-relaxed font-mono">
                  // ADVISORY <br/>
                  {currentTip || "Loading security tips..."}
                </p>
@@ -496,6 +495,8 @@ function App() {
       </main>
 
 
+      {/* Analytics Overlay */}
+      {showAnalytics && <AnalyticsPanel onClose={() => setShowAnalytics(false)} />}
     </div>
   );
 }

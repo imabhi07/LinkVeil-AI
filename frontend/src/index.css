@@ -6,8 +6,8 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --glass-bg: rgba(255, 255, 255, 0.9);
-  --glass-border: rgba(0, 0, 0, 0.1);
+  --glass-bg: rgba(240, 244, 240, 0.92); /* #F0F4F0 */
+  --glass-border: rgba(212, 232, 212, 1); /* #D4E8D4 */
   --glass-blur: 12px;
 }
 .dark {
@@ -24,7 +24,10 @@ html, body {
 }
 
 ::selection {
-  background-color: rgba(16, 185, 129, 0.3);
+  background-color: rgba(0, 200, 83, 0.3); /* #00C853 */
+}
+.dark ::selection {
+  background-color: rgba(57, 255, 20, 0.3);
 }
 
 /* ── Glass panel ── */
@@ -32,6 +35,10 @@ html, body {
   background: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur));
   border: 1px solid var(--glass-border);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.10);
+}
+.dark .glass-panel {
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
 }
 
 /* ── Custom scrollbar (webkit) ── */
@@ -39,13 +46,22 @@ html, body {
   width: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #050505;
+  background: #F0F4F0;
 }
 ::-webkit-scrollbar-thumb {
-  background: #333;
+  background: #D4E8D4;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
+  background: #00C853;
+}
+.dark ::-webkit-scrollbar-track {
+  background: #050505;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #333;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
   background: #39FF14;
 }
 

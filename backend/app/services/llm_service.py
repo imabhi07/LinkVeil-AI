@@ -46,7 +46,7 @@ class RiskAnalysis(BaseModel):
 
     def model_post_init(self, __context):
         level = self.risk_level.strip().capitalize()
-        if level not in ("Low", "Medium", "High"):
+        if level not in ("Low", "High"):
             level = "Unknown"
         self.risk_level = level
 
@@ -83,11 +83,16 @@ TASKS:
 4. **FREE HOSTING & CLOUD ABUSE**:
    - Legitimate brands host login/auth on dedicated private infrastructure.
    - Any login portal on github.io, netlify.app, vercel.app, firebaseapp.com, web.app, etc., should be flagged as HIGH RISK brand impersonation unless it is the developer's own site.
+5. **CALIBRATION — AVOID FALSE POSITIVES**:
+   - Standard SaaS signup/login pages (e.g., lovable.dev/signup, vercel.com/login) on their OWN domain are LEGITIMATE. Do not inflate scores for normal authentication UIs.
+   - Query parameters like `?ref=`, `?utm_`, `?source=` are standard marketing/affiliate referral codes, NOT spearphishing tracking IDs. Only flag query params if they contain base64-encoded email addresses or obfuscated redirect chains.
+   - A page having a signup or login form does NOT make it phishing. Phishing requires the domain to be impersonating ANOTHER brand.
+   - If the domain is well-known or clearly belongs to a real company/product, the riskScore should be LOW (0-25) unless there is concrete impersonation evidence.
 
 OUTPUT FORMAT:
 Return a valid JSON object.
 - riskScore: 0-100 (Integer).
-- risk_level: "Low" | "Medium" | "High".
+- risk_level: "Low" | "High".
 - explanation: A professional, 6-8 bullet point summary of core findings.
 - technicalDetails:
     - "urlDeepDive": Expert analysis of the URL's structure and entropy.
@@ -142,12 +147,12 @@ async def analyze_url(url: str, features: dict) -> dict:
         fallback["explanation"] = "API Error: GEMINI_API_KEY environment variable is missing or invalid."
         return fallback
 
-    prompt = f'Investigate this URL: "{url}". Features: {json.dumps(features)}. Perform active probing simulation and visual forensics analysis.'
+    prompt = f'Investigate this URL: "{url}". Lexical features: {json.dumps(features)}. Analyze ONLY the URL structure, domain reputation signals, and lexical features provided. Do NOT simulate probing, form interactions, or credential testing — that is handled by a separate system.'
 
     # ── Model Rotation & Retry Loop ──
     for model_name in AVAILABLE_MODELS:
-        # Retry with exponential backoff (handles transient 429/5xx)
-        max_retries = 1
+        # Retry with backoff
+        max_retries = 2
         for attempt in range(max_retries + 1):
             try:
                 logger.debug(f"Attempting analysis with {model_name} (attempt {attempt + 1})")
@@ -199,9 +204,20 @@ async def analyze_url(url: str, features: dict) -> dict:
             except Exception as e:
                 error_msg = str(e)
                 is_quota_error = any(kw in error_msg for kw in ["429", "RESOURCE_EXHAUSTED", "QUOTA_EXHAUSTED"])
+                is_not_found = any(kw in error_msg for kw in ["404", "NOT_FOUND"])
                 
                 if is_quota_error:
-                    logger.warning(f"Quota exhausted for {model_name}. Falling back to next model if available.")
+                    if attempt < max_retries:
+                        wait_time = 5 * (attempt + 1)
+                        logger.warning(f"Quota exhausted for {model_name} (attempt {attempt + 1}), waiting {wait_time}s...")
+                        await asyncio.sleep(wait_time)
+                        continue
+                    else:
+                        logger.warning(f"Quota exhausted for {model_name}. Falling back to next model.")
+                        break
+                    
+                if is_not_found:
+                    logger.warning(f"Model {model_name} not available (404). Falling back to next model if available.")
                     break # Immediately try next model in AVAILABLE_MODELS
                 
                 is_retryable = any(kw in error_msg for kw in ["503", "UNAVAILABLE", "deadline", "timeout"])

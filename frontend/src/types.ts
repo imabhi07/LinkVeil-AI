@@ -8,22 +8,23 @@ export interface AnalysisDetails {
   visualPrediction?: string;
 }
 
-export interface WebSource {
-  title: string;
-  uri: string;
-}
-
 export interface AgentReport {
   activeProbing: {
     performed: boolean;
     credentialsUsed: string;
     outcome: string;
-    behaviorRisk: 'HIGH' | 'MEDIUM' | 'LOW';
-  };
-  visualForensics: {
-    analyzed: boolean;
-    brandImpersonation: string;
-    hostingMismatch: string;
+    behaviorRisk: 'HIGH' | 'MEDIUM' | 'LOW' | 'Unknown';
+    reachable?: boolean;
+    loginFormFound?: boolean;
+    fieldsFilled?: boolean;
+    acceptedFakeCredentials?: boolean;
+    postSubmitRedirect?: string;
+    pageTitle?: string;
+    finalUrl?: string;
+    screenshotPath?: string;
+    redirectChain?: string[];
+    formFields?: Record<string, any>;
+    contentSnippet?: string;
   };
 }
 
@@ -36,8 +37,32 @@ export interface AnalysisResult {
   technicalDetails: AnalysisDetails;
   mitigationAdvice?: string[];
   agentReport: AgentReport;
-  webSources: WebSource[];
   timestamp: number;
+  
+  // New Forensic Artifacts
+  whois_info?: Record<string, any>;
+  threat_intel?: Record<string, any>;
+  visual_forensics?: Record<string, any>;
+  fusion_trace?: Record<string, any>;
+  probe_artifacts?: Record<string, any>;
+}
+
+export interface BackendScanResponse {
+  url: string;
+  risk_score: number;
+  risk_level: string;
+  explanation: string;
+  brand_impersonation: boolean;
+  brand_name: string | null;
+  verdictTitle: string;
+  technicalDetails: Record<string, any>;
+  mitigationAdvice: string[];
+  agentReport: Record<string, any>;
+  whois_info?: Record<string, any>;
+  threat_intel?: Record<string, any>;
+  visual_forensics?: Record<string, any>;
+  fusion_trace?: Record<string, any>;
+  probe_artifacts?: Record<string, any>;
 }
 
 export interface ScanHistoryItem extends AnalysisResult {

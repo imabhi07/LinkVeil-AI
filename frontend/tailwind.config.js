@@ -22,6 +22,17 @@ export default {
           maliciousred: '#fb7185',
           slatebg: '#020617',
           panelbg: '#0f172a',
+          light: {
+            bg: '#F0F4F0',
+            border: '#D4E8D4',
+            heading: '#0D1F0D',
+            text: '#4A5E4A',
+            accent: '#00A846', // Deeper, richer green for text contrast
+            'accent-deep': '#006B2B', // For SAFE badges and chart labels
+            'accent-data': '#005C2A', // For key data points like %
+            'accent-code': '#007A35', // For payload/monospace text
+            'accent-bg': '#C8F5DC',   // Light background for green badges
+          }
         }
       },
       fontFamily: {
