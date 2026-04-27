@@ -87,7 +87,8 @@ TASKS:
    - Standard SaaS signup/login pages (e.g., lovable.dev/signup, vercel.com/login) on their OWN domain are LEGITIMATE. Do not inflate scores for normal authentication UIs.
    - Query parameters like `?ref=`, `?utm_`, `?source=` are standard marketing/affiliate referral codes, NOT spearphishing tracking IDs. Only flag query params if they contain base64-encoded email addresses or obfuscated redirect chains.
    - A page having a signup or login form does NOT make it phishing. Phishing requires the domain to be impersonating ANOTHER brand.
-   - If the domain is well-known or clearly belongs to a real company/product, the riskScore should be LOW (0-25) unless there is concrete impersonation evidence.
+   - **SECURITY TOOLS & REPOS**: Do not penalize URLs just because they contain words like "PhishGuard", "LinkVeil", "Security", or "Exploit" if they are clearly on a legitimate developer platform like GitHub or a security company's blog. These are educational/defensive tools, not threats.
+   - If the domain is well-known (GitHub, Microsoft, Google, etc.) or clearly belongs to a real company/product, the riskScore should be VERY LOW (0-15) unless there is concrete evidence of a file-based exploit or hosted malware.
 
 OUTPUT FORMAT:
 Return a valid JSON object.
@@ -130,6 +131,7 @@ async def analyze_url(url: str, features: dict) -> dict:
         "explanation": "Analysis unavailable due to API error.",
         "brand_impersonation": False,
         "brand_name": None,
+        "recommendation": "⚠️ Caution: Detailed analysis unavailable."
     }
 
     # ── Check LLM cache ──

@@ -227,18 +227,42 @@ async def evaluate_url(url: str, db: Session) -> dict:
                 probe_adjustment = -20  # Strong exculpatory: page reachable, no cred harvesting at all
                 logger.info("Probe Dampener: -20 (No login form found — not a credential harvester)")
     
-    risk_score = risk_score + whois_boost + brand_boost + vision_boost + tld_boost + login_boost + probe_adjustment
+    # ── Safe Domain Dampener ──
+    if _should_skip_probe(url):
+        risk_score -= 30
+        logger.info(f"Safe Domain Dampener: -30 (Domain is in KNOWN_SAFE_DOMAINS)")
+
     risk_score = max(0.0, min(100.0, risk_score))
     
-    # Final Level Assignment
-    if risk_score >= 40: final_level = "High"
-    else: final_level = "Low"
+    # ── Unreachable Domain Override ──
+    is_unreachable = False
+    if probe_result and hasattr(probe_result, "performed") and probe_result.performed:
+        if not getattr(probe_result, "reachable", True):
+            is_unreachable = True
+
+    # Final Level and Recommendation Assignment
+    if is_unreachable:
+        final_level = "Unknown"
+        recommendation = "💤 Site is Offline - Safe to ignore"
+        risk_score = 0.0
+        llm_result["explanation"] = "The target URL is currently unreachable, offline, or does not exist. Since no content could be loaded, it currently poses no active threat."
+        logger.info(f"Unreachable Domain Override: Score set to 0.0 for {url}")
+    elif risk_score >= 71:
+        final_level = "High"
+        recommendation = "🛑 Dangerous - Do Not Open"
+    elif risk_score >= 31:
+        final_level = "Medium"
+        recommendation = "⚠️ Suspicious - Proceed with Caution"
+    else:
+        final_level = "Low"
+        recommendation = "✅ Safe - You can proceed"
 
     # Construct Verdict
     verdict = {
         "url": url,
         "risk_score": round(risk_score, 2),
         "risk_level": final_level,
+        "recommendation": recommendation,
         "explanation": llm_result.get("explanation", "Analysis complete."),
         "brand_impersonation": brand_result.get("is_mismatch", False) or llm_result.get("brand_impersonation", False),
         "brand_name": brand_result.get("brand_detected") or llm_result.get("brand_name"),
@@ -294,6 +318,7 @@ def _save_to_db(verdict: dict, db: Session):
             url=verdict["url"],
             risk_score=verdict["risk_score"],
             risk_level=verdict["risk_level"],
+            recommendation=verdict.get("recommendation"),
             explanation=verdict["explanation"],
             brand_impersonation=verdict["brand_impersonation"],
             brand_name=str(verdict["brand_name"]).title() if verdict.get("brand_name") else None,
