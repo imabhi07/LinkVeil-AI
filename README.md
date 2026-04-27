@@ -21,11 +21,10 @@ LinkVeil-AI is an advanced, multi-layered security platform that provides real-t
 
 *   **⚡ Hybrid Intelligence**: Combines DistilBERT (Semantic), XGBoost (Lexical), and Gemini Pro (Cognitive).
 *   **🕵️ Active Probing**: Real-time browser agent (Playwright) analyzes live page behavior and redirects.
-*   **👁️ Visual Forensics**: pHash similarity & Brand spoofing detection (Amazon, Apple, etc.).
-*   **📡 Threat Intelligence**: Real-time short-circuiting via OpenPhish & URLhaus feeds.
-*   **🧠 Cyber Analyst**: Receives detailed explanations of *why* a site was flagged, powered by Gemini.
-*   **📊 Analytics Dashboard**: Premium dashboard for tracking threat trends and scan volume.
-*   **🎨 Premium UI**: Glassmorphic, animated React dashboard for a seamless security experience.
+*   **👁️ Multimodal Visual Forensics**: Integrated Gemini Vision for visual brand recognition and impersonation detection.
+*   **📡 Intelligence Dashboard**: Real-time aggregation of forensic indicators, categories, and historical data.
+*   **🛡️ Threat Intel Services**: Live feeds from OpenPhish/URLhaus plus Whois and brand reputation lookups.
+*   **🎨 Cyber-Light UI**: A premium "Cyber-Botanical" light mode for accessibility without sacrificing aesthetic depth.
 
 ---
 
@@ -44,8 +43,8 @@ LinkVeil-AI is an advanced, multi-layered security platform that provides real-t
 ├── backend/                # FastAPI High-Performance Backend
 │   ├── app/
 │   │   ├── models/         # Pydantic Schemas & DB Models
-│   │   ├── routes/         # API Scanning Endpoints
-│   │   ├── services/       # AI Engines: Gemini, Playwright, XGBoost
+│   │   ├── routes/         # API Endpoints (Scanning, Analytics)
+│   │   ├── services/       # AI Engines: Vision, Whois, ThreatIntel, Probe
 │   │   └── main.py         # Entry Point
 │   └── requirements.txt    # Python Dependencies
 ├── frontend/               # React + Vite Forensic Dashboard

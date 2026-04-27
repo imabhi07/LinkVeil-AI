@@ -18,11 +18,12 @@ LinkVeil-AI solves this using a **Defense-in-Depth** approach, combining four sp
 
 ### 🛡️ High-Level Component View
 1. **Frontend (React/Vite)**: Gathers the URL and provides a real-time "progress scan" visualizer.
-2. **API Layer (FastAPI)**: Manages async orchestration of the four detection engines.
+2. **API Layer (FastAPI)**: Manages async orchestration of five forensic engines.
 3. **Engine 1: XGBoost (Lexical)**: Checks the "DNA" of the URL string.
 4. **Engine 2: DistilBERT (Semantic)**: Checks the "Meaning" of the URL.
 5. **Engine 3: Playwright Agent (Live Probe)**: Checks the "Behavior" of the destination.
-6. **Engine 4: Gemini Pro (LLM Analyst)**: Checks the "Context" and explains the risk.
+6. **Engine 4: Gemini Pro (Cognitive Analyst)**: Synthesizes evidence and explains risks.
+7. **Engine 5: Gemini Vision (Visual Forensics)**: Detects pixel-perfect brand impersonation.
 
 ---
 
@@ -71,8 +72,10 @@ Scores are aggregated into a **Final Risk Score (0-100)** using a weighted prior
 
 ## 7. Frontend Design System
 The UI was designed to feel like a high-end security operations center (SOC) tool:
-- **Glassmorphism**: Elegant, transparent UI elements.
-- **Micro-Animations**: Real-time progress bars and transition effects to keep the user engaged during the 2-4 second analysis window.
+The UI was designed to feel like a high-end security operations center (SOC) tool:
+- **Glassmorphism**: Elegant, transparent UI elements with subtle motion.
+- **Cyber-Light Theme**: A native light mode designed for accessibility. It uses deep forest-green accents (#00A846) on warm-off-white (#F0F4F0) to maintain a premium technical feel while reducing eye strain.
+- **Micro-Animations**: Real-time progress bars and transition effects to keep the user engaged during the analysis window.
 - **Accessibility**: High-contrast badges and clear typography for binary verdicts (Safe/Malicious).
 
 ---
@@ -83,7 +86,21 @@ The UI was designed to feel like a high-end security operations center (SOC) too
 
 ---
 
-## 9. Future Roadmap
-- [ ] **Visual Analysis**: Using computer vision to detect pixel-perfect clones of websites.
-- [ ] **WHOIS Analysis**: Checking domain age (phishing sites are usually < 48 hours old).
+---
+
+## 9. Multimodal Visual Forensics (Engine 5)
+Using Gemini Vision, LinkVeil-AI can now "see" like a human analyst:
+- **Logo Recognition**: Identifies if a page is visually claiming to be Amazon, Google, or Microsoft.
+- **Anti-SSO Heuristics**: Distinguishes between legitimate "Login with Google" buttons and malicious pages designed entirely around fake Google portals.
+- **Confidence Scoring**: Each visual match is assigned a confidence value, which is fused with lexical and behavioral signals for the final verdict.
+
+## 10. Intelligence Analytics & Historics
+The platform now features a dedicated intelligence panel:
+- **Indicator Aggregation**: Tracks category trends (Financial, Social Media, Tech) across all scans.
+- **Historical Trends**: Visualizes scan volume and risk distribution over time.
+- **Data Persistence**: Uses a forensic SQLite/Postgres store to ensure all intelligence is available for retroactive auditing.
+
+## 11. Future Roadmap
 - [ ] **Browser Extension**: Real-time protection while browsing.
+- [ ] **Email Integration**: Scanning suspicious email headers and attachments.
+- [ ] **Collaborative Forensic Sharing**: Community-driven threat intelligence sharing.
