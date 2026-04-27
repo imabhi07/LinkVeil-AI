@@ -17,9 +17,11 @@ import asyncio
 import logging
 import re
 import threading
+import os
+import hashlib
 from concurrent.futures import ThreadPoolExecutor
-from typing import Optional
-from dataclasses import dataclass
+from typing import Optional, List, Dict
+from dataclasses import dataclass, field
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
@@ -138,14 +140,48 @@ class ProbeResult:
     credentials_used: str = f"{FAKE_USER} / ••••••••"
     outcome: str = "Probe not performed."
     behavior_risk: str = "Unknown"
-
+    
     login_form_found: bool = False
     fields_filled: bool = False
     post_submit_redirect: Optional[str] = None
     accepted_fake_creds: bool = False
+    
     page_title: Optional[str] = None
     final_url: Optional[str] = None
     error: Optional[str] = None
+    
+    # New Forensic Fields
+    screenshot_path: Optional[str] = None
+    redirect_chain: List[str] = field(default_factory=list)
+    form_fields: Dict = field(default_factory=dict)
+    content_snippet: str = ""
+
+def _cleanup_screenshots(max_files: int = 50):
+    """Deletes oldest screenshots if the folder exceeds max_files cap."""
+    try:
+        path = "data/screenshots"
+        if not os.path.exists(path):
+            return
+            
+        files = [os.path.join(path, f) for f in os.listdir(path) if f.endswith(".png")]
+        if len(files) <= max_files:
+            return
+            
+        # Sort by modification time (oldest first)
+        files.sort(key=os.path.getmtime)
+        
+        # Delete excess files
+        to_delete = files[:len(files) - max_files]
+        for f in to_delete:
+            try:
+                os.remove(f)
+                logger.debug(f"Removed old screenshot: {f}")
+            except Exception:
+                pass
+        if to_delete:
+            logger.info(f"Storage Management: Purged {len(to_delete)} legacy screenshots (Cap: {max_files}).")
+    except Exception as e:
+        logger.warning(f"Screenshot cleanup failed: {e}")
 
 
 def run_probe(url: str) -> ProbeResult:
@@ -184,6 +220,9 @@ def run_probe(url: str) -> ProbeResult:
         )
         page = context.new_page()
 
+        # --- Track redirect chain ---
+        page.on("response", lambda res: result.redirect_chain.append(res.url) if 300 <= res.status < 400 else None)
+
         # --- Step 1: Navigate ---
         try:
             page.goto(url, timeout=NAVIGATION_TIMEOUT_MS, wait_until="domcontentloaded")
@@ -191,12 +230,40 @@ def run_probe(url: str) -> ProbeResult:
             result.page_title = page.title()
             result.final_url = page.url
             logger.info(f"Probe: loaded '{result.page_title}' at {result.final_url}")
+            
+            # --- Capture Screenshot ---
+            url_hash = hashlib.md5(url.encode()).hexdigest()
+            screenshot_path = f"data/screenshots/{url_hash}.png"
+            os.makedirs("data/screenshots", exist_ok=True)
+            page.screenshot(path=screenshot_path, full_page=True)
+            result.screenshot_path = screenshot_path
+            
+            # --- Capture Content Snippet ---
+            result.content_snippet = page.content()[:2000]
+            
+            # --- Storage Hygiene: Purge old evidence ---
+            _cleanup_screenshots(max_files=50)
+
         except PWTimeout:
+            try:
+                if page.url and page.url != "about:blank":
+                    result.final_url = page.url
+                elif result.redirect_chain:
+                    result.final_url = result.redirect_chain[-1]
+            except Exception:
+                pass
             result.reachable = False
             result.outcome = "Target offline — probe failed. The URL did not respond within the timeout window."
             result.behavior_risk = "Unknown"
             return result
         except Exception as e:
+            try:
+                if page.url and page.url != "about:blank":
+                    result.final_url = page.url
+                elif result.redirect_chain:
+                    result.final_url = result.redirect_chain[-1]
+            except Exception:
+                pass
             result.reachable = False
             error_msg = str(e).split('\n')[0].split('Call log:')[0].strip()
             friendly_msg = _get_friendly_error(error_msg)
@@ -212,6 +279,14 @@ def run_probe(url: str) -> ProbeResult:
         text_fields = page.query_selector_all(
             'input[type="text"], input[type="email"], input[type="tel"], input:not([type])'
         )
+        
+        # --- Collect Form Metadata ---
+        result.form_fields = {
+            "password_count": len(password_fields),
+            "text_email_count": len(text_fields),
+            "submit_button_count": len(page.query_selector_all('button[type="submit"], input[type="submit"]')),
+            "has_login_indicators": any(kw in page.content().lower() for kw in ["sign in", "login", "password", "username"])
+        }
         multi_step = False
 
         # Multi-step detection: no password field yet but text/email fields exist
@@ -444,4 +519,9 @@ def probe_result_to_dict(r: ProbeResult) -> dict:
         "pageTitle": r.page_title,
         "finalUrl": r.final_url,
         "error": r.error,
+        # New Forensic Fields
+        "screenshotPath": r.screenshot_path,
+        "redirectChain": r.redirect_chain,
+        "formFields": r.form_fields,
+        "contentSnippet": r.content_snippet
     }

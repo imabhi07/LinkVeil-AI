@@ -1,13 +1,14 @@
 import os
-from dotenv import load_dotenv
-load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '.env'))  # Load root .env
-
+import asyncio
 import time
 import logging
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '.env'))  # Load root .env
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from backend.app.routes import scan
+from fastapi.staticfiles import StaticFiles
+from backend.app.routes import scan, analytics
 from backend.app.database import engine, Base
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,13 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+@app.on_event("startup")
+async def startup_event():
+    from backend.app.services.threat_intel_service import threat_intel_service
+    # Start background refresh task
+    asyncio.create_task(threat_intel_service.background_refresh())
+    logger.info("Threat Intel background refresh task started.")
 
 # ── Gzip compression (min 500 bytes to avoid compressing tiny responses) ──
 app.add_middleware(GZipMiddleware, minimum_size=500)
@@ -51,7 +59,12 @@ async def add_process_time_header(request: Request, call_next):
         logger.warning(f"Slow request: {request.method} {request.url.path} took {elapsed_ms:.0f}ms")
     return response
 
-app.include_router(scan.router, prefix="/api/v1")
+app.include_router(scan.router, prefix="/api/v1", tags=["Scanning"])
+app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Analytics"])
+
+# ── Serve screenshots ──
+os.makedirs("data/screenshots", exist_ok=True)
+app.mount("/data/screenshots", StaticFiles(directory="data/screenshots"), name="screenshots")
 
 @app.get("/health")
 def health_check():

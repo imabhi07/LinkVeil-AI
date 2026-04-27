@@ -21,9 +21,11 @@ LinkVeil-AI is an advanced, multi-layered security platform that provides real-t
 
 *   **⚡ Hybrid Intelligence**: Combines DistilBERT (Semantic), XGBoost (Lexical), and Gemini Pro (Cognitive).
 *   **🕵️ Active Probing**: Real-time browser agent (Playwright) analyzes live page behavior and redirects.
+*   **👁️ Visual Forensics**: pHash similarity & Brand spoofing detection (Amazon, Apple, etc.).
+*   **📡 Threat Intelligence**: Real-time short-circuiting via OpenPhish & URLhaus feeds.
 *   **🧠 Cyber Analyst**: Receives detailed explanations of *why* a site was flagged, powered by Gemini.
+*   **📊 Analytics Dashboard**: Premium dashboard for tracking threat trends and scan volume.
 *   **🎨 Premium UI**: Glassmorphic, animated React dashboard for a seamless security experience.
-*   **✅ Verified Accuracy**: Optimized for 97%+ F1 score on modern phishing datasets.
 
 ---
 
