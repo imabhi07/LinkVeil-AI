@@ -110,6 +110,7 @@ function mapToAnalysisResult(raw: BackendScanResponse): AnalysisResult {
     riskScore: Math.round(raw.risk_score),
     riskLevel,
     verdictTitle,
+    recommendation: raw.recommendation,
     reasoning,
     technicalDetails,
     agentReport: mappedAgentReport,
@@ -302,6 +303,9 @@ function App() {
         <BackgroundPaths />
         <div className="absolute inset-x-0 bottom-0 h-64 bg-gradient-to-t from-cyber-light-bg dark:from-ornex-black to-transparent" />
       </div>
+
+      {/* Top scroll mask to smoothly fade out content scrolling behind the gap above the navbar */}
+      <div className="fixed top-0 inset-x-0 h-16 bg-gradient-to-b from-cyber-light-bg dark:from-ornex-black to-transparent z-40 pointer-events-none"></div>
 
       {/* Navbar */}
       <nav className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
