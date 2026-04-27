@@ -33,6 +33,7 @@ export interface AnalysisResult {
   riskScore: number;
   riskLevel: RiskLevel;
   verdictTitle: string;
+  recommendation?: string;
   reasoning: string[];
   technicalDetails: AnalysisDetails;
   mitigationAdvice?: string[];
@@ -51,6 +52,7 @@ export interface BackendScanResponse {
   url: string;
   risk_score: number;
   risk_level: string;
+  recommendation?: string;
   explanation: string;
   brand_impersonation: boolean;
   brand_name: string | null;
