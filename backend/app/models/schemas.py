@@ -8,6 +8,7 @@ class ScanResponse(BaseModel):
     url: str
     risk_score: float
     risk_level: str
+    recommendation: Optional[str] = None
     explanation: str
     brand_impersonation: bool
     brand_name: Optional[str] = None

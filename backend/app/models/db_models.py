@@ -9,6 +9,7 @@ class ScanResult(Base):
     url = Column(String, index=True)
     risk_score = Column(Float)
     risk_level = Column(String)
+    recommendation = Column(String, nullable=True)
     explanation = Column(String)
     brand_impersonation = Column(Boolean, default=False)
     brand_name = Column(String, nullable=True)
