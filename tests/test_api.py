@@ -2,12 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
 
-# Important: Mock the actual model/LLM so tests run instantly and without keys
-with patch('backend.app.services.dl_service.DistilBertForSequenceClassification.from_pretrained'), \
-     patch('backend.app.services.dl_service.DistilBertTokenizerFast.from_pretrained'), \
-     patch('backend.app.services.engine_service.evaluate_url') as mock_evaluate:
-    
-    from backend.app.main import app
+from backend.app.main import app
 
 client = TestClient(app)
 
