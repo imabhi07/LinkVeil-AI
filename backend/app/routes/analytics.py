@@ -117,9 +117,13 @@ def get_scan_list(
     
     # Risk filter
     if filter == "malicious":
-        q = q.filter(ScanResult.risk_level.in_(["High", "Medium", "Malicious", "Unknown"]))
+        q = q.filter(ScanResult.risk_level.in_(["High", "Malicious"]))
+    elif filter == "suspicious":
+        q = q.filter(ScanResult.risk_level == "Medium")
     elif filter == "safe":
         q = q.filter(ScanResult.risk_level.in_(["Low", "Safe"]))
+    elif filter == "offline":
+        q = q.filter(ScanResult.risk_level == "Unknown")
     # "all" -> no additional filter
     
     scans = q.order_by(ScanResult.timestamp.desc()).limit(limit).all()
