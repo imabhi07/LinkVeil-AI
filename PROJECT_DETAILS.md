@@ -19,11 +19,11 @@ LinkVeil-AI solves this using a **Defense-in-Depth** approach, combining four sp
 ### 🛡️ High-Level Component View
 1. **Frontend (React/Vite)**: Gathers the URL and provides a real-time "progress scan" visualizer.
 2. **API Layer (FastAPI)**: Manages async orchestration of five forensic engines.
-3. **Engine 1: XGBoost (Lexical)**: Checks the "DNA" of the URL string.
-4. **Engine 2: DistilBERT (Semantic)**: Checks the "Meaning" of the URL.
-5. **Engine 3: Playwright Agent (Live Probe)**: Checks the "Behavior" of the destination.
-6. **Engine 4: Gemini Pro (Cognitive Analyst)**: Synthesizes evidence and explains risks.
-7. **Engine 5: Gemini Vision (Visual Forensics)**: Detects pixel-perfect brand impersonation.
+3. **Engine 1: XGBoost (Lexical)**: Checks the "DNA" of the URL string via 30 hand-crafted features.
+4. **Engine 2: Playwright Agent (Live Probe)**: Checks the "Behavior" of the destination.
+5. **Engine 3: Gemini AI (Cognitive Analyst)**: Synthesizes evidence and explains risks.
+6. **Engine 4: Gemini Vision (Visual Forensics)**: Detects pixel-perfect brand impersonation.
+7. **Engine 5: Threat Intel + WHOIS**: Checks live phishing feeds and domain registration data.
 
 ---
 
@@ -34,10 +34,11 @@ The XGBoost engine focuses on the mathematical properties of the URL string.
 - **Features Extracted**: Entropy (randomness), character frequency (excessive dashes/dots), presence of sensitive keywords (login, bank, secure), and TLD (top-level domain) reputation.
 - **Why XGBoost?**: It is exceptionally fast and handles non-linear relationships between these features better than simple logistic regression.
 
-### B. Deep Learning (DistilBERT)
-DistilBERT treates the URL as **natural language**. 
+### B. Deep Learning (DistilBERT — Training Only)
+A DistilBERT model can optionally be trained on URL data using `ml/train.py`. 
 - **The Insight**: Phishing URLs often "sound" wrong or try to look like other brands (e.g., `paypal-security-update.com`).
-- **Fine-tuning**: We fine-tuned the `distilbert-base-uncased` model on 100,000+ balanced phishing and benign URLs so it understands the semantic patterns of malicious links.
+- **Fine-tuning**: The `distilbert-base-uncased` model is fine-tuned on balanced phishing and benign URLs so it understands the semantic patterns of malicious links.
+- **Note**: The DistilBERT model is a training artifact only. At runtime the backend uses the XGBoost engine (`xgb_service.py`) alongside the Gemini LLM for all inference.
 
 ---
 
@@ -52,8 +53,8 @@ The **Probe Agent** is the most advanced part of LinkVeil-AI.
 
 ---
 
-## 5. The Cyber Analyst (Gemini Pro)
-Once the ML engines have their scores, the **Gemini 1.5 Pro** LLM is fed the raw evidence:
+## 5. The Cyber Analyst (Gemini AI)
+Once the ML engines have their scores, the **Gemini AI** LLM is fed the raw evidence:
 - "The Deep Learning model is 92% sure this is phishing."
 - "The Probe Agent found a login form on a suspicious domain."
 - "The URL contains the brand 'Netflix' but is not hosted on netflix.com."
@@ -63,15 +64,15 @@ Gemini acts as the "Decision Maker," synthesizing these signals into a human-rea
 ---
 
 ## 6. Score Orchestration Logic
-Scores are aggregated into a **Final Risk Score (0-100)** using a weighted priority system:
-1. **Critical Flags**: If the Probe Agent detects a known phishing pattern, the score is immediately boosted.
-2. **High-Confidence DL**: If DistilBERT and XGBoost both agree (>0.9), the verdict is locked as Malicious.
-3. **Ambiguous Cases**: If signals are mixed, Gemini's reasoning takes the highest weight to decide if it's a creative new attack.
+Scores are aggregated into a **Final Risk Score (0-100)** using a weighted fusion system:
+1. **Base Blend**: LLM score (70%) + XGBoost score (30%) form the base risk value.
+2. **Signal Boosts**: WHOIS age, brand mismatch, suspicious TLD, login-path keywords, and visual forensics each add incremental risk points.
+3. **Probe Adjustment**: If the Playwright agent confirms credential harvesting, the score is boosted significantly. If the page safely redirects to a known trusted domain, the score is dampened.
+4. **Threat Intel Short-Circuit**: If the URL appears in a live phishing feed, the verdict is immediately set to High risk without running the full pipeline.
 
 ---
 
 ## 7. Frontend Design System
-The UI was designed to feel like a high-end security operations center (SOC) tool:
 The UI was designed to feel like a high-end security operations center (SOC) tool:
 - **Glassmorphism**: Elegant, transparent UI elements with subtle motion.
 - **Cyber-Light Theme**: A native light mode designed for accessibility. It uses deep forest-green accents (#00A846) on warm-off-white (#F0F4F0) to maintain a premium technical feel while reducing eye strain.
@@ -81,14 +82,12 @@ The UI was designed to feel like a high-end security operations center (SOC) too
 ---
 
 ## 8. Database & Caching
-- **SQLite/Postgres**: Stores every scan result.
-- **Caching**: If a URL was scanned in the last hour, the system returns the cached result instantly, saving API costs and compute time.
+- **SQLite/Postgres**: Stores every scan result with full forensic context (WHOIS, probe artifacts, fusion trace).
+- **In-Process Cache**: If a URL was scanned in the last 5 minutes, the system returns the cached result instantly, saving API costs and compute time.
 
 ---
 
----
-
-## 9. Multimodal Visual Forensics (Engine 5)
+## 9. Multimodal Visual Forensics (Engine 4)
 Using Gemini Vision, LinkVeil-AI can now "see" like a human analyst:
 - **Logo Recognition**: Identifies if a page is visually claiming to be Amazon, Google, or Microsoft.
 - **Anti-SSO Heuristics**: Distinguishes between legitimate "Login with Google" buttons and malicious pages designed entirely around fake Google portals.
