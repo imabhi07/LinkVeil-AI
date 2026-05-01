@@ -30,7 +30,7 @@ function ScanListInline({ scans, loading, riskLevelColor }: {
   riskLevelColor: string;
 }) {
   return (
-    <div className="mt-6 pt-6 border-t border-white/10 overflow-hidden">
+    <div className="mt-6 pt-6 border-t border-zinc-200 dark:border-white/10 overflow-hidden">
       <div className="flex items-center justify-between mb-4 px-1">
         <div className="flex items-center gap-2">
            <div className={`w-1.5 h-1.5 rounded-full ${riskLevelColor} animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.3)]`} />
@@ -39,7 +39,7 @@ function ScanListInline({ scans, loading, riskLevelColor }: {
            </h4>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="text-[8px] text-zinc-600 font-mono uppercase tracking-tighter opacity-50">Pulse</span>
+          <span className="text-[8px] text-zinc-500 dark:text-zinc-600 font-mono uppercase tracking-tighter opacity-50">Pulse</span>
           <div className="w-1 h-1 rounded-full bg-emerald-500/50" />
         </div>
       </div>
@@ -56,18 +56,18 @@ function ScanListInline({ scans, loading, riskLevelColor }: {
           </div>
         ) : (
           scans.map((scan, i) => (
-            <div key={i} className="group/item relative p-3 bg-zinc-950/40 dark:bg-black/30 border border-white/5 rounded-xl flex items-center justify-between hover:bg-zinc-900/60 dark:hover:bg-white/[0.03] hover:border-white/10 transition-all duration-200">
+            <div key={i} className="group/item relative p-3 bg-zinc-100/50 dark:bg-black/30 border border-zinc-200/50 dark:border-white/5 rounded-xl flex items-center justify-between hover:bg-white dark:hover:bg-white/[0.03] hover:border-emerald-500/20 dark:hover:border-white/10 transition-all duration-200">
               <div className="min-w-0 flex-1 pr-3">
-                <div className="text-[11px] text-zinc-800 dark:text-zinc-300 truncate font-mono group-hover/item:text-emerald-400 transition-colors tracking-tight">
+                <div className="text-[11px] text-zinc-700 dark:text-zinc-300 truncate font-mono group-hover/item:text-emerald-600 dark:group-hover/item:text-emerald-400 transition-colors tracking-tight">
                   {scan.url}
                 </div>
                 <div className="flex items-center gap-3 mt-1.5">
-                   <div className="flex items-center gap-1 px-1.5 py-0.5 bg-black/30 rounded border border-white/5">
+                   <div className="flex items-center gap-1 px-1.5 py-0.5 bg-zinc-200/50 dark:bg-black/30 rounded border border-zinc-200 dark:border-white/5">
                       <span className={`text-[9px] font-mono font-bold ${riskLevelColor.replace('bg-', 'text-')}`}>
                         {Math.round(scan.risk_score)}
                       </span>
                    </div>
-                   <span className="text-[8px] text-zinc-600 font-mono">{new Date(scan.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                   <span className="text-[8px] text-zinc-500 dark:text-zinc-600 font-mono">{new Date(scan.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
               </div>
               <div className={`w-0.5 h-6 rounded-full opacity-30 group-hover/item:opacity-80 transition-opacity ${
@@ -302,7 +302,7 @@ export function AnalyticsPanel({ onClose }: { onClose: () => void }) {
                     onClick={() => handleCardClick(stat.filterKey)}
                     className={`stat-card relative p-6 border rounded-3xl cursor-pointer transition-all duration-500 overflow-hidden flex flex-col h-full
                       ${isActive 
-                        ? 'bg-zinc-900 dark:bg-zinc-950/90 border-emerald-500/30 shadow-[0_15px_40px_rgba(0,0,0,0.4)]' 
+                        ? 'bg-white dark:bg-zinc-950/90 border-emerald-500/20 dark:border-emerald-500/30 shadow-[0_15px_40px_rgba(0,0,0,0.08)] dark:shadow-[0_15px_40px_rgba(0,0,0,0.4)]' 
                         : 'bg-white/40 dark:bg-white/[0.02] border-zinc-200/50 dark:border-white/[0.04] hover:bg-white/60 dark:hover:bg-white/[0.05]'}`}
                   >
                     {/* Background Glow Effect */}
@@ -310,7 +310,7 @@ export function AnalyticsPanel({ onClose }: { onClose: () => void }) {
                     
                     <div className={`flex flex-col h-full ${!isActive ? 'justify-center items-center text-center' : ''}`}>
                       <div className={`flex items-center justify-between ${isActive ? 'mb-6' : 'mb-3'}`}>
-                        <div className={`p-2.5 rounded-xl ${isActive ? 'bg-white/5 border border-white/10' : ''}`}>
+                        <div className={`p-2.5 rounded-xl ${isActive ? 'bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10' : ''}`}>
                           <stat.icon className={`w-5 h-5 ${stat.color} transition-all duration-500 ${!isActive ? 'group-hover:scale-110' : ''}`} />
                         </div>
                         {isActive && (
