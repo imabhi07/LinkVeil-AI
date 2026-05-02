@@ -6,13 +6,14 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --glass-bg: rgba(240, 244, 240, 0.92); /* #F0F4F0 */
-  --glass-border: rgba(212, 232, 212, 1); /* #D4E8D4 */
-  --glass-blur: 12px;
+  --glass-bg: rgba(255, 255, 255, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.9);
+  --glass-blur: 20px;
 }
 .dark {
-  --glass-bg: rgba(10, 10, 10, 0.6);
-  --glass-border: rgba(57, 255, 20, 0.15);
+  --glass-bg: rgba(10, 10, 10, 0.85);
+  --glass-border: rgba(0, 255, 65, 0.25);
+  --glass-blur: 16px;
 }
 
 /* ── Global ── */
@@ -35,10 +36,24 @@ html, body {
   background: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur));
   border: 1px solid var(--glass-border);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.10);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.07), 0 1px 0 rgba(255,255,255,0.8) inset;
 }
 .dark .glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+}
+
+.frosted-nav {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+}
+
+.dark .frosted-nav {
+  background: rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 /* ── Custom scrollbar (webkit) ── */
@@ -90,4 +105,35 @@ html, body {
 
 @utility neon-glow-malicious {
   filter: drop-shadow(0 0 12px rgba(251, 113, 133, 0.8));
+}
+
+/* ── Light Mode Specifics ── */
+.light-hero-gradient {
+  background: radial-gradient(ellipse at 30% 20%, #D4EDD4 0%, #EDF5ED 60%, #F5F8F5 100%);
+}
+
+.badge-safe-light {
+  background: #DCFCE7;
+  color: #166534;
+  border: 1px solid #BBF7D0;
+}
+
+.badge-malicious-light {
+  background: #FEE2E2;
+  color: #991B1B;
+  border: 1px solid #FECACA;
+}
+
+.frosted-card-light {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(200, 240, 210, 0.6);
+}
+
+.scan-row-divider {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.scan-row-hover:hover {
+  background: rgba(0, 180, 80, 0.04);
 }

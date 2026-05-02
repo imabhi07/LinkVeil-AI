@@ -9,12 +9,12 @@ export default {
     extend: {
       colors: {
         ornex: {
-          black: '#050505',
-          dark: '#0A0A0A',
-          panel: '#111111',
-          green: '#39FF14',
-          greenDim: 'rgba(57, 255, 20, 0.1)',
-          border: '#222222',
+          black: '#000000',
+          dark: '#080808',
+          panel: '#0C0C0C',
+          green: '#00FF41',
+          greenDim: 'rgba(0, 255, 65, 0.1)',
+          border: '#1A1A1A',
         },
         cyber: {
           safegreen: '#34d399',
