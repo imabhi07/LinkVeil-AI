@@ -17,10 +17,6 @@ LLM_CACHE_TTL = 600  # 10 minutes — LLM results change less often than probe r
 # ── Gemini Model Rotation Stack ──
 # If one model hits quota limits (429), we fall back through the list
 AVAILABLE_MODELS = [
-    "gemini-3.1-flash-lite",
-    "gemini-3-flash",
-    "gemini-2.5-flash",
-    "gemini-2.5-flash-lite",
     "gemini-2.0-flash",
     "gemini-1.5-flash",
     "gemini-1.5-flash-8b",

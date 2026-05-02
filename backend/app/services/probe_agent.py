@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 FAKE_USER = "test_admin@linkveil.local"
 FAKE_PASS = "Phish@Guard#Fake!2024"
 
-NAVIGATION_TIMEOUT_MS = 20000   # increased from 10s for heavy WAF-protected sites
+NAVIGATION_TIMEOUT_MS = 30000   # increased from 20s for heavy/global sites
 FORM_WAIT_MS = 2500             # reduced from 3s
 
 TRUSTED_REDIRECT_DOMAINS = {
@@ -225,8 +225,16 @@ def run_probe(url: str) -> ProbeResult:
 
         # --- Step 1: Navigate ---
         try:
-            page.goto(url, timeout=NAVIGATION_TIMEOUT_MS, wait_until="domcontentloaded")
+            # Set a standard desktop viewport to avoid mobile-style distortion
+            page.set_viewport_size({"width": 1280, "height": 1080})
+            
+            # networkidle is better for ensuring all assets (CSS/JS) are loaded
+            page.goto(url, timeout=NAVIGATION_TIMEOUT_MS, wait_until="networkidle")
             result.reachable = True
+            
+            # Small delay for final rendering
+            page.wait_for_timeout(2000)
+            
             result.page_title = page.title()
             result.final_url = page.url
             logger.info(f"Probe: loaded '{result.page_title}' at {result.final_url}")
@@ -235,7 +243,8 @@ def run_probe(url: str) -> ProbeResult:
             url_hash = hashlib.md5(url.encode()).hexdigest()
             screenshot_path = f"data/screenshots/{url_hash}.png"
             os.makedirs("data/screenshots", exist_ok=True)
-            page.screenshot(path=screenshot_path, full_page=True)
+            # Removed full_page=True as it causes layout issues on some reactive sites
+            page.screenshot(path=screenshot_path)
             result.screenshot_path = screenshot_path
             
             # --- Capture Content Snippet ---

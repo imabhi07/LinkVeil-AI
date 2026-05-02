@@ -44,7 +44,9 @@ class WhoisService:
             creation_date = w.creation_date
             # creation_date can be a single datetime or a list
             if isinstance(creation_date, list):
-                creation_date = creation_date[0]
+                # Filter out None values and check if list is not empty
+                valid_dates = [d for d in creation_date if d is not None]
+                creation_date = min(valid_dates) if valid_dates else None
             
             age_days = None
             is_new = False
