@@ -2,6 +2,7 @@ import os
 import asyncio
 import time
 import logging
+from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), '.env'))  # Load root .env
 from fastapi import FastAPI, Request
@@ -20,20 +21,35 @@ logging.basicConfig(
 # Create DB tables synchronously on startup for MVP
 Base.metadata.create_all(bind=engine)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup logic
+    from backend.app.services.threat_intel_service import threat_intel_service
+    # Start background refresh task and store reference
+    app.state.threat_intel_task = asyncio.create_task(threat_intel_service.background_refresh())
+    logger.info("Threat Intel background refresh task started.")
+    
+    yield
+    
+    # Shutdown logic
+    logger.info("Shutting down background tasks...")
+    if hasattr(app.state, 'threat_intel_task'):
+        app.state.threat_intel_task.cancel()
+        try:
+            await app.state.threat_intel_task
+        except asyncio.CancelledError:
+            logger.info("Threat Intel background task cancelled successfully.")
+        except Exception as e:
+            logger.error(f"Error while cancelling Threat Intel task: {e}")
+
 app = FastAPI(
     title="LinkVeil API",
     description="Backend service for Hybrid Phishing Detection",
     version="1.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
-
-@app.on_event("startup")
-async def startup_event():
-    from backend.app.services.threat_intel_service import threat_intel_service
-    # Start background refresh task
-    asyncio.create_task(threat_intel_service.background_refresh())
-    logger.info("Threat Intel background refresh task started.")
 
 # ── Gzip compression (min 500 bytes to avoid compressing tiny responses) ──
 app.add_middleware(GZipMiddleware, minimum_size=500)
