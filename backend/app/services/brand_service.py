@@ -42,6 +42,7 @@ BRAND_TOKENS = {
     "outlook": "outlook.com",
     "office365": "office.com",
     "sharepoint": "sharepoint.com",
+    "airbnb": "airbnb.com",
 }
 
 def detect_brand_mismatch(url: str) -> dict:
