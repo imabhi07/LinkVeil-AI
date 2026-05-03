@@ -30,10 +30,10 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
 
   const getBorderColor = () => {
     switch (result.riskLevel) {
-      case 'SAFE': return 'border-emerald-200 dark:border-ornex-green/30 bg-emerald-50/50 dark:bg-ornex-green/5 shadow-[0_0_30px_rgba(16,185,129,0.1)] dark:shadow-[0_0_30px_rgba(57,255,20,0.05)]';
-      case 'SUSPICIOUS': return 'border-amber-500/30 bg-amber-500/10 shadow-[0_0_30px_rgba(245,158,11,0.05)]';
-      case 'MALICIOUS': return 'border-rose-500/30 bg-rose-500/10 shadow-[0_0_30px_rgba(244,63,94,0.05)]';
-      default: return 'border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/5';
+      case 'SAFE': return 'border-emerald-200 dark:border-ornex-green/40 bg-emerald-50/50 dark:bg-ornex-green/5 shadow-[0_0_50px_rgba(16,185,129,0.15)] dark:shadow-[0_0_50px_rgba(57,255,20,0.1)]';
+      case 'SUSPICIOUS': return 'border-amber-500/40 bg-amber-500/10 shadow-[0_0_50px_rgba(245,158,11,0.1)]';
+      case 'MALICIOUS': return 'border-rose-500/40 bg-rose-500/10 shadow-[0_0_50px_rgba(244,63,94,0.1)]';
+      default: return 'border-zinc-200 dark:border-white/20 bg-zinc-50 dark:bg-white/5 shadow-xl';
     }
   };
 
@@ -43,11 +43,11 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
     <div className="w-full space-y-6">
       {/* Dynamic Recommendation Header */}
       {!hideHeader && result.recommendation && (
-        <div className={`p-5 rounded-2xl border flex items-center gap-4 animate-in slide-in-from-top-4 duration-500 ${
-          result.riskLevel === 'SAFE' ? 'bg-[#ECFDF5] border-[#D1FAE5] text-[#065F46] dark:bg-ornex-green/10 dark:border-ornex-green/20 dark:text-ornex-green' :
-          result.riskLevel === 'SUSPICIOUS' ? 'bg-[#FFFBEB] border-[#FEF3C7] text-[#92400E] dark:bg-amber-500/10 dark:border-amber-500/20' :
-          result.riskLevel === 'MALICIOUS' ? 'bg-[#FEF2F2] border-[#FEE2E2] text-[#991B1B] dark:bg-rose-500/10 dark:border-rose-500/20' :
-          'bg-zinc-50 dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400'
+        <div className={`p-5 rounded-2xl border flex items-center gap-4 animate-in slide-in-from-top-4 duration-500 backdrop-blur-md ${
+          result.riskLevel === 'SAFE' ? 'bg-[#ECFDF5] border-[#D1FAE5] text-[#065F46] dark:bg-ornex-green/20 dark:border-ornex-green/30 dark:text-ornex-green' :
+          result.riskLevel === 'SUSPICIOUS' ? 'bg-[#FFFBEB] border-[#FEF3C7] text-[#92400E] dark:bg-amber-500/25 dark:border-amber-500/40 dark:text-white' :
+          result.riskLevel === 'MALICIOUS' ? 'bg-[#FEF2F2] border-[#FEE2E2] text-[#991B1B] dark:bg-rose-500/25 dark:border-rose-500/40 dark:text-white' :
+          'bg-zinc-50 dark:bg-zinc-900/80 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400'
         } shadow-sm shadow-black/5`}>
           <div className={`p-2.5 rounded-xl ${
             result.riskLevel === 'SAFE' ? 'bg-white/80 dark:bg-emerald-500/20' :
@@ -61,8 +61,8 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
              <Activity className="w-5 h-5" />}
           </div>
           <div>
-            <p className="text-[11px] font-mono uppercase tracking-widest opacity-70 mb-0.5">Sentinel Recommendation</p>
-            <p className="text-lg font-bold tracking-tight">{result.recommendation}</p>
+            <p className="text-[11px] font-mono uppercase tracking-widest mb-0.5 dark:text-white/90 font-bold">Sentinel Recommendation</p>
+            <p className="text-lg font-bold tracking-tight dark:text-white">{result.recommendation}</p>
           </div>
         </div>
       )}
@@ -76,7 +76,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
             </div>
             <div>
               <div className="flex items-center gap-3 mb-1">
-                <h2 className="text-xs font-bold text-cyber-light-text dark:text-zinc-500 uppercase tracking-widest">Analysis Verdict</h2>
+                <h2 className="text-xs font-bold text-cyber-light-text dark:text-zinc-300 uppercase tracking-widest">Analysis Verdict</h2>
                 {result.riskLevel === 'UNKNOWN' && (
                   <span className="px-2 py-0.5 rounded border text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900/20 font-black text-xs uppercase tracking-[0.12em] shadow-sm flex items-center gap-1.5">
                     <Globe className="w-2.5 h-2.5 opacity-50" />
@@ -91,7 +91,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                 )}
               </div>
               <h1 className="text-3xl md:text-4xl font-bold text-cyber-light-heading dark:text-white tracking-tight uppercase">{result.verdictTitle || 'Unknown Verdict'}</h1>
-              <p className="text-cyber-light-text dark:text-zinc-400 mt-2 font-mono text-xs break-all opacity-80">{result.url}</p>
+              <p className="text-cyber-light-text dark:text-zinc-200 mt-2 font-mono text-xs break-all">{result.url}</p>
             </div>
           </div>
           <div className="flex-shrink-0">
@@ -131,7 +131,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                       <span>Active Probing</span>
                     </div>
                   </InfoTip>
-                  <div className="bg-white/40 dark:bg-black/40 border border-cyber-light-border dark:border-white/10 rounded-xl p-4 pb-6 font-mono text-xs space-y-2">
+                  <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border border-cyber-light-border dark:border-white/10 rounded-2xl p-5 pb-7 font-mono text-xs space-y-2 shadow-sm hover:shadow-md transition-all duration-300">
                      <div className="flex justify-between border-b border-cyber-light-border dark:border-white/10 pb-2 mb-2">
                         <span className="text-cyber-light-text dark:text-zinc-500">Form:</span>
                         <span className={result.agentReport.activeProbing?.loginFormFound ? "text-amber-500" : "text-zinc-400"}>
@@ -159,7 +159,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                       <span>Visual Forensic</span>
                     </div>
                   </InfoTip>
-                  <div className="bg-white/40 dark:bg-black/40 border border-cyber-light-border dark:border-white/10 rounded-xl p-4 pb-6 font-mono text-xs space-y-2">
+                  <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border border-cyber-light-border dark:border-white/10 rounded-2xl p-5 pb-7 font-mono text-xs space-y-2 shadow-sm hover:shadow-md transition-all duration-300">
                      <div className="flex justify-between border-b border-cyber-light-border dark:border-white/10 pb-2 mb-2">
                         <span className="text-cyber-light-text dark:text-zinc-500">AI Brand Match:</span>
                         <span className="text-cyber-light-heading dark:text-zinc-200">
@@ -189,22 +189,25 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                      <ImageIcon className="w-4 h-4" />
                      <span>Evidence Capture</span>
                   </div>
-                  <div className="relative group overflow-hidden rounded-xl border border-cyber-light-border dark:border-white/10 bg-black aspect-video cursor-zoom-in">
+                  <div className="relative group overflow-hidden rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-black aspect-video cursor-zoom-in">
                     {result.agentReport?.activeProbing?.screenshotPath ? (
                         <img 
                           src={`${API_BASE_URL}/${result.agentReport?.activeProbing?.screenshotPath}`} 
                           alt="Phishing Page Screenshot"
-                          className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                          className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
                           onClick={() => setIsImageModalOpen(true)}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://placehold.co/600x400/f4f4f5/71717a?text=Evidence+Load+Failed';
+                          }}
                         />
                     ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center text-zinc-600 gap-2">
+                      <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 dark:text-zinc-600 gap-2">
                         <ImageIcon className="w-8 h-8 opacity-20" />
-                        <span className="text-[10px] uppercase font-bold tracking-widest opacity-40">No Image Data</span>
+                        <span className="text-[11px] uppercase font-bold tracking-widest opacity-40">No Image Data</span>
                       </div>
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3 pointer-events-none">
-                      <p className="text-[10px] text-white font-mono flex items-center gap-1">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3 pointer-events-none">
+                      <p className="text-[11px] text-white font-mono flex items-center gap-1">
                         <ExternalLink className="w-3 h-3" /> CLICK TO VIEW FULLSCREEN
                       </p>
                     </div>
@@ -238,7 +241,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                           <span>URL Structure</span>
                         </div>
                       </InfoTip>
-                      <p className="text-sm text-cyber-light-heading dark:text-zinc-300 bg-white/40 dark:bg-black/40 p-4 rounded-xl border border-cyber-light-border dark:border-white/5 font-mono">
+                      <p className="text-sm text-cyber-light-heading dark:text-zinc-100 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md p-5 rounded-2xl border border-cyber-light-border dark:border-white/5 font-mono shadow-sm hover:shadow-md transition-all duration-300">
                         {cleanText(result.technicalDetails?.urlStructure)}
                       </p>
                     </div>
@@ -250,7 +253,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                           <span>Domain Reputation</span>
                         </div>
                       </InfoTip>
-                      <p className="text-sm text-cyber-light-heading dark:text-zinc-300 bg-white/40 dark:bg-black/40 p-4 rounded-xl border border-cyber-light-border dark:border-white/5 font-mono">
+                      <p className="text-sm text-cyber-light-heading dark:text-zinc-100 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md p-5 rounded-2xl border border-cyber-light-border dark:border-white/5 font-mono shadow-sm hover:shadow-md transition-all duration-300">
                         {cleanText(result.technicalDetails?.domainReputation)}
                       </p>
                     </div>
@@ -262,7 +265,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                           <span>Social Engineering</span>
                         </div>
                       </InfoTip>
-                      <p className="text-sm text-cyber-light-heading dark:text-zinc-300 bg-white/40 dark:bg-black/40 p-4 rounded-xl border border-cyber-light-border dark:border-white/5 font-mono">
+                      <p className="text-sm text-cyber-light-heading dark:text-zinc-100 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md p-5 rounded-2xl border border-cyber-light-border dark:border-white/5 font-mono shadow-sm hover:shadow-md transition-all duration-300">
                         {cleanText(result.technicalDetails?.socialEngineeringTricks)}
                       </p>
                     </div>
@@ -293,7 +296,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                    <span className="text-sm leading-relaxed">{reason}</span>
                  </li>
                )) || (
-                 <li className="text-sm text-cyber-light-text/50 italic italic">No reasoning data available for this record.</li>
+                 <li className="text-sm text-cyber-light-text/50 italic">No reasoning data available for this record.</li>
                )}
              </ul>
            </div>
@@ -309,7 +312,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
               </h3>
               <div className="grid grid-cols-1 gap-4">
                  {(result.mitigationAdvice && result.mitigationAdvice.length > 0) ? result.mitigationAdvice.map((advice, idx) => (
-                   <div key={idx} className="flex items-start gap-3 p-4 rounded-2xl bg-white/40 dark:bg-black/40 border border-cyber-light-accent/20 backdrop-blur-sm">
+                   <div key={idx} className="flex items-start gap-3 p-4 rounded-2xl bg-white/60 dark:bg-black/60 border border-cyber-light-accent/30 backdrop-blur-md shadow-sm">
                       <div className="w-6 h-6 rounded-full bg-cyber-light-accent/10 dark:bg-ornex-green/10 flex items-center justify-center flex-shrink-0 text-cyber-light-accent dark:text-ornex-green font-bold text-xs">
                          {idx + 1}
                       </div>
@@ -318,7 +321,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                       </p>
                    </div>
                  )) : (
-                    <div className="flex items-center gap-3 p-4 rounded-2xl bg-white/40 dark:bg-black/40 border border-cyber-light-accent/20 backdrop-blur-sm">
+                    <div className="flex items-center gap-3 p-4 rounded-2xl bg-white/60 dark:bg-black/60 border border-cyber-light-accent/30 backdrop-blur-md shadow-sm">
                       <Info className="w-4 h-4 text-cyber-light-accent" />
                       <p className="text-sm text-cyber-light-text/70 italic">No specific mitigation required at this time.</p>
                     </div>

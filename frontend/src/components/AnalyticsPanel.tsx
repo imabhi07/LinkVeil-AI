@@ -318,8 +318,8 @@ export function AnalyticsPanel({ onClose }: { onClose: () => void }) {
                     onClick={() => handleCardClick(stat.filterKey)}
                     className={`relative p-6 border rounded-3xl cursor-pointer transition-all duration-700 ease-[cubic-bezier(0.2,0,0,1)] overflow-hidden flex flex-col h-full
                       ${isActive 
-                        ? 'bg-white dark:bg-ornex-panel border-ornex-green/40 shadow-[0_20px_50px_rgba(0,0,0,0.8),0_0_20px_rgba(0,255,65,0.1)]' 
-                        : 'bg-white/40 dark:bg-white/[0.04] border-zinc-200/50 dark:border-white/10 hover:bg-white/60 dark:hover:bg-white/[0.08] shadow-lg hover:shadow-ornex-green/5'}`}
+                        ? 'bg-white dark:bg-ornex-panel border-ornex-green/40 shadow-[0_25px_60px_rgba(0,0,0,0.9),0_0_20px_rgba(0,255,65,0.15)] scale-[1.02]' 
+                        : 'bg-white/60 dark:bg-white/[0.06] border-zinc-200/50 dark:border-white/10 hover:bg-white/80 dark:hover:bg-white/[0.12] shadow-xl hover:shadow-ornex-green/10 hover:-translate-y-2'}`}
                   >
                     {/* Background Glow Effect */}
                     <div className={`absolute -top-20 -right-20 w-40 h-40 rounded-full blur-[80px] transition-opacity duration-700 ${isActive ? 'opacity-10' : 'opacity-0'} ${riskColor}`} />

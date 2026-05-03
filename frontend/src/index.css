@@ -36,13 +36,42 @@ html, body {
   background: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur));
   border: 1px solid var(--glass-border);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.07), 0 1px 0 rgba(255,255,255,0.8) inset;
+  /* Multi-layered shadow for depth */
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06),
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 1px 0 rgba(255, 255, 255, 0.8) inset;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease, background 0.3s ease;
 }
+
 .dark .glass-panel {
   background: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur));
   border: 1px solid var(--glass-border);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+  /* Deep layered shadow with subtle inner glow */
+  box-shadow: 
+    0 10px 30px -10px rgba(0, 0, 0, 0.9),
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    0 1px 1px rgba(255, 255, 255, 0.05) inset;
+}
+
+.glass-panel:hover {
+  transform: translateY(-5px);
+  box-shadow: 
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04),
+    0 1px 0 rgba(255, 255, 255, 0.9) inset;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.dark .glass-panel:hover {
+  transform: translateY(-5px);
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 1),
+    0 0 20px rgba(57, 255, 20, 0.05),
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+  background: rgba(15, 15, 15, 0.9);
 }
 
 .frosted-nav {

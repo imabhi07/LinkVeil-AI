@@ -67,7 +67,7 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = memo(({ history, mo
               <div
                 key={item.id}
                 onClick={() => onSelect(item)}
-                className="p-4 rounded-xl bg-white/60 dark:bg-black/20 border border-zinc-100 dark:border-white/5 hover:border-[#00C853]/40 dark:hover:border-ornex-green/30 hover:bg-white dark:hover:bg-white/10 cursor-pointer transition-all active:scale-[0.98] group shadow-sm hover:shadow-md"
+                className="p-5 rounded-2xl bg-white/80 dark:bg-zinc-900/40 border border-zinc-100 dark:border-white/10 hover:border-[#00C853]/50 dark:hover:border-ornex-green/50 hover:bg-white dark:hover:bg-black/60 cursor-pointer transition-all active:scale-[0.98] group shadow-sm hover:shadow-xl hover:-translate-y-1"
               >
                 <div className="flex justify-between items-center mb-2">
                   <div className="flex items-center gap-2">

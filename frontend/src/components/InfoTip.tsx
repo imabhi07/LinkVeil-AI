@@ -1,4 +1,4 @@
-import React, { useState, useRef, useLayoutEffect } from 'react';
+import React, { useState, useRef, useLayoutEffect, useId } from 'react';
 import { createPortal } from 'react-dom';
 import { Info } from 'lucide-react';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
@@ -21,6 +21,7 @@ export const InfoTip: React.FC<InfoTipProps> = ({
   const [isVisible, setIsVisible] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
   const triggerRef = useRef<HTMLDivElement>(null);
+  const tooltipId = useId();
 
   useLayoutEffect(() => {
     if (isVisible && triggerRef.current) {
@@ -84,6 +85,8 @@ export const InfoTip: React.FC<InfoTipProps> = ({
     <AnimatePresence mode="wait">
       {isVisible && (
         <motion.div
+          id={tooltipId}
+          role="tooltip"
           initial="hidden"
           animate="visible"
           exit="exit"
@@ -135,7 +138,10 @@ export const InfoTip: React.FC<InfoTipProps> = ({
       onBlur={() => setIsVisible(false)}
     >
       {children ? (
-        <div className={`cursor-help ${className.includes('w-full') ? 'w-full' : ''}`}>
+        <div 
+          className={`cursor-help ${className.includes('w-full') ? 'w-full' : ''}`}
+          aria-describedby={tooltipId}
+        >
           {children}
         </div>
       ) : (
@@ -143,6 +149,7 @@ export const InfoTip: React.FC<InfoTipProps> = ({
           type="button"
           className="p-1 rounded-full hover:bg-emerald-500/10 transition-all duration-300 text-white/30 hover:text-emerald-400 group/tip"
           aria-label="More information"
+          aria-describedby={tooltipId}
         >
           <Info size={13} className="group-hover/tip:scale-110 transition-transform" />
         </button>

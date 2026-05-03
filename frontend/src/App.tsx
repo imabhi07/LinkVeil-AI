@@ -109,7 +109,9 @@ function App() {
   const [loadingStep, setLoadingStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [currentResult, setCurrentResult] = useState<AnalysisResult | null>(null);
+  const [selectedResultId, setSelectedResultId] = useState<string | null>(null);
   const [currentEmailResult, setCurrentEmailResult] = useState<EmailScanResponse | null>(null);
+  const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
   const [history, setHistory] = useState<ScanHistoryItem[]>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('linkveil_history');
@@ -244,6 +246,7 @@ function App() {
       const historyItem: ScanHistoryItem = { ...result, id: generateId(), type: 'url' };
 
       setCurrentResult(result);
+      setSelectedResultId(historyItem.id);
       setHistory(prev => {
         const filtered = prev.filter(item => item.url !== result.url);
         return [historyItem, ...filtered].slice(0, 50);
@@ -267,9 +270,11 @@ function App() {
       if (scanMode === 'url') {
         setHistory([]);
         setCurrentResult(null);
+        setSelectedResultId(null);
       } else {
         setEmailHistory([]);
         setCurrentEmailResult(null);
+        setSelectedEmailId(null);
       }
     }
   }, [scanMode]);
@@ -277,22 +282,22 @@ function App() {
   const handleDeleteHistoryItem = useCallback((id: string) => {
     if (scanMode === 'url') {
       setHistory(prev => {
-        const itemToDelete = prev.find(item => item.id === id);
-        if (itemToDelete && currentResult?.url === itemToDelete.url) {
+        if (selectedResultId === id) {
           setCurrentResult(null);
+          setSelectedResultId(null);
         }
         return prev.filter(item => item.id !== id);
       });
     } else {
       setEmailHistory(prev => {
-        const itemToDelete = prev.find(item => item.id === id);
-        if (itemToDelete && currentEmailResult === itemToDelete.result) {
+        if (selectedEmailId === id) {
           setCurrentEmailResult(null);
+          setSelectedEmailId(null);
         }
         return prev.filter(item => item.id !== id);
       });
     }
-  }, [scanMode, currentResult, currentEmailResult]);
+  }, [scanMode, selectedResultId, selectedEmailId]);
 
   // Memoize the onSelect handler
   const handleSelectHistory = useCallback((item: HistoryItem) => {
@@ -301,11 +306,15 @@ function App() {
     if (item.type === 'email') {
       setScanMode('email');
       setCurrentEmailResult(item.result);
-      setCurrentResult(null); // Clear URL result when switching to email
+      setSelectedEmailId(item.id);
+      setCurrentResult(null);
+      setSelectedResultId(null);
     } else {
       setScanMode('url');
       setCurrentResult(item as ScanHistoryItem);
-      setCurrentEmailResult(null); // Clear email result when switching to URL
+      setSelectedResultId(item.id);
+      setCurrentEmailResult(null);
+      setSelectedEmailId(null);
     }
 
     // Automatically scroll to the results
@@ -336,6 +345,7 @@ function App() {
 
     // Automatically focus on the new forensic result
     setCurrentEmailResult(res);
+    setSelectedEmailId(historyItem.id);
     setTimeout(() => {
       const element = document.getElementById('email-results');
       element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -420,9 +430,9 @@ function App() {
                 </div>
 
                 <h1 className="text-5xl md:text-6xl font-black tracking-tighter text-cyber-light-heading dark:text-white leading-[0.95] uppercase tracking-[-0.01em]">
-                  Cyber Defense <br />
-                  <span className="text-[#8A9E8A] dark:text-zinc-500">That Evolves</span> <br />
-                  <span className="text-[#00A846] dark:text-ornex-green drop-shadow-[0_0_20px_rgba(0,168,70,0.15)] dark:drop-shadow-[0_0_20px_rgba(57,255,20,0.3)]">Daily.</span>
+                  Threats Move Fast <br />
+                  <span className="text-[#8A9E8A] dark:text-zinc-500">We Move Faster</span> <br />
+                  <span className="text-[#00A846] dark:text-ornex-green drop-shadow-[0_0_20px_rgba(0,168,70,0.15)] dark:drop-shadow-[0_0_20px_rgba(57,255,20,0.3)]">Always.</span>
                 </h1>
 
                 <p className="text-cyber-light-text dark:text-zinc-400 max-w-xl text-lg leading-relaxed">

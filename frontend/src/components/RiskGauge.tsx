@@ -98,8 +98,8 @@ export const RiskGauge: React.FC<RiskGaugeProps> = memo(({ score, level }) => {
               {displayScore}
             </span>
             <div className="flex flex-col items-center mt-1">
-              <span className="text-[9px] text-cyber-light-text dark:text-zinc-500 uppercase tracking-[0.25em] font-black opacity-70">Risk</span>
-              <span className="text-[9px] text-cyber-light-text dark:text-zinc-500 uppercase tracking-[0.25em] font-black opacity-70 mt-0.5">Score</span>
+              <span className="text-[9px] text-cyber-light-text dark:text-zinc-400 uppercase tracking-[0.25em] font-black opacity-90">Risk</span>
+              <span className="text-[9px] text-cyber-light-text dark:text-zinc-400 uppercase tracking-[0.25em] font-black opacity-90 mt-0.5">Score</span>
             </div>
           </div>
         </InfoTip>

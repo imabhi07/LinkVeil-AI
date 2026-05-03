@@ -54,6 +54,31 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
     }
   };
 
+  const handleBodyPaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const html = e.clipboardData.getData('text/html');
+    const plain = e.clipboardData.getData('text/plain');
+
+    // If we have HTML, we want to extract the links forensically
+    if (html && html.includes('<a')) {
+      e.preventDefault();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      
+      // Find all links and append their href to their text content
+      const links = doc.querySelectorAll('a');
+      links.forEach(link => {
+        const href = link.getAttribute('href');
+        const text = link.textContent?.trim();
+        if (href && href !== text && !href.startsWith('mailto:') && !href.startsWith('tel:')) {
+          link.textContent = `${text} (${href})`;
+        }
+      });
+
+      const forensicText = doc.body.innerText || doc.body.textContent || plain;
+      setFormData(prev => ({ ...prev, body: prev.body + forensicText }));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -229,12 +254,12 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                       <h4 className="text-lg font-black uppercase tracking-tighter text-cyber-light-heading dark:text-white">
                         {scanMode === 'manual' ? 'Manual Entry Protocol' : scanMode === 'paste' ? 'Raw Source Analysis Guide' : 'EML File Upload Protocol'}
                       </h4>
-                      <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Forensic Instructions • Level 1 Intelligence</p>
+                      <p className="text-[11px] font-mono uppercase tracking-widest text-zinc-500">Forensic Instructions • Level 1 Intelligence</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10">
                     <div className="w-1.5 h-1.5 rounded-full bg-cyber-light-accent dark:bg-ornex-green animate-pulse" />
-                    <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Active Assistant</span>
+                    <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest">Active Assistant</span>
                   </div>
                 </div>
 
@@ -253,15 +278,15 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                       <div className="lg:col-span-2 space-y-4">
                         <div className="flex items-center gap-2 text-cyber-light-accent dark:text-ornex-green">
                           <CheckCircle2 className="w-4 h-4" />
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Best Practice</span>
+                          <span className="text-[11px] font-black uppercase tracking-[0.2em]">Best Practice</span>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors">
-                            <span className="text-[9px] font-bold text-zinc-500 uppercase block mb-1">Body Intelligence</span>
+                            <span className="text-[11px] font-bold text-zinc-500 uppercase block mb-1">Body Intelligence</span>
                             <p className="text-[11px] text-zinc-300">Paste the <span className="font-bold text-white">full body</span>. Don't remove links - we need them to scan the final destination for malware.</p>
                           </div>
                           <div className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors">
-                            <span className="text-[9px] font-bold text-zinc-500 uppercase block mb-1">Impersonation Check</span>
+                            <span className="text-[11px] font-bold text-zinc-500 uppercase block mb-1">Impersonation Check</span>
                             <p className="text-[11px] text-zinc-300">Providing the <span className="font-bold text-white">From Email</span> allows us to cross-reference known official brand domains.</p>
                           </div>
                         </div>
@@ -273,24 +298,24 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                         <div className="space-y-4">
                           <div className="flex items-center gap-2 text-cyber-light-accent dark:text-ornex-green">
                             <Shield className="w-4 h-4" />
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Why use Paste?</span>
+                            <span className="text-[11px] font-black uppercase tracking-[0.2em]">Why use Paste?</span>
                           </div>
                           <p className="text-xs text-zinc-400 leading-relaxed">
-                            This is the <span className="text-white font-bold">Gold Standard</span>. It exposes hidden headers like <span className="font-mono text-[10px]">Return-Path</span> and <span className="font-mono text-[10px]">X-Originating-IP</span> that scammers can't hide.
+                            This is the <span className="text-white font-bold">Gold Standard</span>. It exposes hidden headers like <span className="font-mono text-[11px]">Return-Path</span> and <span className="font-mono text-[11px]">X-Originating-IP</span> that scammers can't hide.
                           </p>
                         </div>
                         <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10 text-amber-500/80">
                           <div className="flex items-center gap-2 mb-1">
                             <AlertTriangle className="w-3.5 h-3.5" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Security Note</span>
+                            <span className="text-[11px] font-black uppercase tracking-widest">Security Note</span>
                           </div>
-                          <p className="text-[10px] leading-tight opacity-80">Headers contain your email address. We process this locally and never store or share your forensic data.</p>
+                          <p className="text-[11px] leading-tight opacity-80">Headers contain your email address. We process this locally and never store or share your forensic data.</p>
                         </div>
                       </div>
                       <div className="lg:col-span-2 space-y-4">
                         <div className="flex items-center gap-2 text-cyber-light-accent dark:text-ornex-green">
                           <Clipboard className="w-4 h-4" />
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Quick Extraction (Select Your Client)</span>
+                          <span className="text-[11px] font-black uppercase tracking-[0.2em]">Quick Extraction (Select Your Client)</span>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           {[
@@ -299,11 +324,11 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                             { name: 'Apple Mail', steps: ['Menu: View', 'Message', 'Raw Source'] }
                           ].map((client) => (
                             <div key={client.name} className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-cyber-light-accent/30 dark:hover:border-ornex-green/30 transition-all group/card">
-                              <span className="text-[10px] font-black text-white uppercase tracking-widest block mb-3 border-b border-white/5 pb-2">{client.name}</span>
+                              <span className="text-[11px] font-black text-white uppercase tracking-widest block mb-3 border-b border-white/5 pb-2">{client.name}</span>
                               <div className="space-y-2">
                                 {client.steps.map((step, i) => (
-                                  <div key={i} className="flex items-center gap-2 text-[10px] text-zinc-500">
-                                    <span className="w-4 h-4 rounded-full bg-white/5 flex items-center justify-center text-[8px] font-black text-zinc-400">{i+1}</span>
+                                  <div key={i} className="flex items-center gap-2 text-[11px] text-zinc-500">
+                                    <span className="w-4 h-4 rounded-full bg-white/5 flex items-center justify-center text-[10px] font-black text-zinc-400">{i+1}</span>
                                     {step}
                                   </div>
                                 ))}
@@ -335,7 +360,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                               <div className="p-2 bg-white/5 rounded-lg text-cyber-light-accent dark:text-ornex-green">
                                 <Mail className="w-4 h-4" />
                               </div>
-                              <span className="text-[10px] font-bold text-white uppercase tracking-widest">Gmail Export</span>
+                              <span className="text-[11px] font-bold text-white uppercase tracking-widest">Gmail Export</span>
                             </div>
                             <p className="text-[11px] text-zinc-500 leading-relaxed">Open email - Click ⋮ (More) - Select <span className="font-bold text-white">Download message</span> to save as .eml.</p>
                           </div>
@@ -344,7 +369,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                               <div className="p-2 bg-white/5 rounded-lg text-zinc-400">
                                 <Layout className="w-4 h-4" />
                               </div>
-                              <span className="text-[10px] font-bold text-white uppercase tracking-widest">Desktop Clients</span>
+                              <span className="text-[11px] font-bold text-white uppercase tracking-widest">Desktop Clients</span>
                             </div>
                             <p className="text-[11px] text-zinc-500 leading-relaxed">Simply drag the email from your inbox to your desktop. It will automatically create an <span className="font-bold text-white">.eml</span> file.</p>
                           </div>
@@ -353,7 +378,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                               <div className="p-2 bg-white/5 rounded-lg text-zinc-400">
                                 <ExternalLink className="w-4 h-4" />
                               </div>
-                              <span className="text-[10px] font-bold text-white uppercase tracking-widest">Manual Save</span>
+                              <span className="text-[11px] font-bold text-white uppercase tracking-widest">Manual Save</span>
                             </div>
                             <p className="text-[11px] text-zinc-500 leading-relaxed">Go to <span className="font-bold text-white">File - Save As</span> and select <span className="font-bold text-white">Email Message (.eml)</span> from the dropdown.</p>
                           </div>
@@ -417,6 +442,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                 <textarea
                   value={formData.body}
                   onChange={e => setFormData({ ...formData, body: e.target.value })}
+                  onPaste={handleBodyPaste}
                   placeholder="Paste the message content here..."
                   rows={6}
                   className="w-full bg-cyber-light-bg dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl px-4 py-4 text-sm focus:border-cyber-light-accent/50 dark:focus:border-ornex-green/50 outline-none transition-all font-mono resize-none"
@@ -515,7 +541,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                 <p className="text-xs font-black uppercase tracking-widest">
                   {result.email_risk_score >= 75 ? 'Critical Threat Detected' : 'Suspicious - Proceed with Caution'}
                 </p>
-                <p className="text-[10px] opacity-80 font-medium">
+                <p className="text-[11px] opacity-80 font-medium">
                   {result.email_risk_score >= 75 
                     ? 'This content matches high-confidence phishing patterns. Immediate isolation recommended.' 
                     : result.link_score >= 65 
@@ -530,7 +556,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
           {result.email_risk_level.toLowerCase() === 'low' && result.link_score >= 30 && result.link_score < 65 && (
             <div className="p-4 rounded-2xl border-2 bg-amber-500/5 border-amber-500/10 text-amber-500/80 flex items-center gap-4">
               <Info className="w-5 h-5 flex-shrink-0" />
-              <p className="text-[10px] font-bold uppercase tracking-widest">
+              <p className="text-[11px] font-bold uppercase tracking-widest">
                 Caution: One link looks slightly unusual (tracking/long URL markers)
               </p>
             </div>
@@ -547,15 +573,15 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
               <div className="flex items-center gap-6">
                 <div className="flex flex-col items-center justify-center w-20 h-20 rounded-2xl bg-white/10 border border-current/20 shadow-inner backdrop-blur-sm relative">
                   <span className="text-3xl font-black leading-none tracking-tighter">{Math.round(result.email_risk_score)}</span>
-                  <span className="text-[8px] font-mono opacity-60 uppercase tracking-tighter mt-1">Forensic</span>
+                  <span className="text-[11px] font-mono opacity-60 uppercase tracking-tighter mt-1">Forensic</span>
                 </div>
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <h3 className="text-3xl font-black uppercase tracking-tighter">{result.email_risk_level} RISK</h3>
                     <div className="h-4 w-px bg-current opacity-20" />
-                    <span className="text-[9px] font-mono uppercase tracking-widest opacity-60">Verdict</span>
+                    <span className="text-xs font-mono uppercase tracking-widest opacity-60">Verdict</span>
                   </div>
-                  <div className="flex flex-wrap items-center gap-4 text-[9px] font-mono opacity-60 pt-1">
+                  <div className="flex flex-wrap items-center gap-4 text-xs font-mono opacity-60 pt-1">
                     <InfoTip title="Heuristic Analysis" content="Score based on email headers, auth signals, and linguistic threat markers.">
                       <span className="flex items-center gap-1.5">
                         Heuristics: {result.heuristic_score}/40
@@ -571,7 +597,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
               </div>
               <div className="flex flex-wrap gap-2 lg:justify-end max-w-sm">
                 {Object.entries(result.suspicious_indicators).map(([key, active]) => active && (
-                  <span key={key} className="px-2.5 py-1 rounded-lg border bg-white/10 border-current/20 text-current text-[9px] font-bold uppercase tracking-widest whitespace-nowrap">
+                  <span key={key} className="px-2.5 py-1 rounded-lg border bg-white/10 border-current/20 text-current text-[11px] font-bold uppercase tracking-widest whitespace-nowrap">
                     {key.replace(/_/g, ' ')}
                   </span>
                 ))}
@@ -587,14 +613,14 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                   <InfoTip title="Total Links" content="Total unique raw links identified in the email body.">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-100 dark:bg-white/5 rounded-xl border border-zinc-200 dark:border-white/10">
                       <Zap className="w-3 h-3 text-cyber-light-accent dark:text-ornex-green" />
-                      <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Total:</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Total:</span>
                       <span className="text-xs font-black text-cyber-light-heading dark:text-white">{result.total_extracted}</span>
                     </div>
                   </InfoTip>
                   <InfoTip title="Scanned Destinations" content="High-priority unique destinations subjected to full forensic analysis.">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-cyber-light-accent/5 dark:bg-ornex-green/5 rounded-xl border border-cyber-light-accent/10 dark:border-ornex-green/10 text-cyber-light-accent dark:text-ornex-green">
                       <Shield className="w-3 h-3" />
-                      <span className="text-[9px] font-black uppercase tracking-widest">Scanned:</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest">Scanned:</span>
                       <span className="text-xs font-black">{result.scanned_count}</span>
                     </div>
                   </InfoTip>
@@ -602,7 +628,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                   <InfoTip title="Tracking Wrappers" content="Tracking URLs unwrapped to reveal and scan their true destinations.">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/5 rounded-xl border border-purple-500/10 text-purple-400">
                       <ExternalLink size={12} />
-                      <span className="text-[9px] font-black uppercase tracking-widest">Unwrapped:</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest">Unwrapped:</span>
                       <span className="text-xs font-black">{result.triage_stats?.wrappers_unwrapped}</span>
                     </div>
                   </InfoTip>
@@ -611,7 +637,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                   <InfoTip title="Privacy Scrubbing" content="Sensitive PII (emails/tokens) scrubbed from URLs before analysis.">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/5 rounded-xl border border-blue-500/10 text-blue-400">
                       <ShieldAlert size={12} />
-                      <span className="text-[9px] font-black uppercase tracking-widest">Scrubbed:</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest">Scrubbed:</span>
                       <span className="text-xs font-black">{result.triage_stats?.pii_scrubbed_count}</span>
                     </div>
                   </InfoTip>
@@ -619,7 +645,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                   <InfoTip title="Filtered Assets" content="Redundant or low-risk assets (CSS, Images) skipped for efficiency.">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-100 dark:bg-white/5 rounded-xl border border-zinc-200 dark:border-white/10 opacity-60">
                       <CheckCircle2 className="w-3 h-3 text-zinc-400" />
-                      <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Filtered:</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Filtered:</span>
                       <span className="text-xs font-black text-zinc-600 dark:text-zinc-400">{(result.total_extracted ?? 0) - (result.scanned_count ?? 0)}</span>
                     </div>
                   </InfoTip>
@@ -629,7 +655,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
               {result.forensic_errors && result.forensic_errors.length > 0 && (
                 <div className="space-y-3">
                   {result.forensic_errors.map((err, i) => (
-                    <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-amber-500/5 border border-amber-500/10 text-amber-500/80 text-[10px] font-mono">
+                    <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-amber-500/5 border border-amber-500/10 text-amber-500/80 text-[11px] font-mono">
                       <AlertCircle className="w-4 h-4" />
                       <span className="uppercase font-bold">[{err.stage}]:</span>
                       <span>{err.message}</span>
@@ -647,8 +673,8 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                 ].map(({ key, title, content }) => (
                   <InfoTip key={key} title={title} content={content} className="w-full relative flex items-center">
                     <div className={`flex items-center justify-between p-3.5 rounded-2xl border backdrop-blur-sm w-full ${getAuthColor(result.auth_results?.[key as keyof typeof result.auth_results] || 'none')}`}>
-                      <span className="text-[10px] font-black uppercase tracking-widest">{key}</span>
-                      <span className="text-[10px] font-bold uppercase opacity-80">{result.auth_results?.[key as keyof typeof result.auth_results] || 'none'}</span>
+                      <span className="text-[11px] font-black uppercase tracking-widest">{key}</span>
+                      <span className="text-[11px] font-bold uppercase opacity-80">{result.auth_results?.[key as keyof typeof result.auth_results] || 'none'}</span>
                     </div>
                   </InfoTip>
                 ))}
@@ -678,59 +704,78 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                     Analyzed Link Profile
                   </h4>
                   <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                    {result.link_results.map((link, idx) => (
-                      <div 
-                        key={idx} 
-                        onClick={() => setExpandedUrls({ ...expandedUrls, [link.url]: !expandedUrls[link.url] })}
-                        className={`group cursor-pointer p-4 rounded-2xl border transition-all ${expandedUrls[link.url] ? 'bg-cyber-light-accent/5 dark:bg-ornex-green/5 border-cyber-light-accent/30 dark:border-ornex-green/30' : 'bg-zinc-50 dark:bg-white/5 border-zinc-100 dark:border-white/5'}`}
-                      >
-                        <div className="flex flex-col gap-2">
-                          {(() => {
-                            const unwrapEvent = result.unwrap_events?.find(e => e.destination_url === link.url);
-                            return (
-                              <div className="space-y-2 overflow-hidden">
-                                {unwrapEvent && (
-                                  <div className="flex flex-col gap-1 p-2 rounded-lg bg-zinc-500/5 border border-zinc-500/10 mb-1">
-                                    <span className="text-[8px] font-black uppercase text-zinc-400 flex items-center gap-1">
-                                      Found Original URL:
-                                      <InfoTip title="Tracking Source" content="The raw URL found in the email body, containing tracking parameters." />
-                                    </span>
-                                    <span className="text-[10px] text-zinc-500 truncate font-mono opacity-60">
-                                      {unwrapEvent.found_url}
-                                    </span>
-                                  </div>
-                                )}
-                                <div className="flex justify-between items-center gap-4">
-                                  <div className="space-y-1 overflow-hidden">
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-[8px] font-black uppercase text-cyber-light-accent dark:text-ornex-green">
-                                        {unwrapEvent ? 'Scanned Destination:' : 'Scanned URL:'}
+                    {result.link_results.length > 0 ? (
+                      result.link_results.map((link, idx) => (
+                        <div 
+                          key={idx} 
+                          onClick={() => setExpandedUrls({ ...expandedUrls, [link.url]: !expandedUrls[link.url] })}
+                          className={`group cursor-pointer p-4 rounded-2xl border transition-all ${expandedUrls[link.url] ? 'bg-cyber-light-accent/5 dark:bg-ornex-green/5 border-cyber-light-accent/30 dark:border-ornex-green/30' : 'bg-zinc-50 dark:bg-white/5 border-zinc-100 dark:border-white/5'}`}
+                        >
+                          <div className="flex flex-col gap-2">
+                            {(() => {
+                              const unwrapEvent = result.unwrap_events?.find(e => e.destination_url === link.url);
+                              return (
+                                <div className="space-y-2 overflow-hidden">
+                                  {unwrapEvent && (
+                                    <div className="flex flex-col gap-1 p-2 rounded-lg bg-zinc-500/5 border border-zinc-500/10 mb-1">
+                                      <span className="text-[11px] font-black uppercase text-zinc-400 flex items-center gap-1">
+                                        Found Original URL:
+                                        <InfoTip title="Tracking Source" content="The raw URL found in the email body, containing tracking parameters." />
                                       </span>
-                                      {formatUrl(link.url)}
-                                      <button onClick={(e) => copyToClipboard(link.url, e)} className="p-1 hover:bg-zinc-200 dark:hover:bg-white/10 rounded transition-colors">
-                                        <Copy size={10} className="text-zinc-400" />
-                                      </button>
-                                      {unwrapEvent && (
-                                        <span className="px-1.5 py-0.5 rounded bg-purple-500/10 text-[8px] font-black text-purple-400 border border-purple-500/20">UNWRAPPED</span>
+                                      <span className="text-[11px] text-zinc-500 truncate font-mono opacity-60">
+                                        {unwrapEvent.found_url}
+                                      </span>
+                                    </div>
+                                  )}
+                                  <div className="flex justify-between items-center gap-4">
+                                    <div className="space-y-1 overflow-hidden">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-[11px] font-black uppercase text-cyber-light-accent dark:text-ornex-green">
+                                          {unwrapEvent ? 'Scanned Destination:' : 'Scanned URL:'}
+                                        </span>
+                                        {formatUrl(link.url)}
+                                        <button onClick={(e) => copyToClipboard(link.url, e)} className="p-1 hover:bg-zinc-200 dark:hover:bg-white/10 rounded transition-colors">
+                                          <Copy size={10} className="text-zinc-400" />
+                                        </button>
+                                        {unwrapEvent && (
+                                          <span className="px-1.5 py-0.5 rounded bg-purple-500/10 text-[11px] font-black text-purple-400 border border-purple-500/20">UNWRAPPED</span>
+                                        )}
+                                      </div>
+                                      {link.risk_level === 'INCONCLUSIVE' && (
+                                        <span className="px-2 py-0.5 rounded bg-zinc-500/10 text-[11px] font-bold uppercase text-zinc-500 border border-zinc-500/20">FETCH ERROR (404)</span>
                                       )}
                                     </div>
-                                    {link.risk_level === 'INCONCLUSIVE' && (
-                                      <span className="px-2 py-0.5 rounded bg-zinc-500/10 text-[9px] font-bold uppercase text-zinc-500 border border-zinc-500/20">FETCH ERROR (404)</span>
-                                    )}
-                                  </div>
-                                  <div className="flex items-center gap-3">
-                                    <div className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${getRiskColor(link.risk_level)}`}>
-                                      {link.risk_level}
+                                    <div className="flex items-center gap-3">
+                                      <div className={`px-2 py-1 rounded-lg text-[11px] font-black uppercase tracking-widest border ${getRiskColor(link.risk_level)}`}>
+                                        {link.risk_level}
+                                      </div>
+                                      <ChevronDown className={`w-4 h-4 text-zinc-400 transition-transform ${expandedUrls[link.url] ? 'rotate-180' : ''}`} />
                                     </div>
-                                    <ChevronDown className={`w-4 h-4 text-zinc-400 transition-transform ${expandedUrls[link.url] ? 'rotate-180' : ''}`} />
                                   </div>
                                 </div>
-                              </div>
-                            );
-                          })()}
+                              );
+                            })()}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-10 text-center space-y-4">
+                        <div className="p-4 bg-zinc-100 dark:bg-white/5 rounded-3xl border border-zinc-200 dark:border-white/10">
+                          <Shield className="w-8 h-8 text-zinc-400 opacity-50" />
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">No Forensic Links Identified</p>
+                          <p className="text-[11px] text-zinc-500 max-w-[280px] leading-relaxed mx-auto">
+                            All extracted URLs ({result.total_extracted}) were identified as low-risk assets (CSS, Images, Tracking Pixels) and skipped to optimize forensic efficiency.
+                          </p>
+                        </div>
+                        <div className="pt-2">
+                           <div className="px-4 py-1.5 rounded-full bg-emerald-500/5 border border-emerald-500/10 text-[10px] font-bold text-emerald-500 uppercase tracking-widest">
+                             Safe Baseline Confirmed
+                           </div>
                         </div>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
               </div>
