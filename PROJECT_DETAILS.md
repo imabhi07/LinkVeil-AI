@@ -10,20 +10,22 @@ LinkVeil-AI was built on the premise that single-signal detection (like blacklis
 - **Legitimate hosting** (GitHub Pages, Netlify).
 - **Context-aware content** (Impersonating specific corporate portals).
 
-LinkVeil-AI solves this using a **Defense-in-Depth** approach, combining four specialized engines into a single decision.
+LinkVeil-AI solves this using a **Defense-in-Depth** approach, combining seven specialized engines into a single decision.
 
 ---
 
 ## 2. System Architecture
 
 ### 🛡️ High-Level Component View
-1. **Frontend (React/Vite)**: Gathers the URL and provides a real-time "progress scan" visualizer.
-2. **API Layer (FastAPI)**: Manages async orchestration of five forensic engines.
-3. **Engine 1: XGBoost (Lexical)**: Checks the "DNA" of the URL string via 30 hand-crafted features.
-4. **Engine 2: Playwright Agent (Live Probe)**: Checks the "Behavior" of the destination.
-5. **Engine 3: Gemini AI (Cognitive Analyst)**: Synthesizes evidence and explains risks.
+1. **Frontend (React/Vite)**: Gathers input (URL/Email) and provides a real-time forensic visualizer.
+2. **API Layer (FastAPI)**: Manages async orchestration of seven forensic engines.
+3. **Engine 1: XGBoost (Lexical)**: Checks the "DNA" of the URL string via 30+ features.
+4. **Engine 2: Playwright Agent (Live Probe)**: Analyzes "Behavior" of the destination in a sandbox.
+5. **Engine 3: Gemini AI (Cognitive Analyst)**: Synthesizes multi-engine evidence into explanations.
 6. **Engine 4: Gemini Vision (Visual Forensics)**: Detects pixel-perfect brand impersonation.
-7. **Engine 5: Threat Intel + WHOIS**: Checks live phishing feeds and domain registration data.
+7. **Engine 5: Threat Intel + WHOIS**: Checks live phishing feeds and domain registration.
+8. **Engine 6: Email Forensic Analyzer**: Heuristic scoring of headers, authentication, and urgency.
+9. **Engine 7: Brand Mismatch Detector**: Local, zero-cost token matching for 20+ major brands.
 
 ---
 
@@ -58,26 +60,43 @@ Once the ML engines have their scores, the **Gemini AI** LLM is fed the raw evid
 - "The XGBoost model scores this URL at 87% phishing probability."
 - "The Probe Agent found a login form on a suspicious domain."
 - "The URL contains the brand 'Netflix' but is not hosted on netflix.com."
+- "The Email headers show an SPF 'fail' for a purported Microsoft sender."
 
-Gemini acts as the "Decision Maker," synthesizing these signals into a human-readable explanation and a final verdict. This eliminates the "Black Box" problem of traditional AI.
+Gemini acts as the "Decision Maker," synthesizing these signals into a human-readable explanation and a final verdict.
+
+---
+
+## 6. Email Forensic Pipeline & Link Triage
+
+When an email is submitted, LinkVeil-AI executes a multi-stage forensic extraction:
+
+1. **Header Authentication**: Validates SPF and DKIM results to detect sender spoofing.
+2. **Heuristic Scoring**: Analyzes body urgency, common phishing keywords, and impersonation flags (e.g., "PayPal" in name but `scam.com` in domain).
+3. **Link Extraction & Triage**:
+   - Extracts all URLs from the email body.
+   - **Classification**: Categorizes links as `static_asset`, `tracking_wrapper`, `unsubscribe`, `content`, or `known_safe`.
+   - **PII Scrubbing**: Automatically removes sensitive query parameters (email addresses, IDs) before analysis to protect user privacy.
+   - **Unwrapping**: Detects and unwraps common email tracking/redirect services to find the final destination.
+4. **SSRF Hardening**: All network-bound tasks in the triage layer use a threaded executor with strict timeouts and private IP rejection to protect the internal infrastructure.
 
 ---
 
 ## 6. Score Orchestration Logic
 Scores are aggregated into a **Final Risk Score (0-100)** using a weighted fusion system:
 1. **Base Blend**: LLM score (70%) + XGBoost score (30%) form the base risk value.
-2. **Signal Boosts**: WHOIS age, brand mismatch, suspicious TLD, login-path keywords, and visual forensics each add incremental risk points.
-3. **Probe Adjustment**: If the Playwright agent confirms credential harvesting, the score is boosted significantly. If the page safely redirects to a known trusted domain, the score is dampened.
-4. **Threat Intel Short-Circuit**: If the URL appears in a live phishing feed, the verdict is immediately set to High risk without running the full pipeline.
+2. **Signal Boosts**: WHOIS age, brand mismatch (Engine 7), suspicious TLD, and visual forensics (Engine 4) add incremental risk.
+3. **Probe Adjustment**: If the Playwright agent confirms credential harvesting, the score is boosted. If no login elements are found, the score is dampened.
+4. **Threat Intel Short-Circuit**: Instant "High" risk if the URL appears in live phishing feeds.
 
 ---
 
 ## 7. Frontend Design System
 The UI was designed to feel like a high-end security operations center (SOC) tool:
 - **Glassmorphism**: Elegant, transparent UI elements with subtle motion.
-- **Cyber-Light Theme**: A native light mode designed for accessibility. It uses deep forest-green accents (#00A846) on warm-off-white (#F0F4F0) to maintain a premium technical feel while reducing eye strain.
-- **Micro-Animations**: Real-time progress bars and transition effects to keep the user engaged during the analysis window.
-- **Accessibility**: High-contrast badges and clear typography for binary verdicts (Safe/Malicious).
+- **Forensic Intelligence Dashboard**: A centralized panel featuring `AnalyticsPanel.tsx` for trend tracking and indicator aggregation.
+- **Triple-Mode Email Scanner**: `EmailScan.tsx` allows for manual forensic entry, raw text pasting, or `.eml` file uploads.
+- **Accessible Design**: High-contrast typography, theme-aware styling, and ARIA-compliant `InfoTip` components.
+- **Animated Risk Visuals**: `RiskGauge.tsx` and real-time progress transitions provide immediate cognitive feedback.
 
 ---
 
@@ -100,6 +119,16 @@ The platform now features a dedicated intelligence panel:
 - **Data Persistence**: Uses a forensic SQLite/Postgres store to ensure all intelligence is available for retroactive auditing.
 
 ## 11. Future Roadmap
-- [ ] **Browser Extension**: Real-time protection while browsing.
-- [ ] **Email Integration**: Scanning suspicious email headers and attachments.
-- [ ] **Collaborative Forensic Sharing**: Community-driven threat intelligence sharing.
+- [x] **Email Forensic Pipeline**: Full header/body analysis and link triage.
+- [ ] **Browser Extension**: Real-time protection while browsing (In Progress).
+- [ ] **Collaborative Forensic Sharing**: Community-driven threat intelligence.
+
+---
+
+## 12. Testing & Quality Assurance
+
+LinkVeil-AI maintains a robust test suite in `/tests` to ensure detection accuracy:
+- **Service Isolation**: Individual tests for WHOIS, Vision, Brand, and LLM engines.
+- **Fusion Integration**: End-to-end tests for the score orchestration logic.
+- **Email Forensics**: Validation of `.eml` parsing and header authentication.
+- **Continuous Validation**: `pytest tests/ -v`
