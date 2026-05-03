@@ -132,8 +132,6 @@ async def _execute_email_analysis(parsed_data: dict, db: Session):
     
     # Verdict Fusion: Single final verdict
     # Blend heuristic and link risk, but prioritize the definitive link results
-    auth = parsed_data.get("auth_results", {})
-    auth_pass = auth.get("spf") == "pass" or auth.get("dkim") == "pass"
     
     effective_heuristic = float(heuristic_score)
     if auth_pass and effective_heuristic < 25:
@@ -230,7 +228,8 @@ async def scan_eml(file: UploadFile = File(...), db: Session = Depends(get_db)):
     """
     Uploads and analyzes a .eml file.
     """
-    if not file.filename.endswith('.eml'):
+    filename = file.filename or ""
+    if not filename.lower().endswith('.eml'):
         raise HTTPException(status_code=400, detail="Only .eml files are supported")
         
     content = await file.read()

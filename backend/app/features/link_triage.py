@@ -3,6 +3,8 @@ import socket
 import base64
 import ipaddress
 import binascii
+import concurrent.futures
+import os
 from urllib.parse import urlparse, urlunparse, parse_qs, urlencode, unquote
 
 def strip_pii(url: str) -> str:
@@ -38,7 +40,7 @@ def strip_pii(url: str) -> str:
     except Exception:
         return url
 
-def is_safe_url(url: str) -> bool:
+def is_safe_url(url: str, dns_timeout: float = 3.0) -> bool:
     """
     SSRF hardening: only allow http/https, reject private IP ranges and localhost.
     Now with full DNS resolution and IP range checks.
@@ -56,10 +58,13 @@ def is_safe_url(url: str) -> bool:
         if len(url) > 2048:
             return False
             
-        # 2. DNS Resolution and IP checking
+        # 2. DNS Resolution and IP checking with timeout
         try:
-            # Resolve hostname to all available IP addresses
-            addr_info = socket.getaddrinfo(hostname, None)
+            # We use a ThreadPoolExecutor to enforce a timeout on the blocking getaddrinfo call
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(socket.getaddrinfo, hostname, None)
+                addr_info = future.result(timeout=dns_timeout)
+                
             for res in addr_info:
                 ip_str = res[4][0]
                 ip_addr = ipaddress.ip_address(ip_str)
@@ -71,8 +76,8 @@ def is_safe_url(url: str) -> bool:
                     ip_addr.is_unspecified or 
                     ip_addr.is_multicast):
                     return False
-        except (socket.gaierror, socket.timeout):
-            # If we can't resolve it, we don't trust it
+        except (socket.gaierror, socket.timeout, concurrent.futures.TimeoutError):
+            # If we can't resolve it or it times out, we don't trust it
             return False
             
         return True
@@ -121,14 +126,17 @@ KNOWN_SAFE_DOMAINS = {
     "google.com", "microsoft.com", "apple.com", "infosys.com", "gmail.com", "outlook.com"
 }
 
-def classify_url(url: str) -> tuple[str, str]:
+def classify_url(url: str, unwrapped_info: tuple[str | None, str | None] = (None, None)) -> tuple[str, str]:
     """
     Classifies a URL into categories: static_asset, tracking_wrapper, unsubscribe, content, known_safe, other.
     Returns: (category, reason)
     """
     try:
-        # Check for Tracking Wrapper FIRST
-        unwrapped, param = unwrap_once(url)
+        # Check for Tracking Wrapper FIRST (can be passed in to avoid redundant work)
+        unwrapped, param = unwrapped_info
+        if not unwrapped:
+            unwrapped, param = unwrap_once(url)
+            
         if unwrapped:
             return "tracking_wrapper", f"Found destination in '{param}' parameter"
 
@@ -171,8 +179,9 @@ def classify_url(url: str) -> tuple[str, str]:
             
             
         # Default for "pages" (no extension or .html/.php etc)
-        page_extensions = {'.html', '.htm', '.php', '.asp', '.aspx', ''}
-        if any(path.endswith(ext) for ext in page_extensions):
+        page_extensions = {'.html', '.htm', '.php', '.asp', '.aspx'}
+        _, ext = os.path.splitext(path)
+        if ext in page_extensions or not ext:
             return "content", "Standard web page pattern"
             
         return "other", "Unclassified link"
@@ -223,11 +232,11 @@ def triage_urls(urls: list[str], max_scan: int = 8, from_email: str = None) -> d
         if sanitized_raw != raw_url:
             pii_scrubbed_count += 1
             
-        # Classification
-        cat, reason = classify_url(raw_url)
-        
-        # Unwrapping
+        # Unwrapping (Check this before classification to avoid redundancy)
         unwrapped, param = unwrap_once(raw_url)
+        
+        # Classification (Pass unwrapped info to avoid second lookup)
+        cat, reason = classify_url(raw_url, unwrapped_info=(unwrapped, param))
         final_scan_url = raw_url
         sanitized_final_url = sanitized_raw
         

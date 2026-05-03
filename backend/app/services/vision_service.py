@@ -51,13 +51,14 @@ class VisionService:
         try:
             with Image.open(screenshot_path) as img:
                 # Resize image slightly to save tokens if it's massive
-                img.thumbnail((1280, 1280))
+                # 800px is sufficient for brand recognition and saves significant tokens
+                img.thumbnail((800, 800))
                 
                 prompt = (
                     "Analyze this screenshot of a webpage. What famous brand, company, or service is the *primary* subject of this page? "
-                    "Is the page actively trying to impersonate them? "
-                    "CRITICAL: Ignore generic 'Sign in with [Brand]', 'Continue with [Brand]', or 'Login with [Brand]' SSO (Single Sign-On) buttons. "
-                    "Only output a brand if the ENTIRE PAGE is designed to look like that brand's official page (e.g., a fake Google login page). "
+                    "Is the page trying to impersonate them or use their brand authority? "
+                    "CRITICAL: Ignore generic 'Sign in with [Brand]' SSO buttons. "
+                    "Flag the brand if the page uses its logo, trademarked colors, or specific layout patterns to look like an official page or login portal. "
                     "Return your answer strictly as a JSON object matching this schema: "
                     "{\"brand_logo_guess\": \"BrandName\" or null, \"confidence\": float between 0.0 and 1.0}."
                 )

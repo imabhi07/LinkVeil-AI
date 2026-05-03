@@ -1,4 +1,5 @@
 import re
+import tldextract
 from typing import List, Dict, Any
 
 # Keyword lists based on requirements
@@ -90,12 +91,16 @@ def analyze_email(
         from_name_lower = from_name.lower()
         from_email_lower = from_email.lower()
         
+        # Extract root domain for accurate comparison
+        ext = tldextract.extract(from_email_lower)
+        root_domain = f"{ext.domain}.{ext.suffix}"
+        
         for service in major_services:
-            # If name says "PayPal" but email domain isn't paypal.com
-            if service in from_name_lower and service not in from_email_lower:
+            # If name says "PayPal" but email domain isn't the legitimate one
+            if service in from_name_lower and service not in root_domain:
                 flags["impersonation"] = True
                 score += 15
-                reasons.append(f"Sender name '{from_name}' does not match the actual email domain.")
+                reasons.append(f"Sender name '{from_name}' claims to be a major service but domain '{root_domain}' is not recognized.")
                 break
 
     # 1. Urgency Check (+8)
@@ -143,9 +148,10 @@ def analyze_email(
         is_legit_service = False
         if is_trusted and from_name and from_email and '@' in from_email:
             # If CodeRabbit says "CodeRabbit Support", it's legit
-            # We check if the email domain matches the name
-            domain_part = from_email.split('@')[-1].split('.')[0].lower()
-            if domain_part in from_name.lower():
+            # We check if the core domain matches the name
+            ext = tldextract.extract(from_email.lower())
+            domain_part = ext.domain.lower()
+            if domain_part and domain_part in from_name.lower():
                 is_legit_service = True
         
         if not is_legit_service:

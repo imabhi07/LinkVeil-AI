@@ -58,7 +58,9 @@ def _root_domain(url: str) -> str:
     """Extract root domain correctly using tldextract (handles .co.in, etc.)"""
     try:
         ext = tldextract.extract(url)
-        return f"{ext.domain}.{ext.suffix}".lower() if ext.domain and ext.suffix else ext.registered_domain.lower()
+        if ext.domain and ext.suffix:
+            return f"{ext.domain}.{ext.suffix}".lower()
+        return (ext.registered_domain or "").lower()
     except Exception:
         return ""
 
@@ -180,10 +182,8 @@ async def evaluate_url(url: str, db: Session) -> dict:
     whois_result = results[3] if not isinstance(results[3], Exception) else {}
     brand_result = results[4] if not isinstance(results[4], Exception) else {}
 
-    # ── 4. Vision Analysis ──
+    # ── 4. Vision Analysis (Delayed for Early Exit check) ──
     visual_result = None
-    if probe_result and hasattr(probe_result, "screenshot_path") and probe_result.screenshot_path:
-        visual_result = await vision_service.analyze_screenshot(probe_result.screenshot_path)
 
     # ── 5. Fusion Logic ──
     raw_xgb_score = xgb_prob * 100
@@ -197,6 +197,32 @@ async def evaluate_url(url: str, db: Session) -> dict:
 
     # Base blend (70% LLM, 30% XGB)
     risk_score = (llm_score * 0.7) + (raw_xgb_score * 0.3)
+    
+    # ── 4.5 Late Vision Analysis (with Early Exit) ──
+    if probe_result and hasattr(probe_result, "screenshot_path") and probe_result.screenshot_path:
+        # Optimization: Only run Vision if we need visual corroboration
+        is_mismatch = brand_result.get("is_mismatch", False)
+        has_login = getattr(probe_result, "login_form_found", False)
+        
+        # Logic: 
+        # - Skip if already definitively flagged by domain mismatch (Saves Quota)
+        # - Skip if low risk and no login form (Selective Vision)
+        if is_mismatch:
+            logger.info(f"Deterministic Early Exit: Skipping Vision for {url} (Brand Mismatch already confirmed)")
+            # Synthesize a visual result so the UI still shows the forensic evidence
+            visual_result = {
+                "visual_score": 0.95,
+                "score": 0.95,
+                "brand_logo_guess": brand_result.get("brand_detected", "Unknown"),
+                "brand_match": brand_result.get("brand_detected", "Unknown"),
+                "phash": "DETERMINISTIC-MATCH",
+                "explanation": f"Deterministic Match: Local engine confirmed brand impersonation of '{brand_result.get('brand_detected')}' via domain analysis."
+            }
+        elif not has_login and llm_score < 40:
+            logger.info(f"Selective Vision: Skipping Vision for {url} (No login form and LLM score {llm_score} is low)")
+        else:
+            logger.info(f"Vision Required: Invoking Gemini Vision for {url}")
+            visual_result = await vision_service.analyze_screenshot(probe_result.screenshot_path)
     
     # WHOIS Boosts
     whois_boost = 0
@@ -259,11 +285,6 @@ async def evaluate_url(url: str, db: Session) -> dict:
                 probe_adjustment = -20  # Strong exculpatory: page reachable, no cred harvesting at all
                 logger.info("Probe Dampener: -20 (No login form found — not a credential harvester)")
     
-    # ── Safe Domain Dampener ──
-    if _should_skip_probe(url):
-        risk_score = min(25.0, risk_score - 30)
-        logger.info(f"Safe Domain Dampener: Score capped at 25.0 (Trusted Domain)")
-
     risk_score = max(0.0, min(100.0, risk_score))
     
     # ── Unreachable Domain Override ──

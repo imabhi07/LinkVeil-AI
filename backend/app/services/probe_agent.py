@@ -30,7 +30,7 @@ FAKE_USER = "test_admin@linkveil.local"
 FAKE_PASS = "Phish@Guard#Fake!2024"
 
 NAVIGATION_TIMEOUT_MS = 30000   # increased from 20s for heavy/global sites
-FORM_WAIT_MS = 2500             # reduced from 3s
+FORM_WAIT_MS = 4000             # increased from 2.5s for modern JS/SPA rendering
 
 TRUSTED_REDIRECT_DOMAINS = {
     "google.com", "google.co", "accounts.google.com",
@@ -311,7 +311,9 @@ def run_probe(url: str) -> ProbeResult:
                         'button[type="submit"], input[type="submit"], '
                         'button:has-text("continue"), button:has-text("next"), '
                         'button:has-text("sign in"), button:has-text("log in"), '
-                        'button:has-text("submit"), button:has-text("proceed")'
+                        'button:has-text("login"), button:has-text("signin"), '
+                        'a:has-text("login"), a:has-text("sign in"), '
+                        'div[role="button"]:has-text("login"), div[role="button"]:has-text("sign in")'
                     )
                     visible_btns = [b for b in step1_buttons if b.is_visible()]
                     if visible_btns:
