@@ -26,6 +26,7 @@ LinkVeil-AI solves this using a **Defense-in-Depth** approach, combining seven s
 7. **Engine 5: Threat Intel + WHOIS**: Checks live phishing feeds and domain registration.
 8. **Engine 6: Email Forensic Analyzer**: Heuristic scoring of headers, authentication, and urgency.
 9. **Engine 7: Brand Mismatch Detector**: Local, zero-cost token matching for 20+ major brands.
+![LinkVeil-AI Architecture](docs/assets/architecture-LinkVeilAI-v1.png)
 
 ---
 
