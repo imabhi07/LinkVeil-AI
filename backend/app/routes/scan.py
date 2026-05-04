@@ -151,6 +151,12 @@ async def _execute_email_analysis(parsed_data: dict, db: Session):
     else:
         email_risk_level = "Low"
         
+    # Inject Link Analysis into Forensic Logs
+    if max_link_score >= 65:
+        reasons.insert(0, f"Critical: Email contains high-risk deceptive links (Link Risk: {round(max_link_score, 1)}/100).")
+    elif max_link_score >= 35:
+        reasons.insert(0, f"Warning: Email contains suspicious or tracking links (Link Risk: {round(max_link_score, 1)}/100).")
+        
     # Indicator & Reason Filtering: Tame noise if overall verdict is LOW or sender is Trusted
     final_indicators = indicators
     final_reasons = reasons

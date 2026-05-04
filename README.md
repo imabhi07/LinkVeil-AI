@@ -19,14 +19,14 @@ LinkVeil-AI is an advanced, multi-layered security platform that provides real-t
 
 ## 🔥 Key Highlights
 
-*   **⚡ Hybrid Intelligence**: Combines XGBoost (Lexical), and Gemini AI (Cognitive + Visual).
+*   **⚡ Hybrid Intelligence**: Tri-model ensemble combining XGBoost (Lexical), Gemini LLM (Cognitive), and Gemini Vision (Visual).
 *   **📧 Email Forensic Scanner**: Deep analysis of `.eml` files and raw email text with header authentication (SPF/DKIM) and heuristic scoring.
 *   **🕵️ Active Probing**: Real-time browser agent (Playwright) analyzes live page behavior and redirects.
-*   **👁️ Multimodal Visual Forensics**: Integrated Gemini Vision for visual brand recognition and impersonation detection.
+*   **👁️ Visual Forensics**: Integrated Gemini Vision for visual brand recognition and impersonation detection.
+*   **🔒 Privacy-First Forensics**: Automated PII scrubbing ("Privacy Protected") and intelligent log filtering ("Skipped") to protect sensitive forensic data.
 *   **🛡️ Brand Mismatch Engine**: Local, zero-API-cost token matching for 20+ global brands.
-*   **🔗 Link Triage**: Intelligent extraction, classification, and PII scrubbing of URLs from email bodies.
 *   **📡 Intelligence Dashboard**: Real-time aggregation of forensic indicators, categories, and historical trends.
-*   **🎨 Premium UI**: A professional "Cyber-Botanical" theme with full dark/light mode support and ARIA-compliant accessibility.
+*   **🎨 Premium UI**: A high-contrast "Cyber-Botanical" dashboard with enhanced light mode accessibility and professional glassmorphism.
 
 ---
 

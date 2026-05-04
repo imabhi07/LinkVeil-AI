@@ -77,8 +77,8 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = memo(({ history, mo
                     </span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-xs font-mono text-cyber-light-text dark:text-zinc-600">
-                      {new Date(item.timestamp).toLocaleTimeString()}
+                    <span className="text-xs font-mono text-zinc-500 dark:text-zinc-600 font-medium">
+                      {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                     <button
                       onClick={(e) => {
@@ -93,7 +93,7 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = memo(({ history, mo
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-mono text-cyber-light-text dark:text-zinc-400 truncate w-3/4 opacity-70 mb-0.5" title={subtitle}>
+                  <p className="text-xs font-mono text-zinc-500 dark:text-zinc-400 truncate w-3/4 opacity-80 mb-0.5" title={subtitle}>
                       {subtitle}
                   </p>
                   <ArrowUpRight className="w-3 h-3 text-cyber-light-text/40 dark:text-zinc-700 group-hover:text-cyber-light-accent dark:group-hover:text-ornex-green transition-colors" />

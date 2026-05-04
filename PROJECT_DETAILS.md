@@ -17,9 +17,9 @@ LinkVeil-AI solves this using a **Defense-in-Depth** approach, combining seven s
 ## 2. System Architecture
 
 ### 🛡️ High-Level Component View
-1. **Frontend (React/Vite)**: Gathers input (URL/Email) and provides a real-time forensic visualizer.
+1. **Frontend (React/Vite)**: Gathers input (URL/Email) and provides a real-time forensic visualizer with theme-aware high-contrast accessibility.
 2. **API Layer (FastAPI)**: Manages async orchestration of seven forensic engines.
-3. **Engine 1: XGBoost (Lexical)**: Checks the "DNA" of the URL string via 30+ features.
+3. **Engine 1: Dual-ML Classifier (XGBoost + DistilBERT)**: Checks URL "DNA" via lexical and semantic signals.
 4. **Engine 2: Playwright Agent (Live Probe)**: Analyzes "Behavior" of the destination in a sandbox.
 5. **Engine 3: Gemini AI (Cognitive Analyst)**: Synthesizes multi-engine evidence into explanations.
 6. **Engine 4: Gemini Vision (Visual Forensics)**: Detects pixel-perfect brand impersonation.
@@ -36,11 +36,11 @@ The XGBoost engine focuses on the mathematical properties of the URL string.
 - **Features Extracted**: Entropy (randomness), character frequency (excessive dashes/dots), presence of sensitive keywords (login, bank, secure), and TLD (top-level domain) reputation.
 - **Why XGBoost?**: It is exceptionally fast and handles non-linear relationships between these features better than simple logistic regression.
 
-### B. Deep Learning (DistilBERT — Training Only)
-A DistilBERT model can optionally be trained on URL data using `ml/train.py`. 
+### B. Deep Learning (DistilBERT)
+A DistilBERT model is fine-tuned on URL data and used for live inference alongside XGBoost.
 - **The Insight**: Phishing URLs often "sound" wrong or try to look like other brands (e.g., `paypal-security-update.com`).
 - **Fine-tuning**: The `distilbert-base-uncased` model is fine-tuned on balanced phishing and benign URLs so it understands the semantic patterns of malicious links.
-- **Note**: The DistilBERT model is a training artifact only. At runtime the backend uses the XGBoost engine (`xgb_service.py`) alongside the Gemini LLM for all inference.
+- **Ensemble Scoring**: At runtime, the `dl_service.py` provides a semantic score that is fused with lexical (XGBoost) and cognitive (Gemini) results.
 
 ---
 
@@ -75,22 +75,22 @@ When an email is submitted, LinkVeil-AI executes a multi-stage forensic extracti
 3. **Link Extraction & Triage**:
    - Extracts all URLs from the email body.
    - **Classification**: Categorizes links as `static_asset`, `tracking_wrapper`, `unsubscribe`, `content`, or `known_safe`.
-   - **PII Scrubbing**: Automatically removes sensitive query parameters (email addresses, IDs) before analysis to protect user privacy.
+   - **Forensic Transparency**: Automatically filters non-malicious noise as `Skipped` and protects user PII by labeling sensitive parameters as `Privacy Protected`.
    - **Unwrapping**: Detects and unwraps common email tracking/redirect services to find the final destination.
 4. **SSRF Hardening**: All network-bound tasks in the triage layer use a threaded executor with strict timeouts and private IP rejection to protect the internal infrastructure.
 
 ---
 
-## 6. Score Orchestration Logic
+## 7. Score Orchestration Logic
 Scores are aggregated into a **Final Risk Score (0-100)** using a weighted fusion system:
-1. **Base Blend**: LLM score (70%) + XGBoost score (30%) form the base risk value.
+1. **Base Blend**: LLM score (60%) + XGBoost score (20%) + DistilBERT score (20%) form the base risk value.
 2. **Signal Boosts**: WHOIS age, brand mismatch (Engine 7), suspicious TLD, and visual forensics (Engine 4) add incremental risk.
 3. **Probe Adjustment**: If the Playwright agent confirms credential harvesting, the score is boosted. If no login elements are found, the score is dampened.
 4. **Threat Intel Short-Circuit**: Instant "High" risk if the URL appears in live phishing feeds.
 
 ---
 
-## 7. Frontend Design System
+## 8. Frontend Design System
 The UI was designed to feel like a high-end security operations center (SOC) tool:
 - **Glassmorphism**: Elegant, transparent UI elements with subtle motion.
 - **Forensic Intelligence Dashboard**: A centralized panel featuring `AnalyticsPanel.tsx` for trend tracking and indicator aggregation.
@@ -100,32 +100,36 @@ The UI was designed to feel like a high-end security operations center (SOC) too
 
 ---
 
-## 8. Database & Caching
+## 9. Database & Caching
 - **SQLite/Postgres**: Stores every scan result with full forensic context (WHOIS, probe artifacts, fusion trace).
 - **In-Process Cache**: If a URL was scanned in the last 5 minutes, the system returns the cached result instantly, saving API costs and compute time.
 
 ---
 
-## 9. Multimodal Visual Forensics (Engine 4)
+## 10. Multimodal Visual Forensics (Engine 4)
 Using Gemini Vision, LinkVeil-AI can now "see" like a human analyst:
 - **Logo Recognition**: Identifies if a page is visually claiming to be Amazon, Google, or Microsoft.
 - **Anti-SSO Heuristics**: Distinguishes between legitimate "Login with Google" buttons and malicious pages designed entirely around fake Google portals.
 - **Confidence Scoring**: Each visual match is assigned a confidence value, which is fused with lexical and behavioral signals for the final verdict.
 
-## 10. Intelligence Analytics & Historics
+---
+
+## 11. Intelligence Analytics & Historics
 The platform now features a dedicated intelligence panel:
 - **Indicator Aggregation**: Tracks category trends (Financial, Social Media, Tech) across all scans.
 - **Historical Trends**: Visualizes scan volume and risk distribution over time.
 - **Data Persistence**: Uses a forensic SQLite/Postgres store to ensure all intelligence is available for retroactive auditing.
 
-## 11. Future Roadmap
+---
+
+## 12. Future Roadmap
 - [x] **Email Forensic Pipeline**: Full header/body analysis and link triage.
 - [ ] **Browser Extension**: Real-time protection while browsing (In Progress).
 - [ ] **Collaborative Forensic Sharing**: Community-driven threat intelligence.
 
 ---
 
-## 12. Testing & Quality Assurance
+## 13. Testing & Quality Assurance
 
 LinkVeil-AI maintains a robust test suite in `/tests` to ensure detection accuracy:
 - **Service Isolation**: Individual tests for WHOIS, Vision, Brand, and LLM engines.

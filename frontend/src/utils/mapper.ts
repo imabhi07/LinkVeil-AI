@@ -45,6 +45,7 @@ export function mapToAnalysisResult(raw: BackendScanResponse): AnalysisResult {
   
   const mappedAgentReport: AgentReport = {
     activeProbing: {
+      ...activeProbing, // Spread all properties from backend
       performed: !!activeProbing?.performed,
       credentialsUsed: activeProbing?.credentialsUsed || 'test_admin@linkveil.local / ●●●●●●●●',
       outcome: activeProbing?.outcome || 'No outcome reported by agent.',

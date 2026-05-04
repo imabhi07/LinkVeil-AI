@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import type { AnalysisResult } from '../types';
 import { 
   ShieldCheck, ShieldAlert, ShieldX, Activity, Globe, AlertTriangle, 
-  ExternalLink, ArrowRight, Bot, Eye, Terminal, Zap, Image as ImageIcon, Info, X
+  ExternalLink, ArrowRight, Bot, Eye, Terminal, Zap, Image as ImageIcon, Info, X, ChevronDown
 } from 'lucide-react';
 import { RiskGauge } from './RiskGauge';
 import { InfoTip } from './InfoTip';
@@ -15,6 +15,19 @@ interface ResultDetailsProps {
 
 export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideHeader }) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['agentLog']));
+
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => {
+      const next = new Set(prev);
+      if (next.has(section)) {
+        next.delete(section);
+      } else {
+        next.add(section);
+      }
+      return next;
+    });
+  };
 
   // Safety check for critical data
   if (!result) return null;
@@ -104,25 +117,32 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
 
         {/* Agent Investigation Report */}
         {result.agentReport && (
-          <div className="lg:col-span-2 glass-panel rounded-3xl p-8 pb-12 dark:border-ornex-green/20 dark:bg-ornex-green/5 overflow-hidden relative">
-            <div className="absolute top-0 right-0 p-4 opacity-10">
+          <div className="lg:col-span-2 glass-panel rounded-3xl p-8 dark:border-ornex-green/20 dark:bg-ornex-green/5 overflow-hidden relative">
+            <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
                <Bot className="w-32 h-32 text-cyber-light-accent dark:text-ornex-green" />
             </div>
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-sm font-bold text-cyber-light-heading dark:text-white flex items-center gap-2 uppercase tracking-[0.05em] border-l-[3px] border-cyber-light-accent pl-3">
+            <div 
+              className="flex items-center justify-between cursor-pointer group/agent"
+              onClick={() => toggleSection('agentLog')}
+            >
+              <h3 className="text-sm font-bold text-cyber-light-heading dark:text-white flex items-center gap-2 uppercase tracking-[0.05em] border-l-[3px] border-cyber-light-accent pl-3 group-hover/agent:text-cyber-light-accent dark:group-hover/agent:text-ornex-green transition-colors">
                 <span className="w-1.5 h-1.5 bg-cyber-light-accent dark:bg-ornex-green rounded-full animate-pulse"></span>
                 Agent Investigation Log
               </h3>
-              <div className="flex gap-2">
-                {result.agentReport.activeProbing?.reachable ? (
-                   <span className="px-2 py-1 rounded-md bg-cyber-light-accent-bg dark:bg-emerald-500/10 text-cyber-light-accent-deep dark:text-ornex-green text-xs font-bold border border-cyber-light-accent/20">LIVE</span>
-                ) : (
-                   <span className="px-2 py-1 rounded-md bg-zinc-500/10 text-zinc-500 text-xs font-bold border border-zinc-500/20">OFFLINE</span>
-                )}
+              <div className="flex items-center gap-4">
+                <div className="flex gap-2">
+                  {result.agentReport.activeProbing?.reachable ? (
+                     <span className="px-2 py-1 rounded-md bg-cyber-light-accent-bg dark:bg-emerald-500/10 text-cyber-light-accent-deep dark:text-ornex-green text-xs font-bold border border-cyber-light-accent/20">LIVE</span>
+                  ) : (
+                     <span className="px-2 py-1 rounded-md bg-zinc-500/10 text-zinc-500 text-xs font-bold border border-zinc-500/20">OFFLINE</span>
+                  )}
+                </div>
+                <ChevronDown className={`w-5 h-5 text-zinc-400 transition-transform duration-300 ${expandedSections.has('agentLog') ? 'rotate-180' : ''}`} />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+            <div className={`accordion-content ${expandedSections.has('agentLog') ? 'expanded' : 'collapsed'}`}>
+              <div className="pt-6 pb-4 grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
                {/* Active Probing Section */}
                <div className="space-y-3">
                   <InfoTip title="Active Probing" content="Real-time interaction with the URL to identify login forms and harvest behavior signatures.">
@@ -131,19 +151,21 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                       <span>Active Probing</span>
                     </div>
                   </InfoTip>
-                  <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border border-cyber-light-border dark:border-white/10 rounded-2xl p-5 pb-7 font-mono text-xs space-y-2 shadow-sm hover:shadow-md transition-all duration-300">
+                  <div className="bg-white dark:bg-zinc-900/80 backdrop-blur-md border border-zinc-200 dark:border-white/10 rounded-2xl p-5 pb-7 font-mono text-xs space-y-2 shadow-sm hover:shadow-md transition-all duration-300">
                      <div className="flex justify-between border-b border-cyber-light-border dark:border-white/10 pb-2 mb-2">
-                        <span className="text-cyber-light-text dark:text-zinc-500">Form:</span>
+                        <span className="text-cyber-light-text dark:text-zinc-400">Form:</span>
                         <span className={result.agentReport.activeProbing?.loginFormFound ? "text-amber-500" : "text-zinc-400"}>
                           {result.agentReport.activeProbing?.loginFormFound ? "DETECTED" : "NONE"}
                         </span>
                      </div>
                       <div className="space-y-1">
-                        <p className="text-cyber-light-text dark:text-zinc-500 mb-1">Payload Trace:</p>
-                        <p className="text-cyber-light-accent-code dark:text-ornex-green truncate bg-cyber-light-accent/5 dark:bg-transparent px-2 py-0.5 rounded font-mono">{result.agentReport?.activeProbing?.credentialsUsed || 'N/A'}</p>
+                        <p className="text-zinc-500 dark:text-zinc-400 mb-1">Payload Trace:</p>
+                        <p className="text-cyber-light-accent-code dark:text-ornex-green truncate bg-zinc-100 dark:bg-transparent px-2 py-0.5 rounded font-mono font-bold">
+                          {result.agentReport?.activeProbing?.credentialsUsed || 'N/A'}
+                        </p>
                       </div>
                      <div className="mt-2 pt-2 border-t border-cyber-light-border dark:border-white/10">
-                        <p className="text-cyber-light-text dark:text-zinc-500 mb-1">Outcome:</p>
+                        <p className="text-cyber-light-text dark:text-zinc-400 mb-1">Outcome:</p>
                         <p className={`font-bold ${result.agentReport.activeProbing?.behaviorRisk === 'HIGH' ? 'text-rose-500' : 'text-cyber-light-heading dark:text-zinc-300'}`}>
                            {result.agentReport.activeProbing?.outcome || 'Session Terminated'}
                         </p>
@@ -159,21 +181,21 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                       <span>Visual Forensic</span>
                     </div>
                   </InfoTip>
-                  <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border border-cyber-light-border dark:border-white/10 rounded-2xl p-5 pb-7 font-mono text-xs space-y-2 shadow-sm hover:shadow-md transition-all duration-300">
+                  <div className="bg-white dark:bg-zinc-900/80 backdrop-blur-md border border-zinc-200 dark:border-white/10 rounded-2xl p-5 pb-7 font-mono text-xs space-y-2 shadow-sm hover:shadow-md transition-all duration-300">
                      <div className="flex justify-between border-b border-cyber-light-border dark:border-white/10 pb-2 mb-2">
-                        <span className="text-cyber-light-text dark:text-zinc-500">AI Brand Match:</span>
+                        <span className="text-cyber-light-text dark:text-zinc-400">AI Brand Match:</span>
                         <span className="text-cyber-light-heading dark:text-zinc-200">
                           {result.visual_forensics?.brand_match ? `${Math.round(result.visual_forensics.score * 100)}%` : '0%'}
                         </span>
                      </div>
                      <div className="space-y-1">
-                        <p className="text-cyber-light-text dark:text-zinc-500 mb-1">Identity Guess:</p>
+                        <p className="text-cyber-light-text dark:text-zinc-400 mb-1">Identity Guess:</p>
                         <p className="text-cyber-light-heading dark:text-zinc-200 font-bold uppercase tracking-tighter">
                           {result.visual_forensics?.brand_match || 'UNKNOWN'}
                         </p>
                      </div>
                      <div className="mt-2 pt-2 border-t border-cyber-light-border dark:border-white/10">
-                        <p className="text-cyber-light-text dark:text-zinc-500 mb-1">Visual Evidence:</p>
+                        <p className="text-cyber-light-text dark:text-zinc-400 mb-1">Visual Evidence:</p>
                         <p className="text-cyber-light-heading dark:text-zinc-300">
                            {result.visual_forensics?.brand_match 
                               ? `Detected high-fidelity impersonation of ${result.visual_forensics.brand_match}` 
@@ -183,49 +205,61 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                   </div>
                </div>
 
-               {/* Screenshot Section */}
                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-xs font-mono text-cyber-light-accent dark:text-ornex-green uppercase tracking-wider mb-1">
-                     <ImageIcon className="w-4 h-4" />
-                     <span>Evidence Capture</span>
-                  </div>
-                  <div className="relative group overflow-hidden rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-black aspect-video cursor-zoom-in">
+                  <InfoTip title="Evidence Capture" content="Visual snapshot of the target page taken during active probing to detect UI redress or impersonation.">
+                    <div className="flex items-center gap-2 text-xs font-mono text-cyber-light-accent dark:text-ornex-green uppercase tracking-wider mb-1">
+                       <ImageIcon className="w-4 h-4" />
+                       <span>Evidence Capture</span>
+                    </div>
+                  </InfoTip>
+                  <div className="relative group/screenshot overflow-hidden rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-zinc-900/50 aspect-video cursor-zoom-in">
                     {result.agentReport?.activeProbing?.screenshotPath ? (
                         <img 
-                          src={`${API_BASE_URL}/${result.agentReport?.activeProbing?.screenshotPath}`} 
+                          src={`${API_BASE_URL}/${result.agentReport?.activeProbing?.screenshotPath.replace(/^\//, '')}`} 
                           alt="Phishing Page Screenshot"
-                          className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
+                          className="w-full h-full object-cover object-top opacity-90 group-hover/screenshot:opacity-100 transition-opacity"
                           onClick={() => setIsImageModalOpen(true)}
                           onError={(e) => {
                             (e.target as HTMLImageElement).src = 'https://placehold.co/600x400/f4f4f5/71717a?text=Evidence+Load+Failed';
                           }}
                         />
                     ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 dark:text-zinc-600 gap-2">
-                        <ImageIcon className="w-8 h-8 opacity-20" />
-                        <span className="text-[11px] uppercase font-bold tracking-widest opacity-40">No Image Data</span>
+                      <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(255,255,255,0.05)_10px,rgba(255,255,255,0.05)_20px)] dark:bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(255,255,255,0.02)_10px,rgba(255,255,255,0.02)_20px)] border-2 border-dashed border-zinc-300 dark:border-white/20 animate-pulse-slow">
+                        <ImageIcon className="w-8 h-8 text-zinc-400 dark:text-zinc-500 opacity-50" />
+                        <div className="text-center">
+                          <span className="text-[11px] uppercase font-bold tracking-widest text-zinc-500 dark:text-zinc-400 block">No Screenshot Captured</span>
+                          <span className="text-[9px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Target not probed or failed</span>
+                        </div>
                       </div>
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3 pointer-events-none">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover/screenshot:opacity-100 transition-opacity flex items-end p-3 pointer-events-none">
                       <p className="text-[11px] text-white font-mono flex items-center gap-1">
                         <ExternalLink className="w-3 h-3" /> CLICK TO VIEW FULLSCREEN
                       </p>
                     </div>
                   </div>
                </div>
+              </div>
             </div>
           </div>
         )}
 
         {/* Right Column: Technical Details Section */}
         <div className="space-y-6">
-          <div className="glass-panel rounded-3xl p-8 dark:border-white/10 space-y-6 transition-colors">
-            <h3 className="text-sm font-bold text-cyber-light-heading dark:text-white flex items-center gap-2 uppercase tracking-[0.05em] border-l-[3px] border-purple-500 pl-3">
-              <span className="w-1.5 h-1.5 bg-purple-500 rounded-full"></span>
-              Technical Analysis
-            </h3>
+          <div className="glass-panel rounded-3xl p-8 dark:border-white/10 transition-colors">
+            <div 
+              className="flex items-center justify-between cursor-pointer group/tech"
+              onClick={() => toggleSection('technical')}
+            >
+              <h3 className="text-sm font-bold text-cyber-light-heading dark:text-white flex items-center gap-2 uppercase tracking-[0.05em] border-l-[3px] border-purple-500 pl-3 group-hover/tech:text-purple-500 transition-colors">
+                <span className="w-1.5 h-1.5 bg-purple-500 rounded-full"></span>
+                Technical Analysis
+              </h3>
+              <ChevronDown className={`w-5 h-5 text-zinc-400 transition-transform duration-300 ${expandedSections.has('technical') ? 'rotate-180' : ''}`} />
+            </div>
 
-            <div className="space-y-5">
+            <div className={`accordion-content ${expandedSections.has('technical') ? 'expanded' : 'collapsed'}`}>
+              <div className="pt-6 space-y-5">
               {(() => {
                 const cleanText = (text: string) => {
                   if (!text) return "Data unavailable for this analysis stage.";
@@ -236,42 +270,43 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                   <>
                     <div>
                       <InfoTip title="URL Analysis" content="Checks for typosquatting, suspicious subdomains, and long encoded tokens.">
-                        <div className="flex items-center gap-2 text-xs font-mono text-cyber-light-text dark:text-zinc-500 mb-2 uppercase tracking-wider">
+                        <div className="flex items-center gap-2 text-xs font-mono text-cyber-light-text dark:text-zinc-400 mb-2 uppercase tracking-wider">
                           <Globe className="w-3 h-3" />
                           <span>URL Structure</span>
                         </div>
                       </InfoTip>
-                      <p className="text-sm text-cyber-light-heading dark:text-zinc-100 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md p-5 rounded-2xl border border-cyber-light-border dark:border-white/5 font-mono shadow-sm hover:shadow-md transition-all duration-300">
+                      <p className="text-sm text-cyber-light-heading dark:text-zinc-100 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md p-5 rounded-2xl border border-cyber-light-border dark:border-white/5 font-mono shadow-sm hover:shadow-md transition-all duration-300 break-all">
                         {cleanText(result.technicalDetails?.urlStructure)}
                       </p>
                     </div>
 
                     <div>
                       <InfoTip title="Trust Signals" content="Verification against global threat feeds and historical domain age/stability.">
-                        <div className="flex items-center gap-2 text-xs font-mono text-cyber-light-text dark:text-zinc-500 mb-2 uppercase tracking-wider">
+                        <div className="flex items-center gap-2 text-xs font-mono text-cyber-light-text dark:text-zinc-400 mb-2 uppercase tracking-wider">
                           <ShieldCheck className="w-3 h-3" />
                           <span>Domain Reputation</span>
                         </div>
                       </InfoTip>
-                      <p className="text-sm text-cyber-light-heading dark:text-zinc-100 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md p-5 rounded-2xl border border-cyber-light-border dark:border-white/5 font-mono shadow-sm hover:shadow-md transition-all duration-300">
+                      <p className="text-sm text-cyber-light-heading dark:text-zinc-100 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md p-5 rounded-2xl border border-cyber-light-border dark:border-white/5 font-mono shadow-sm hover:shadow-md transition-all duration-300 break-words">
                         {cleanText(result.technicalDetails?.domainReputation)}
                       </p>
                     </div>
 
                     <div>
                       <InfoTip title="Hook Detection" content="Identifies linguistic pressure (Urgency, Financial) used to manipulate users.">
-                        <div className="flex items-center gap-2 text-xs font-mono text-cyber-light-text dark:text-zinc-500 mb-2 uppercase tracking-wider">
+                        <div className="flex items-center gap-2 text-xs font-mono text-cyber-light-text dark:text-zinc-400 mb-2 uppercase tracking-wider">
                           <AlertTriangle className="w-3 h-3" />
                           <span>Social Engineering</span>
                         </div>
                       </InfoTip>
-                      <p className="text-sm text-cyber-light-heading dark:text-zinc-100 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md p-5 rounded-2xl border border-cyber-light-border dark:border-white/5 font-mono shadow-sm hover:shadow-md transition-all duration-300">
+                      <p className="text-sm text-cyber-light-heading dark:text-zinc-100 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md p-5 rounded-2xl border border-cyber-light-border dark:border-white/5 font-mono shadow-sm hover:shadow-md transition-all duration-300 break-words">
                         {cleanText(result.technicalDetails?.socialEngineeringTricks)}
                       </p>
                     </div>
                   </>
                 );
               })()}
+              </div>
             </div>
           </div>
 
@@ -280,36 +315,51 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
 
         {/* Right Column: Advice & Findings */}
         <div className="space-y-6">
-           {/* Key Findings */}
-           <div className="glass-panel rounded-3xl p-8 dark:border-white/10 transition-colors relative overflow-hidden">
-             <div className="absolute top-0 right-0 p-3 opacity-5">
-                 <Activity className="w-32 h-32" />
-             </div>
-             <h3 className="text-sm font-bold text-cyber-light-heading dark:text-white flex items-center gap-2 mb-6 uppercase tracking-[0.05em] border-l-[3px] border-blue-500 pl-3">
-               <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
-               Core Forensic Indicators
-             </h3>
+          <div className="glass-panel rounded-3xl p-8 dark:border-white/10 transition-colors">
+            <div 
+              className="flex items-center justify-between cursor-pointer group/findings"
+              onClick={() => toggleSection('findings')}
+            >
+              <h3 className="text-sm font-bold text-cyber-light-heading dark:text-white flex items-center gap-2 uppercase tracking-[0.05em] border-l-[3px] border-blue-500 pl-3 group-hover/findings:text-blue-500 transition-colors">
+                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+                Findings & Advice
+              </h3>
+              <ChevronDown className={`w-5 h-5 text-zinc-400 transition-transform duration-300 ${expandedSections.has('findings') ? 'rotate-180' : ''}`} />
+            </div>
+
+            <div className={`accordion-content ${expandedSections.has('findings') ? 'expanded' : 'collapsed'}`}>
+              <div className="pt-6 space-y-6">
+                 {/* Key Findings */}
+                 <div className="rounded-2xl p-6 bg-white/50 dark:bg-black/20 border border-zinc-200 dark:border-white/5 relative overflow-hidden">
+                   <div className="absolute top-0 right-0 p-3 opacity-5 pointer-events-none">
+                       <Activity className="w-24 h-24" />
+                   </div>
+                   <h4 className="text-xs font-bold text-cyber-light-heading dark:text-white flex items-center gap-2 mb-4 uppercase tracking-[0.05em] opacity-80">
+                     Core Forensic Indicators
+                   </h4>
              <ul className="space-y-4">
-               {result.reasoning?.map((reason, idx) => (
-                 <li key={idx} className="flex items-start gap-4 text-cyber-light-text dark:text-zinc-300 group">
-                   <ArrowRight className="w-4 h-4 text-cyber-light-text/50 dark:text-zinc-600 mt-1 flex-shrink-0 group-hover:text-cyber-light-accent dark:group-hover:text-ornex-green transition-colors" />
-                   <span className="text-sm leading-relaxed">{reason}</span>
-                 </li>
-               )) || (
+               {result.reasoning && result.reasoning.length > 0 ? (
+                 result.reasoning.map((reason, idx) => (
+                   <li key={idx} className="flex items-start gap-4 text-cyber-light-text dark:text-zinc-300 group/finding">
+                     <ArrowRight className="w-4 h-4 text-cyber-light-text/50 dark:text-zinc-600 mt-1 flex-shrink-0 group-hover/finding:text-cyber-light-accent dark:group-hover/finding:text-ornex-green transition-colors" />
+                     <span className="text-sm leading-relaxed">{reason}</span>
+                   </li>
+                 ))
+               ) : (
                  <li className="text-sm text-cyber-light-text/50 italic">No reasoning data available for this record.</li>
                )}
-             </ul>
-           </div>
+                 </ul>
+               </div>
 
-           {/* Advice */}
-           <div className="glass-panel rounded-3xl p-8 border border-cyber-light-accent/30 bg-cyber-light-accent/5 dark:bg-ornex-green/5 shadow-[0_0_40px_rgba(0,200,83,0.05)] relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 opacity-5">
-                 <ShieldCheck className="w-32 h-32 text-cyber-light-accent" />
-              </div>
-              <h3 className="text-sm font-bold text-cyber-light-accent-deep dark:text-ornex-green flex items-center gap-2 mb-6 uppercase tracking-[0.05em] border-l-[3px] border-cyber-light-accent pl-3">
-                <ShieldCheck className="w-5 h-5" />
-                Sentinel Mitigation Advice
-              </h3>
+               {/* Advice */}
+               <div className="rounded-2xl p-6 border border-cyber-light-accent/30 bg-cyber-light-accent/5 dark:bg-ornex-green/5 shadow-[0_0_40px_rgba(0,200,83,0.05)] relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                     <ShieldCheck className="w-24 h-24 text-cyber-light-accent" />
+                  </div>
+                  <h4 className="text-xs font-bold text-cyber-light-accent-deep dark:text-ornex-green flex items-center gap-2 mb-4 uppercase tracking-[0.05em] opacity-90">
+                    <ShieldCheck className="w-4 h-4" />
+                    Mitigation Advice
+                  </h4>
               <div className="grid grid-cols-1 gap-4">
                  {(result.mitigationAdvice && result.mitigationAdvice.length > 0) ? result.mitigationAdvice.map((advice, idx) => (
                    <div key={idx} className="flex items-start gap-3 p-4 rounded-2xl bg-white/60 dark:bg-black/60 border border-cyber-light-accent/30 backdrop-blur-md shadow-sm">
@@ -326,11 +376,13 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                       <p className="text-sm text-cyber-light-text/70 italic">No specific mitigation required at this time.</p>
                     </div>
                  )}
-              </div>
-           </div>
+               </div>
+            </div>
+          </div>
         </div>
-
       </div>
+    </div>
+  </div>
 
       {/* Image Modal */}
       {isImageModalOpen && result.agentReport?.activeProbing?.screenshotPath && createPortal(
@@ -353,7 +405,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
             onClick={(e) => e.stopPropagation()}
           >
             <img 
-              src={`${API_BASE_URL}/${result.agentReport?.activeProbing?.screenshotPath}`} 
+              src={`${API_BASE_URL}/${result.agentReport?.activeProbing?.screenshotPath.replace(/^\//, '')}`} 
               alt="Fullscreen Evidence Screenshot"
               className="w-full h-auto rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-white/5 cursor-default"
             />

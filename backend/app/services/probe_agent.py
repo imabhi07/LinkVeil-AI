@@ -149,6 +149,7 @@ class ProbeResult:
     page_title: Optional[str] = None
     final_url: Optional[str] = None
     error: Optional[str] = None
+    explicitly_offline: bool = False # NEW: True ONLY for NXDOMAIN/Refused, not for Timeouts
     
     # New Forensic Fields
     screenshot_path: Optional[str] = None
@@ -228,12 +229,15 @@ def run_probe(url: str) -> ProbeResult:
             # Set a standard desktop viewport to avoid mobile-style distortion
             page.set_viewport_size({"width": 1280, "height": 1080})
             
-            # networkidle is better for ensuring all assets (CSS/JS) are loaded
-            page.goto(url, timeout=NAVIGATION_TIMEOUT_MS, wait_until="networkidle")
+            # 'commit' is the fastest check - returns as soon as headers are received
+            page.goto(url, timeout=NAVIGATION_TIMEOUT_MS, wait_until="commit")
             result.reachable = True
             
-            # Small delay for final rendering
-            page.wait_for_timeout(2000)
+            # Now wait a bit for meaningful content for forensics
+            try:
+                page.wait_for_load_state("load", timeout=5000)
+            except:
+                pass # Proceed even if load times out, as we committed successfully
             
             result.page_title = page.title()
             result.final_url = page.url
@@ -243,7 +247,6 @@ def run_probe(url: str) -> ProbeResult:
             url_hash = hashlib.md5(url.encode()).hexdigest()
             screenshot_path = f"data/screenshots/{url_hash}.png"
             os.makedirs("data/screenshots", exist_ok=True)
-            # Removed full_page=True as it causes layout issues on some reactive sites
             page.screenshot(path=screenshot_path)
             result.screenshot_path = screenshot_path
             
@@ -254,29 +257,54 @@ def run_probe(url: str) -> ProbeResult:
             _cleanup_screenshots(max_files=50)
 
         except PWTimeout:
+            # PARTIAL RECOVERY: If we have a URL, the site is technically ONLINE
             try:
-                if page.url and page.url != "about:blank":
-                    result.final_url = page.url
-                elif result.redirect_chain:
-                    result.final_url = result.redirect_chain[-1]
+                current_url = page.url
+                if current_url and current_url != "about:blank":
+                    result.reachable = True
+                    result.final_url = current_url
+                    result.page_title = page.title() or "Timed out (partial load)"
+                    result.outcome = "Target reached but load timed out (partial data captured)."
+                    
+                    # Try to get a screenshot of what DID load
+                    url_hash = hashlib.md5(url.encode()).hexdigest()
+                    screenshot_path = f"data/screenshots/{url_hash}_partial.png"
+                    os.makedirs("data/screenshots", exist_ok=True)
+                    page.screenshot(path=screenshot_path)
+                    result.screenshot_path = screenshot_path
+                    result.content_snippet = page.content()[:2000]
+                    logger.info(f"Probe: Partial recovery for {url}")
+                    return result 
             except Exception:
                 pass
+            
             result.reachable = False
-            result.outcome = "Target offline — probe failed. The URL did not respond within the timeout window."
-            result.behavior_risk = "Unknown"
+            result.explicitly_offline = False # Timeout != Offline
+            result.outcome = "Probe timed out - site might be slow or blocking bots."
             return result
         except Exception as e:
             try:
                 if page.url and page.url != "about:blank":
+                    result.reachable = True
                     result.final_url = page.url
-                elif result.redirect_chain:
-                    result.final_url = result.redirect_chain[-1]
+                    result.page_title = page.title() or "Error (partial load)"
             except Exception:
                 pass
+            
+            if result.reachable:
+                result.outcome = f"Target reached but encountered error: {str(e).splitlines()[0]}"
+                return result
+                
             result.reachable = False
-            error_msg = str(e).split('\n')[0].split('Call log:')[0].strip()
-            friendly_msg = _get_friendly_error(error_msg)
-            result.outcome = f"Target unreachable — {friendly_msg}"
+            err_str = str(e).lower()
+            # Hard failures: DNS or Refused
+            if "err_name_not_resolved" in err_str or "err_connection_refused" in err_str:
+                result.explicitly_offline = True
+                result.outcome = "Target confirmed offline (Domain not found or connection refused)."
+            else:
+                result.explicitly_offline = False
+                result.outcome = f"Target unreachable - {_get_friendly_error(str(e).splitlines()[0])}"
+            
             result.behavior_risk = "Unknown"
             result.error = str(e)
             return result
@@ -533,6 +561,7 @@ def probe_result_to_dict(r: ProbeResult) -> dict:
         # New Forensic Fields
         "screenshotPath": r.screenshot_path,
         "redirectChain": r.redirect_chain,
+        "explicitlyOffline": r.explicitly_offline,
         "formFields": r.form_fields,
         "contentSnippet": r.content_snippet
     }
