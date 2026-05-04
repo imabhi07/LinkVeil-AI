@@ -146,11 +146,11 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
 
   const getRiskColor = (level: string) => {
     switch (level?.toLowerCase()) {
-      case 'high': return 'text-rose-500 bg-rose-500/10 border-rose-500/20';
-      case 'medium': return 'text-amber-500 bg-amber-500/10 border-amber-500/20';
-      case 'low': return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20 dark:text-ornex-green';
-      case 'inconclusive': return 'text-zinc-500 bg-zinc-500/10 border-zinc-500/20';
-      default: return 'text-zinc-500 bg-zinc-500/10 border-zinc-500/20';
+      case 'high': return 'text-rose-700 dark:text-rose-500 bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/20';
+      case 'medium': return 'text-amber-900 dark:text-amber-500 bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20';
+      case 'low': return 'text-emerald-900 dark:text-ornex-green bg-emerald-50 dark:bg-ornex-green/10 border-emerald-200 dark:border-ornex-green/20';
+      case 'inconclusive': return 'text-zinc-700 dark:text-zinc-500 bg-zinc-50 dark:bg-zinc-500/10 border-zinc-200 dark:border-zinc-500/20';
+      default: return 'text-zinc-700 dark:text-zinc-500 bg-zinc-50 dark:bg-zinc-500/10 border-zinc-200 dark:border-zinc-500/20';
     }
   };
 
@@ -245,7 +245,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
               <div className="absolute top-0 right-0 w-64 h-64 bg-cyber-light-accent/5 dark:bg-ornex-green/5 blur-[100px] -mr-32 -mt-32 pointer-events-none" />
               
               <div className="relative space-y-8">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-200 dark:border-white/5 pb-6">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-[#00C853]/10 dark:bg-ornex-green/20 rounded-2xl">
                       <Zap className="w-5 h-5 text-[#00C853] dark:text-ornex-green" />
@@ -257,9 +257,9 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                       <p className="text-[11px] font-mono uppercase tracking-widest text-zinc-500">Forensic Instructions • Level 1 Intelligence</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10">
+                  <div className="flex items-center gap-2 px-3 py-1 bg-zinc-100 dark:bg-white/5 rounded-full border border-zinc-200 dark:border-white/10">
                     <div className="w-1.5 h-1.5 rounded-full bg-cyber-light-accent dark:bg-ornex-green animate-pulse" />
-                    <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest">Active Assistant</span>
+                    <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">Active Assistant</span>
                   </div>
                 </div>
 
@@ -271,8 +271,8 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                           <Layout className="w-4 h-4" />
                           <span className="text-[10px] font-black uppercase tracking-[0.2em]">Context</span>
                         </div>
-                        <p className="text-xs text-zinc-400 leading-relaxed font-medium">
-                          Use this when you only have the visible message content. Our AI uses <span className="text-white">NLP (Natural Language Processing)</span> to detect urgency, threat patterns, and deceptive tone.
+                        <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
+                          Use this when you only have the visible message content. Our AI uses <span className="text-cyber-light-heading dark:text-white font-bold">NLP (Natural Language Processing)</span> to detect urgency, threat patterns, and deceptive tone.
                         </p>
                       </div>
                       <div className="lg:col-span-2 space-y-4">
@@ -281,13 +281,13 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                           <span className="text-[11px] font-black uppercase tracking-[0.2em]">Best Practice</span>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors">
-                            <span className="text-[11px] font-bold text-zinc-500 uppercase block mb-1">Body Intelligence</span>
-                            <p className="text-[11px] text-zinc-300">Paste the <span className="font-bold text-white">full body</span>. Don't remove links - we need them to scan the final destination for malware.</p>
+                          <div className="p-4 rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/5 hover:border-cyber-light-accent/30 dark:hover:border-white/10 transition-colors">
+                            <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-500 uppercase block mb-1">Body Intelligence</span>
+                            <p className="text-[11px] text-zinc-600 dark:text-zinc-300">Paste the <span className="font-bold text-cyber-light-heading dark:text-white">full body</span>. Don't remove links - we need them to scan the final destination for malware.</p>
                           </div>
-                          <div className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors">
-                            <span className="text-[11px] font-bold text-zinc-500 uppercase block mb-1">Impersonation Check</span>
-                            <p className="text-[11px] text-zinc-300">Providing the <span className="font-bold text-white">From Email</span> allows us to cross-reference known official brand domains.</p>
+                          <div className="p-4 rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/5 hover:border-cyber-light-accent/30 dark:hover:border-white/10 transition-colors">
+                            <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-500 uppercase block mb-1">Impersonation Check</span>
+                            <p className="text-[11px] text-zinc-600 dark:text-zinc-300">Providing the <span className="font-bold text-cyber-light-heading dark:text-white">From Email</span> allows us to cross-reference known official brand domains.</p>
                           </div>
                         </div>
                       </div>
@@ -300,16 +300,16 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                             <Shield className="w-4 h-4" />
                             <span className="text-[11px] font-black uppercase tracking-[0.2em]">Why use Paste?</span>
                           </div>
-                          <p className="text-xs text-zinc-400 leading-relaxed">
-                            This is the <span className="text-white font-bold">Gold Standard</span>. It exposes hidden headers like <span className="font-mono text-[11px]">Return-Path</span> and <span className="font-mono text-[11px]">X-Originating-IP</span> that scammers can't hide.
+                          <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                            This is the <span className="text-cyber-light-heading dark:text-white font-bold">Gold Standard</span>. It exposes hidden headers like <span className="font-mono text-[11px] text-cyber-light-heading dark:text-white/80">Return-Path</span> and <span className="font-mono text-[11px] text-cyber-light-heading dark:text-white/80">X-Originating-IP</span> that scammers can't hide.
                           </p>
                         </div>
-                        <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10 text-amber-500/80">
+                        <div className="p-4 rounded-2xl bg-[#FFFBEB] dark:bg-amber-500/5 border border-amber-200 dark:border-amber-500/10 text-[#92400E] dark:text-amber-500/80">
                           <div className="flex items-center gap-2 mb-1">
                             <AlertTriangle className="w-3.5 h-3.5" />
                             <span className="text-[11px] font-black uppercase tracking-widest">Security Note</span>
                           </div>
-                          <p className="text-[11px] leading-tight opacity-80">Headers contain your email address. We process this locally and never store or share your forensic data.</p>
+                          <p className="text-[11px] leading-tight font-medium opacity-90">Headers contain your email address. We process this locally and never store or share your forensic data.</p>
                         </div>
                       </div>
                       <div className="lg:col-span-2 space-y-4">
@@ -323,12 +323,12 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                             { name: 'Outlook', steps: ['Open Email', 'Click ... (More)', 'View message source'] },
                             { name: 'Apple Mail', steps: ['Menu: View', 'Message', 'Raw Source'] }
                           ].map((client) => (
-                            <div key={client.name} className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-cyber-light-accent/30 dark:hover:border-ornex-green/30 transition-all group/card">
-                              <span className="text-[11px] font-black text-white uppercase tracking-widest block mb-3 border-b border-white/5 pb-2">{client.name}</span>
+                            <div key={client.name} className="p-4 rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/5 hover:border-cyber-light-accent/30 dark:hover:border-ornex-green/30 transition-all group/card">
+                              <span className="text-[11px] font-black text-cyber-light-heading dark:text-white uppercase tracking-widest block mb-3 border-b border-zinc-200 dark:border-white/5 pb-2">{client.name}</span>
                               <div className="space-y-2">
                                 {client.steps.map((step, i) => (
-                                  <div key={i} className="flex items-center gap-2 text-[11px] text-zinc-500">
-                                    <span className="w-4 h-4 rounded-full bg-white/5 flex items-center justify-center text-[10px] font-black text-zinc-400">{i+1}</span>
+                                  <div key={i} className="flex items-center gap-2 text-[11px] text-zinc-600 dark:text-zinc-500 font-medium">
+                                    <span className="w-4 h-4 rounded-full bg-zinc-200 dark:bg-white/5 flex items-center justify-center text-[10px] font-black text-zinc-500 dark:text-zinc-400">{i+1}</span>
                                     {step}
                                   </div>
                                 ))}
@@ -345,8 +345,8 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                           <FileUp className="w-4 h-4" />
                           <span className="text-[10px] font-black uppercase tracking-[0.2em]">EML Benefits</span>
                         </div>
-                        <p className="text-xs text-zinc-400 leading-relaxed">
-                          EML files are <span className="text-white">untampered forensic artifacts</span>. They preserve the exact structure of the email, including tracking pixels and multi-part MIME boundaries.
+                        <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                          EML files are <span className="text-cyber-light-heading dark:text-white font-bold">untampered forensic artifacts</span>. They preserve the exact structure of the email, including tracking pixels and multi-part MIME boundaries.
                         </p>
                       </div>
                       <div className="lg:col-span-2 space-y-4">
@@ -355,32 +355,32 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                           <span className="text-[10px] font-black uppercase tracking-[0.2em]">How to export</span>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex flex-col gap-3">
+                          <div className="p-4 rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/5 flex flex-col gap-3">
                             <div className="flex items-center gap-3">
-                              <div className="p-2 bg-white/5 rounded-lg text-cyber-light-accent dark:text-ornex-green">
+                              <div className="p-2 bg-zinc-200 dark:bg-white/5 rounded-lg text-cyber-light-accent dark:text-ornex-green">
                                 <Mail className="w-4 h-4" />
                               </div>
-                              <span className="text-[11px] font-bold text-white uppercase tracking-widest">Gmail Export</span>
+                              <span className="text-[11px] font-bold text-cyber-light-heading dark:text-white uppercase tracking-widest">Gmail Export</span>
                             </div>
-                            <p className="text-[11px] text-zinc-500 leading-relaxed">Open email - Click ⋮ (More) - Select <span className="font-bold text-white">Download message</span> to save as .eml.</p>
+                            <p className="text-[11px] text-zinc-600 dark:text-zinc-500 leading-relaxed">Open email - Click ⋮ (More) - Select <span className="font-bold text-cyber-light-heading dark:text-white">Download message</span> to save as .eml.</p>
                           </div>
-                          <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex flex-col gap-3">
+                          <div className="p-4 rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/5 flex flex-col gap-3">
                             <div className="flex items-center gap-3">
-                              <div className="p-2 bg-white/5 rounded-lg text-zinc-400">
+                              <div className="p-2 bg-zinc-200 dark:bg-white/5 rounded-lg text-zinc-500 dark:text-zinc-400">
                                 <Layout className="w-4 h-4" />
                               </div>
-                              <span className="text-[11px] font-bold text-white uppercase tracking-widest">Desktop Clients</span>
+                              <span className="text-[11px] font-bold text-cyber-light-heading dark:text-white uppercase tracking-widest">Desktop Clients</span>
                             </div>
-                            <p className="text-[11px] text-zinc-500 leading-relaxed">Simply drag the email from your inbox to your desktop. It will automatically create an <span className="font-bold text-white">.eml</span> file.</p>
+                            <p className="text-[11px] text-zinc-600 dark:text-zinc-500 leading-relaxed">Simply drag the email from your inbox to your desktop. It will automatically create an <span className="font-bold text-cyber-light-heading dark:text-white">.eml</span> file.</p>
                           </div>
-                          <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex flex-col gap-3">
+                          <div className="p-4 rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/5 flex flex-col gap-3">
                             <div className="flex items-center gap-3">
-                              <div className="p-2 bg-white/5 rounded-lg text-zinc-400">
+                              <div className="p-2 bg-zinc-200 dark:bg-white/5 rounded-lg text-zinc-500 dark:text-zinc-400">
                                 <ExternalLink className="w-4 h-4" />
                               </div>
-                              <span className="text-[11px] font-bold text-white uppercase tracking-widest">Manual Save</span>
+                              <span className="text-[11px] font-bold text-cyber-light-heading dark:text-white uppercase tracking-widest">Manual Save</span>
                             </div>
-                            <p className="text-[11px] text-zinc-500 leading-relaxed">Go to <span className="font-bold text-white">File - Save As</span> and select <span className="font-bold text-white">Email Message (.eml)</span> from the dropdown.</p>
+                            <p className="text-[11px] text-zinc-600 dark:text-zinc-500 leading-relaxed">Go to <span className="font-bold text-cyber-light-heading dark:text-white">File - Save As</span> and select <span className="font-bold text-cyber-light-heading dark:text-white">Email Message (.eml)</span> from the dropdown.</p>
                           </div>
                         </div>
                       </div>
@@ -403,7 +403,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                     value={formData.from_name}
                     onChange={e => setFormData({ ...formData, from_name: e.target.value })}
                     placeholder="e.g. PayPal Support"
-                    className="w-full bg-cyber-light-bg dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:border-cyber-light-accent/50 dark:focus:border-ornex-green/50 outline-none transition-all font-mono"
+                    className="w-full bg-cyber-light-bg dark:bg-white/5 border border-zinc-300 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:border-cyber-light-accent/50 dark:focus:border-ornex-green/50 outline-none transition-all font-mono shadow-sm"
                   />
                 </div>
                 <div className="space-y-2">
@@ -413,7 +413,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                     value={formData.from_email}
                     onChange={e => setFormData({ ...formData, from_email: e.target.value })}
                     placeholder="e.g. security@paypal.com"
-                    className="w-full bg-cyber-light-bg dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:border-cyber-light-accent/50 dark:focus:border-ornex-green/50 outline-none transition-all font-mono"
+                    className="w-full bg-cyber-light-bg dark:bg-white/5 border border-zinc-300 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:border-cyber-light-accent/50 dark:focus:border-ornex-green/50 outline-none transition-all font-mono shadow-sm"
                   />
                 </div>
                 <div className="space-y-2">
@@ -423,7 +423,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                     value={formData.reply_to}
                     onChange={e => setFormData({ ...formData, reply_to: e.target.value })}
                     placeholder="Check for mismatches..."
-                    className="w-full bg-cyber-light-bg dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:border-cyber-light-accent/50 dark:focus:border-ornex-green/50 outline-none transition-all font-mono"
+                    className="w-full bg-cyber-light-bg dark:bg-white/5 border border-zinc-300 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:border-cyber-light-accent/50 dark:focus:border-ornex-green/50 outline-none transition-all font-mono shadow-sm"
                   />
                 </div>
                 <div className="space-y-2">
@@ -433,7 +433,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                     value={formData.subject}
                     onChange={e => setFormData({ ...formData, subject: e.target.value })}
                     placeholder="Action Required: Account Verification"
-                    className="w-full bg-cyber-light-bg dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:border-cyber-light-accent/50 dark:focus:border-ornex-green/50 outline-none transition-all font-mono"
+                    className="w-full bg-cyber-light-bg dark:bg-white/5 border border-zinc-300 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:border-cyber-light-accent/50 dark:focus:border-ornex-green/50 outline-none transition-all font-mono shadow-sm"
                   />
                 </div>
               </div>
@@ -534,14 +534,14 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
             <div className={`p-4 rounded-2xl border-2 flex items-center gap-4 shadow-lg backdrop-blur-md animate-pulse-subtle ${
               (result.email_risk_score >= 75 || result.link_score >= 75) 
                 ? 'bg-rose-500/10 border-rose-500/20 text-rose-500' 
-                : 'bg-amber-500/10 border-amber-500/20 text-amber-500'
+                : 'bg-[#FFFBEB] dark:bg-amber-500/10 border-[#FEF3C7] dark:border-amber-500/20 text-[#92400E] dark:text-amber-500'
             }`}>
               <AlertTriangle className="w-6 h-6 flex-shrink-0" />
               <div className="flex flex-col">
                 <p className="text-xs font-black uppercase tracking-widest">
                   {result.email_risk_score >= 75 ? 'Critical Threat Detected' : 'Suspicious - Proceed with Caution'}
                 </p>
-                <p className="text-[11px] opacity-80 font-medium">
+                <p className="text-[11px] font-semibold opacity-90">
                   {result.email_risk_score >= 75 
                     ? 'This content matches high-confidence phishing patterns. Immediate isolation recommended.' 
                     : result.link_score >= 65 
@@ -554,7 +554,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
 
           {/* Subtle Caution Banner */}
           {result.email_risk_level.toLowerCase() === 'low' && result.link_score >= 30 && result.link_score < 65 && (
-            <div className="p-4 rounded-2xl border-2 bg-amber-500/5 border-amber-500/10 text-amber-500/80 flex items-center gap-4">
+            <div className="p-4 rounded-2xl border-2 bg-[#FFFBEB] dark:bg-amber-500/5 border-[#FEF3C7] dark:border-amber-500/10 text-[#92400E] dark:text-amber-500/80 flex items-center gap-4">
               <Info className="w-5 h-5 flex-shrink-0" />
               <p className="text-[11px] font-bold uppercase tracking-widest">
                 Caution: One link looks slightly unusual (tracking/long URL markers)
@@ -571,17 +571,17 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
             
             <div className="relative flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
               <div className="flex items-center gap-6">
-                <div className="flex flex-col items-center justify-center w-20 h-20 rounded-2xl bg-white/10 border border-current/20 shadow-inner backdrop-blur-sm relative">
-                  <span className="text-3xl font-black leading-none tracking-tighter">{Math.round(result.email_risk_score)}</span>
-                  <span className="text-[11px] font-mono opacity-60 uppercase tracking-tighter mt-1">Forensic</span>
+                <div className="flex flex-col items-center justify-center w-20 h-20 rounded-2xl bg-white/20 dark:bg-white/10 border border-current/30 shadow-inner backdrop-blur-sm relative">
+                  <span className="text-3xl font-black leading-none tracking-tighter drop-shadow-sm">{Math.round(result.email_risk_score)}</span>
+                  <span className="text-[11px] font-mono opacity-70 uppercase tracking-tighter mt-1">Forensic</span>
                 </div>
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
-                    <h3 className="text-3xl font-black uppercase tracking-tighter">{result.email_risk_level} RISK</h3>
-                    <div className="h-4 w-px bg-current opacity-20" />
-                    <span className="text-xs font-mono uppercase tracking-widest opacity-60">Verdict</span>
+                    <h3 className="text-3xl font-black uppercase tracking-tighter drop-shadow-sm">{result.email_risk_level} RISK</h3>
+                    <div className="h-4 w-px bg-current opacity-30" />
+                    <span className="text-xs font-mono uppercase tracking-widest opacity-80 font-bold">Verdict</span>
                   </div>
-                  <div className="flex flex-wrap items-center gap-4 text-xs font-mono opacity-60 pt-1">
+                  <div className="flex flex-wrap items-center gap-4 text-xs font-mono opacity-90 pt-1 font-medium">
                     <InfoTip title="Heuristic Analysis" content="Score based on email headers, auth signals, and linguistic threat markers.">
                       <span className="flex items-center gap-1.5">
                         Heuristics: {result.heuristic_score}/40
@@ -634,18 +634,18 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                   </InfoTip>
                 )}
                 {(result.triage_stats?.pii_scrubbed_count ?? 0) > 0 && (
-                  <InfoTip title="Privacy Scrubbing" content="Sensitive PII (emails/tokens) scrubbed from URLs before analysis.">
+                  <InfoTip title="Identity Protection" content="Personal data (such as your email address) was securely removed from these links prior to analysis to ensure your privacy.">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/5 rounded-xl border border-blue-500/10 text-blue-400">
                       <ShieldAlert size={12} />
-                      <span className="text-[10px] font-black uppercase tracking-widest">Scrubbed:</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest">Privacy Protected:</span>
                       <span className="text-xs font-black">{result.triage_stats?.pii_scrubbed_count}</span>
                     </div>
                   </InfoTip>
                 )}
-                  <InfoTip title="Filtered Assets" content="Redundant or low-risk assets (CSS, Images) skipped for efficiency.">
+                  <InfoTip title="Skipped Assets" content="Redundant or known-safe links (like WhatsApp/socials) skipped to save quota.">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-100 dark:bg-white/5 rounded-xl border border-zinc-200 dark:border-white/10 opacity-60">
                       <CheckCircle2 className="w-3 h-3 text-zinc-400" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Filtered:</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Skipped:</span>
                       <span className="text-xs font-black text-zinc-600 dark:text-zinc-400">{(result.total_extracted ?? 0) - (result.scanned_count ?? 0)}</span>
                     </div>
                   </InfoTip>
@@ -783,13 +783,65 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
               {/* Expanded Deep Dives */}
               <div className="space-y-8 pt-4">
                 {result.link_results.map((link, idx) => expandedUrls[link.url] && (
-                  <div key={idx} className="space-y-6 animate-slide-down">
-                    <div className="flex items-center gap-3">
-                      <div className="h-px flex-1 bg-zinc-200 dark:bg-white/10" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Deep Dive: #{idx + 1}</span>
-                      <div className="h-px flex-1 bg-zinc-200 dark:bg-white/10" />
+                  <div key={idx} className="animate-slide-down relative glass-panel rounded-3xl border border-zinc-200 dark:border-white/10 bg-zinc-50/80 dark:bg-zinc-900/40 shadow-xl overflow-hidden group/dive">
+                    
+                    {/* Top gradient bar based on risk */}
+                    <div className={`absolute top-0 left-0 right-0 h-1.5 ${
+                      link.risk_level?.toLowerCase() === 'high' ? 'bg-rose-500' :
+                      link.risk_level?.toLowerCase() === 'medium' ? 'bg-amber-500' :
+                      link.risk_level?.toLowerCase() === 'low' ? 'bg-emerald-500' : 'bg-zinc-500'
+                    }`} />
+                    
+                    <div className="p-6 md:p-8">
+                      {/* Deep Dive Header */}
+                      <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8 pb-6 border-b border-zinc-200 dark:border-white/10">
+                        <div className="flex flex-col gap-3 flex-1 min-w-0">
+                          <div className="flex items-center gap-4">
+                            <span className="text-[11px] font-black uppercase tracking-widest text-zinc-500 bg-zinc-200/50 dark:bg-white/5 px-3 py-1.5 rounded-lg border border-zinc-300/50 dark:border-white/10 shrink-0">
+                              Scan #{idx + 1}
+                            </span>
+                            <span className="text-[15px] font-bold text-cyber-light-heading dark:text-white uppercase tracking-tight truncate">
+                              {(() => {
+                                const mapped = mapToAnalysisResult(link);
+                                const flags = [];
+                                if (mapped.threat_intel?.is_known_malicious) flags.push("Threat Intel Match");
+                                if (mapped.visual_forensics?.brand_match) flags.push("Visual Brand Match");
+                                else if (link.brand_impersonation) flags.push("Deceptive Phishing Lure");
+                                if (mapped.agentReport?.activeProbing?.acceptedFakeCredentials) flags.push("Credential Harvester");
+                                else if (mapped.agentReport?.activeProbing?.loginFormFound) flags.push("Suspicious Login Form");
+                                if (mapped.whois_info?.is_new_domain) flags.push("New Domain");
+                                if (mapped.whois_info?.has_privacy) flags.push("Hidden WHOIS");
+                                
+                                if (flags.length > 0) return flags.join(" • ");
+                                
+                                if (link.risk_level?.toLowerCase() === 'high') return "Multiple High-Risk Indicators";
+                                if (link.risk_level?.toLowerCase() === 'medium') return "Suspicious Heuristics Detected";
+                                if (link.risk_level?.toLowerCase() === 'low') return "Safe Baseline Confirmed";
+                                return "Analysis Inconclusive";
+                              })()}
+                            </span>
+                          </div>
+                          <span className="text-sm font-mono text-zinc-500 dark:text-zinc-400 truncate" title={link.url}>
+                            {link.url}
+                          </span>
+                          {link.explanation && (
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed pr-8 border-l-2 border-zinc-200 dark:border-white/10 pl-3 mt-1">
+                              {link.explanation.split('\n')[0]} {/* Show just the first paragraph/line of explanation */}
+                            </p>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center gap-3 shrink-0 pt-1">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Verdict:</span>
+                          <div className={`px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest border ${getRiskColor(link.risk_level)} shadow-sm`}>
+                            {link.risk_level}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Forensic Details */}
+                      <ResultDetails result={mapToAnalysisResult(link)} hideHeader={true} />
                     </div>
-                    <ResultDetails result={mapToAnalysisResult(link)} hideHeader={true} />
                   </div>
                 ))}
               </div>

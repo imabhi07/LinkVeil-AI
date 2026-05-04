@@ -412,36 +412,44 @@ function App() {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 lg:pt-40 relative z-10">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 lg:pt-36 relative z-10">
         <ErrorBoundary>
-          <div className="w-full mx-auto flex flex-col gap-12">
+          <div className="w-full mx-auto flex flex-col gap-20">
 
             {/* Main Content */}
-            <div className="w-full space-y-12">
+            <div className="w-full space-y-8">
 
               {/* Hero Section */}
-              <div className="text-center space-y-8 flex flex-col items-center relative z-10">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cyber-light-accent/30 bg-cyber-light-accent/10 text-cyber-light-accent dark:border-ornex-green/30 dark:bg-ornex-green/10 dark:text-ornex-green text-xs font-mono tracking-widest uppercase transition-colors">
-                  <span className="relative flex h-2 w-2">
+              <div className="text-center space-y-8 flex flex-col items-center relative z-10 border-b border-[#00C853]/5 pb-12">
+                {/* Decorative Side Label - Right Side */}
+                <div className="hidden xl:block absolute right-[-5%] top-[75%] select-none">
+                  <div className="flex flex-col gap-3 text-zinc-500 dark:text-zinc-200/50 text-[12px] font-light uppercase tracking-[1.2em] text-left" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                    <span>Adaptive</span>
+                    <span>Security.</span>
+                  </div>
+                </div>
+
+                <div className="inline-flex items-center gap-3 px-5 py-2 rounded-full border border-cyber-light-accent/30 bg-cyber-light-accent/10 text-cyber-light-accent dark:border-ornex-green/30 dark:bg-ornex-green/10 dark:text-ornex-green text-xs font-mono tracking-widest uppercase transition-colors">
+                  <span className="relative flex h-2.5 w-2.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyber-light-accent dark:bg-ornex-green opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-cyber-light-accent dark:bg-ornex-green"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyber-light-accent dark:bg-ornex-green"></span>
                   </span>
                   Defend Yourself From Phishing
                 </div>
 
-                <h1 className="text-5xl md:text-6xl font-black tracking-tighter text-cyber-light-heading dark:text-white leading-[0.95] uppercase tracking-[-0.01em]">
+                <h1 className="text-4xl md:text-6xl font-black text-cyber-light-heading dark:text-white leading-[1.2] uppercase tracking-[0.05em] mb-4" style={{ fontFamily: "'Orbitron', sans-serif" }}>
                   Threats Move Fast <br />
                   <span className="text-[#8A9E8A] dark:text-zinc-500">We Move Faster</span> <br />
                   <span className="text-[#00A846] dark:text-ornex-green drop-shadow-[0_0_20px_rgba(0,168,70,0.15)] dark:drop-shadow-[0_0_20px_rgba(57,255,20,0.3)]">Always.</span>
                 </h1>
 
-                <p className="text-cyber-light-text dark:text-zinc-400 max-w-xl text-lg leading-relaxed">
+                <p className="text-cyber-light-text dark:text-zinc-400 max-w-xl text-base md:text-lg leading-relaxed font-medium">
                   AI-driven protection that learns, adapts, and grows stronger every single day - so you stay one step ahead of every digital threat.
                 </p>
               </div>
 
               {/* Scan Container */}
-              <div className="flex flex-col items-center w-full space-y-8 relative z-20">
+              <div className="flex flex-col items-center w-full space-y-12 relative z-20">
                 {/* Mode Toggle Tabs */}
                 <div className="flex p-1.5 bg-zinc-200/50 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-zinc-200 dark:border-white/10 relative z-20">
                   <button
@@ -629,7 +637,7 @@ function App() {
                    <span className="w-1.5 h-1.5 bg-cyber-light-accent dark:bg-ornex-green rounded-full"></span>
                    Security Intel
                  </h3>
-                 <p className="text-sm text-cyber-light-text dark:text-zinc-400 leading-relaxed font-mono">
+                 <p className="text-sm text-cyber-light-text dark:text-zinc-300 leading-relaxed font-mono">
                    // ADVISORY <br/>
                    {currentTip || "Loading security tips..."}
                  </p>
