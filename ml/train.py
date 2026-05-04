@@ -216,6 +216,7 @@ def main():
                 print("Saving new best model checkpoint...")
                 os.makedirs(MODEL_SAVE_DIR, exist_ok=True)
                 tokenizer.save_pretrained(MODEL_SAVE_DIR)
+                model.config.save_pretrained(MODEL_SAVE_DIR)
                 torch.save(model.state_dict(), os.path.join(MODEL_SAVE_DIR, 'pytorch_model.pt'))
 
         print(f"\nTraining complete. Best val F1: {best_f1:.4f}")
