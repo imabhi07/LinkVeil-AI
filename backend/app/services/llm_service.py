@@ -17,9 +17,9 @@ LLM_CACHE_TTL = 600  # 10 minutes — LLM results change less often than probe r
 # ── Gemini Model Rotation Stack ──
 # If one model hits quota limits (429), we fall back through the list
 AVAILABLE_MODELS = [
-    "gemini-2.0-flash",
-    "gemini-1.5-flash",
-    "gemini-1.5-flash-8b",
+    "gemini-2.5-flash",
+    "gemini-3.1-flash-lite-preview",
+    "gemini-3-flash-preview",
 ]
 
 
@@ -79,27 +79,27 @@ TASKS:
 4. **FREE HOSTING & CLOUD ABUSE**:
    - Legitimate brands host login/auth on dedicated private infrastructure.
    - Any login portal on github.io, netlify.app, vercel.app, firebaseapp.com, web.app, etc., should be flagged as HIGH RISK brand impersonation unless it is the developer's own site.
-5. **CALIBRATION — AVOID FALSE POSITIVES**:
+5. CALIBRATION - AVOID FALSE POSITIVES:
    - Standard SaaS signup/login pages (e.g., lovable.dev/signup, vercel.com/login) on their OWN domain are LEGITIMATE. Do not inflate scores for normal authentication UIs.
    - Query parameters like `?ref=`, `?utm_`, `?source=` are standard marketing/affiliate referral codes, NOT spearphishing tracking IDs. Only flag query params if they contain base64-encoded email addresses or obfuscated redirect chains.
    - A page having a signup or login form does NOT make it phishing. Phishing requires the domain to be impersonating ANOTHER brand.
-   - **SECURITY TOOLS & REPOS**: Do not penalize URLs just because they contain words like "PhishGuard", "LinkVeil", "Security", or "Exploit" if they are clearly on a legitimate developer platform like GitHub or a security company's blog. These are educational/defensive tools, not threats.
+   - SECURITY TOOLS & REPOS: Do not penalize URLs just because they contain words like PhishGuard, LinkVeil, Security, or Exploit if they are clearly on a legitimate developer platform like GitHub or a security company's blog. These are educational/defensive tools, not threats.
    - If the domain is well-known (GitHub, Microsoft, Google, etc.) or clearly belongs to a real company/product, the riskScore should be VERY LOW (0-15) unless there is concrete evidence of a file-based exploit or hosted malware.
 
 OUTPUT FORMAT:
 Return a valid JSON object.
 - riskScore: 0-100 (Integer).
 - risk_level: "Low" | "High".
-- explanation: A professional, 6-8 bullet point summary of core findings.
+- explanation: A professional summary of core findings. Use PLAIN TEXT ONLY. NO markdown formatting (no double asterisks for bolding), NO em-dashes, and NO emojis.
 - technicalDetails:
-    - "urlDeepDive": Expert analysis of the URL's structure and entropy.
-    - "domainForensics": Analysis of the TLD, registrar patterns, and impersonation intent.
-    - "socialEngineering": Detailed breakdown of the psychological manipulation used.
+    - "urlDeepDive": Expert analysis of the URL structure.
+    - "domainForensics": Analysis of TLD and registrar patterns.
+    - "socialEngineering": Breakdown of manipulation tactics.
 - forensicData:
-    - "threatTactics": Analysis of the likely phishing kit or redirection chain.
-    - "visualPrediction": Description of expected UI elements (favicon spoofing, fake SSL badges).
-- mitigationAdvice: List of 3-4 actionable steps for the end-user.
-- **verdictTitle**: A short, punchy forensic summary (3-5 words) that summarizes the core finding (e.g., "Credential Harvester Detected", "Legitimate Domain Verified", "Suspicious Homoglyph Pattern").
+    - "threatTactics": Analysis of the phishing kit or redirection chain.
+    - "visualPrediction": Description of expected UI elements.
+- mitigationAdvice: List of 3-4 actionable steps for the end-user. Use PLAIN TEXT ONLY. Do not use markdown (no double asterisks).
+- verdictTitle: A short, professional summary (3-5 words) summarizing findings.
 
 JSON structure:
 {
@@ -108,7 +108,7 @@ JSON structure:
   "explanation": "Expert summary...",
   "brand_impersonation": boolean,
   "brand_name": "Target Brand Name",
-  "verdictTitle": "Dynamic Forensic Title",
+  "verdictTitle": "Professional Title",
   "technicalDetails": {"urlDeepDive": "...", "domainForensics": "...", "socialEngineering": "..."},
   "forensicData": {"threatTactics": "...", "visualPrediction": "..."},
   "mitigationAdvice": ["Step 1", "Step 2", "Step 3"],
@@ -145,7 +145,7 @@ async def analyze_url(url: str, features: dict) -> dict:
         fallback["explanation"] = "API Error: GEMINI_API_KEY environment variable is missing or invalid."
         return fallback
 
-    prompt = f'Investigate this URL: "{url}". Lexical features: {json.dumps(features)}. Analyze ONLY the URL structure, domain reputation signals, and lexical features provided. Do NOT simulate probing, form interactions, or credential testing — that is handled by a separate system.'
+    prompt = f'Investigate this URL: "{url}". Lexical features: {json.dumps(features)}. Analyze ONLY the URL structure, domain reputation signals, and lexical features provided. Do NOT simulate probing, form interactions, or credential testing - that is handled by a separate system.'
 
     # ── Model Rotation & Retry Loop ──
     for model_name in AVAILABLE_MODELS:
