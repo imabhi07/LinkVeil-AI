@@ -1,1 +1,78 @@
-/* App.css — intentionally minimal; all styling via Tailwind + index.css */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 80s linear infinite;
+  will-change: transform;
+}
+
+.marquee-mask {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    rgba(0, 0, 0, 0.05) 2%,
+    rgba(0, 0, 0, 0.3) 6%,
+    rgba(0, 0, 0, 0.6) 12%,
+    black 20%,
+    black 80%,
+    rgba(0, 0, 0, 0.6) 88%,
+    rgba(0, 0, 0, 0.3) 94%,
+    rgba(0, 0, 0, 0.05) 98%,
+    transparent
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    rgba(0, 0, 0, 0.05) 2%,
+    rgba(0, 0, 0, 0.3) 6%,
+    rgba(0, 0, 0, 0.6) 12%,
+    black 20%,
+    black 80%,
+    rgba(0, 0, 0, 0.6) 88%,
+    rgba(0, 0, 0, 0.3) 94%,
+    rgba(0, 0, 0, 0.05) 98%,
+    transparent
+  );
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.03);
+}
+
+.dark .glass-panel {
+  background: rgba(8, 8, 8, 0.6);
+  backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
+  position: relative;
+  overflow: hidden;
+}
+
+.card-gradient-border {
+  position: relative;
+}
+
+.card-gradient-border::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(to bottom right, rgba(57, 255, 20, 0.2), transparent, rgba(57, 255, 20, 0.05));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}

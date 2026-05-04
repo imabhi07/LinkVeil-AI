@@ -29,3 +29,33 @@ class ScanResponse(BaseModel):
     model_config = {
         "from_attributes": True
     }
+class EmailScanRequest(BaseModel):
+    from_name: Optional[str] = None
+    from_email: Optional[str] = None
+    reply_to: Optional[str] = None
+    subject: Optional[str] = None
+    body: Optional[str] = None
+    raw_email: Optional[str] = None
+
+class EmailScanResponse(BaseModel):
+    email_risk_score: float
+    email_risk_level: str
+    reasons: list[str]
+    suspicious_indicators: dict
+    extracted_urls: list[str]
+    link_results: list[ScanResponse]
+    parsed_email: Optional[dict] = None
+    
+    # Triage Info
+    auth_results: Optional[dict] = None
+    triage_stats: Optional[dict] = None
+    skipped_urls: Optional[list[dict]] = None
+    scanned_count: int = 0
+    total_extracted: int = 0
+    
+    # Forensic Transparency
+    heuristic_score: float = 0.0
+    link_score: float = 0.0
+    forensic_errors: list[dict] = []
+    deep_dive_target: Optional[str] = None
+    unwrap_events: list[dict] = []

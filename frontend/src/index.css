@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap');
 @import "tailwindcss";
 @config "../tailwind.config.js";
 
@@ -6,17 +6,19 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --glass-bg: rgba(240, 244, 240, 0.92); /* #F0F4F0 */
-  --glass-border: rgba(212, 232, 212, 1); /* #D4E8D4 */
-  --glass-blur: 12px;
+  --glass-bg: rgba(255, 255, 255, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.9);
+  --glass-blur: 20px;
 }
 .dark {
-  --glass-bg: rgba(10, 10, 10, 0.6);
-  --glass-border: rgba(57, 255, 20, 0.15);
+  --glass-bg: rgba(10, 10, 10, 0.85);
+  --glass-border: rgba(0, 255, 65, 0.25);
+  --glass-blur: 16px;
 }
 
 /* ── Global ── */
 html, body {
+  font-family: 'Outfit', sans-serif;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -35,10 +37,53 @@ html, body {
   background: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur));
   border: 1px solid var(--glass-border);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.10);
+  /* Multi-layered shadow for depth */
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06),
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 1px 0 rgba(255, 255, 255, 0.8) inset;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease, background 0.3s ease;
 }
+
 .dark .glass-panel {
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  /* Deep layered shadow with subtle inner glow */
+  box-shadow: 
+    0 10px 30px -10px rgba(0, 0, 0, 0.9),
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    0 1px 1px rgba(255, 255, 255, 0.05) inset;
+}
+
+.glass-panel:hover {
+  transform: translateY(-5px);
+  box-shadow: 
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04),
+    0 1px 0 rgba(255, 255, 255, 0.9) inset;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.dark .glass-panel:hover {
+  transform: translateY(-5px);
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 1),
+    0 0 20px rgba(57, 255, 20, 0.05),
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+  background: rgba(15, 15, 15, 0.9);
+}
+
+.frosted-nav {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+}
+
+.dark .frosted-nav {
+  background: rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 /* ── Custom scrollbar (webkit) ── */
@@ -90,4 +135,52 @@ html, body {
 
 @utility neon-glow-malicious {
   filter: drop-shadow(0 0 12px rgba(251, 113, 133, 0.8));
+}
+
+/* ── Light Mode Specifics ── */
+.light-hero-gradient {
+  background: radial-gradient(ellipse at 30% 20%, #D4EDD4 0%, #EDF5ED 60%, #F5F8F5 100%);
+}
+
+.badge-safe-light {
+  background: #DCFCE7;
+  color: #166534;
+  border: 1px solid #BBF7D0;
+}
+
+.badge-malicious-light {
+  background: #FEE2E2;
+  color: #991B1B;
+  border: 1px solid #FECACA;
+}
+
+.frosted-card-light {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(200, 240, 210, 0.6);
+}
+
+.scan-row-divider {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.scan-row-hover:hover {
+  background: rgba(0, 180, 80, 0.04);
+}
+
+/* Accordion transition */
+.accordion-content {
+  overflow: hidden;
+  transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.3s ease;
+}
+
+.accordion-content.collapsed {
+  max-height: 0;
+  opacity: 0;
+}
+
+.accordion-content.expanded {
+  max-height: 2000px;
+  opacity: 1;
 }

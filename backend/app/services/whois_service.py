@@ -44,16 +44,24 @@ class WhoisService:
             creation_date = w.creation_date
             # creation_date can be a single datetime or a list
             if isinstance(creation_date, list):
-                creation_date = creation_date[0]
+                # Normalize all dates to naive UTC for safe comparison
+                normalized = []
+                for d in creation_date:
+                    if d is None:
+                        continue
+                    if hasattr(d, 'tzinfo') and d.tzinfo is not None:
+                        d = d.astimezone(timezone.utc).replace(tzinfo=None)
+                    normalized.append(d)
+                creation_date = min(normalized) if normalized else None
             
             age_days = None
             is_new = False
             if creation_date:
-                # Remove timezone if present to compare with now()
-                if creation_date.tzinfo is not None:
+                # Remove timezone if present to compare with utcnow()
+                if hasattr(creation_date, 'tzinfo') and creation_date.tzinfo is not None:
                     creation_date = creation_date.astimezone(timezone.utc).replace(tzinfo=None)
                 
-                delta = datetime.now() - creation_date
+                delta = datetime.utcnow() - creation_date
                 age_days = delta.days
                 if age_days < 30:
                     is_new = True

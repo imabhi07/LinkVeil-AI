@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 import json
 import tldextract
 from backend.app.services.xgb_service import xgb_service
+from backend.app.services.dl_service import dl_service
 from backend.app.services.llm_service import analyze_url
 from backend.app.services.probe_agent import run_probe_async, probe_result_to_dict, FAKE_USER
 from backend.app.services.threat_intel_service import threat_intel_service
@@ -35,7 +36,9 @@ KNOWN_SAFE_DOMAINS = frozenset({
     "zoom.us", "slack.com", "dropbox.com", "spotify.com",
     "paytm.com", "flipkart.com", "razorpay.com", "phonepe.com",
     "uber.com", "airbnb.com", "stripe.com", "twitch.tv",
-    "perplexity.ai", "chatgpt.com", "openai.com"
+    "perplexity.ai", "chatgpt.com", "openai.com", "claude.ai", "anthropic.com",
+    "infosys.com", "pepsicoindia.co.in", "pepsico.com", "tata.com", "reliance.com",
+    "hdfcbank.com", "icicibank.com", "sbi.co.in", "irctc.co.in"
 })
 
 SUSPICIOUS_TLDS = frozenset({
@@ -48,16 +51,18 @@ LOGIN_KEYWORDS = ["/login", "/signin", "/verify", "/account", "/secure", "/auth"
 
 # ── Timeout guards ──
 XGB_TIMEOUT_S = 5
+BERT_TIMEOUT_S = 5
 LLM_TIMEOUT_S = 25
 PROBE_TIMEOUT_S = 30
 
 
 def _root_domain(url: str) -> str:
-    """Extract root domain: 'https://mail.google.com/x' → 'google.com'"""
+    """Extract root domain correctly using tldextract (handles .co.in, etc.)"""
     try:
-        host = urlparse(url).hostname or ""
-        parts = host.lower().split(".")
-        return ".".join(parts[-2:]) if len(parts) >= 2 else host
+        ext = tldextract.extract(url)
+        if ext.domain and ext.suffix:
+            return f"{ext.domain}.{ext.suffix}".lower()
+        return (ext.registered_domain or "").lower()
     except Exception:
         return ""
 
@@ -65,6 +70,32 @@ def _root_domain(url: str) -> str:
 def _should_skip_probe(url: str) -> bool:
     """Skip Playwright probe for well-known safe domains."""
     return _root_domain(url) in KNOWN_SAFE_DOMAINS
+
+
+def _get_trusted_verdict(url: str) -> dict:
+    """Returns a pre-baked 'Safe' verdict for whitelisted domains."""
+    domain = _root_domain(url)
+    return {
+        "url": url,
+        "risk_score": 0.0,
+        "risk_level": "Safe",
+        "recommendation": "✅ Safe - Verified Trusted Domain",
+        "explanation": f"This domain ({domain}) is a verified high-authority corporate or service platform and is pre-cleared by the PhishGuard Global Whitelist.",
+        "brand_impersonation": False,
+        "brand_name": domain.split('.')[0].capitalize(),
+        "verdictTitle": "Trusted Domain Verified",
+        "technicalDetails": {
+            "urlStructure": "Verified legitimate structure.",
+            "domainReputation": "High-authority whitelisted domain.",
+            "socialEngineeringTricks": "None detected."
+        },
+        "mitigationAdvice": ["No action required. This is an official domain."],
+        "agentReport": {"performed": False, "outcome": "Skipped for trusted domain."},
+        "whois_info": {"domain_age_days": 5000, "is_new_domain": False}, # Representative value
+        "threat_intel": {"is_known_malicious": False},
+        "visual_forensics": None,
+        "fusion_trace": {"final_score": 0.0, "note": "Whitelisted domain short-circuit"}
+    }
 
 
 def _get_cached(url: str) -> Optional[dict]:
@@ -109,7 +140,10 @@ async def evaluate_url(url: str, db: Session) -> dict:
 
     # ── 2. Threat Intel (Short-circuit) ──
     threat_result = await threat_intel_service.check(url)
-    if threat_result["is_known_malicious"] and not _should_skip_probe(url):
+    
+    # (Probe skip optimization moved to parallel task list)
+
+    if threat_result["is_known_malicious"]:
         verdict = {
             "url": url,
             "risk_score": 95.0,
@@ -126,20 +160,15 @@ async def evaluate_url(url: str, db: Session) -> dict:
         _save_to_db(verdict, db)
         return verdict
 
-    # If threat intel matched but domain is known-safe, demote to advisory
-    if threat_result["is_known_malicious"] and _should_skip_probe(url):
-        logger.warning(f"Threat intel matched {url} but domain is known-safe — ignoring short-circuit")
-        threat_result["is_known_malicious"] = False
-        threat_result["note"] = "Suppressed: domain is in KNOWN_SAFE_DOMAINS"
-
-    # ── 3. Parallel Analysis ──
+    # ── 4. Parallel Analysis ──
     lexical_features = extract_features(url)
     tasks = [
         asyncio.to_thread(xgb_service.predict, url),
         analyze_url(url, lexical_features),
         run_probe_async(url) if not _should_skip_probe(url) else asyncio.sleep(0, result="SKIPPED"),
         whois_service.lookup(_root_domain(url)),
-        asyncio.to_thread(detect_brand_mismatch, url)
+        asyncio.to_thread(detect_brand_mismatch, url),
+        asyncio.wait_for(asyncio.to_thread(dl_service.predict, url), timeout=BERT_TIMEOUT_S)
     ]
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -150,21 +179,62 @@ async def evaluate_url(url: str, db: Session) -> dict:
     probe_result = results[2] if not isinstance(results[2], Exception) else None
     whois_result = results[3] if not isinstance(results[3], Exception) else {}
     brand_result = results[4] if not isinstance(results[4], Exception) else {}
+    bert_prob = results[5] if not isinstance(results[5], Exception) else None
 
-    # ── 4. Vision Analysis ──
+    # ── 4. Vision Analysis (Delayed for Early Exit check) ──
     visual_result = None
-    if probe_result and hasattr(probe_result, "screenshot_path") and probe_result.screenshot_path:
-        visual_result = await vision_service.analyze_screenshot(probe_result.screenshot_path)
 
     # ── 5. Fusion Logic ──
     raw_xgb_score = xgb_prob * 100
-    llm_score = llm_result.get("riskScore", 50.0)
+    raw_bert_score = (bert_prob * 100) if bert_prob is not None else 0.0
+    
+    # Cap ML scores for known safe domains to prevent lexical false positives
+    # Lexical models flag unusual URL structures (UUIDs, .ai TLD) as suspicious,
+    # but these are expected patterns on legitimate platforms
+    if _should_skip_probe(url):
+        raw_xgb_score = min(raw_xgb_score, 15.0)
+        raw_bert_score = min(raw_bert_score, 15.0)
+        logger.info(f"ML Score Cap: XGB={raw_xgb_score:.1f}, BERT={raw_bert_score:.1f} (Known safe domain)")
+
+    # Dynamic fallback: if AI fails, be more lenient for known safe domains
+    default_score = 15.0 if _should_skip_probe(url) else 35.0
+    llm_score = llm_result.get("riskScore", default_score)
     if isinstance(llm_score, str):
         try: llm_score = float(llm_score)
-        except: llm_score = 50.0
+        except: llm_score = default_score
 
-    # Base blend (70% LLM, 30% XGB)
-    risk_score = (llm_score * 0.7) + (raw_xgb_score * 0.3)
+    # Base blend (Tri-model ensemble: 60% LLM, 20% XGB, 20% BERT)
+    # If BERT is at fallback (None), we revert to original 70/30 blend
+    if bert_prob is not None:
+        risk_score = (llm_score * 0.60) + (raw_xgb_score * 0.20) + (raw_bert_score * 0.20)
+    else:
+        risk_score = (llm_score * 0.70) + (raw_xgb_score * 0.30)
+    
+    # ── 4.5 Late Vision Analysis (with Early Exit) ──
+    if probe_result and hasattr(probe_result, "screenshot_path") and probe_result.screenshot_path:
+        # Optimization: Only run Vision if we need visual corroboration
+        is_mismatch = brand_result.get("is_mismatch", False)
+        has_login = getattr(probe_result, "login_form_found", False)
+        
+        # Logic: 
+        # - Skip if already definitively flagged by domain mismatch (Saves Quota)
+        # - Skip if low risk and no login form (Selective Vision)
+        if is_mismatch:
+            logger.info(f"Deterministic Early Exit: Skipping Vision for {url} (Brand Mismatch already confirmed)")
+            # Synthesize a visual result so the UI still shows the forensic evidence
+            visual_result = {
+                "visual_score": 0.95,
+                "score": 0.95,
+                "brand_logo_guess": brand_result.get("brand_detected", "Unknown"),
+                "brand_match": brand_result.get("brand_detected", "Unknown"),
+                "phash": "DETERMINISTIC-MATCH",
+                "explanation": f"Deterministic Match: Local engine confirmed brand impersonation of '{brand_result.get('brand_detected')}' via domain analysis."
+            }
+        elif not has_login and llm_score < 40:
+            logger.info(f"Selective Vision: Skipping Vision for {url} (No login form and LLM score {llm_score} is low)")
+        else:
+            logger.info(f"Vision Required: Invoking Gemini Vision for {url}")
+            visual_result = await vision_service.analyze_screenshot(probe_result.screenshot_path)
     
     # WHOIS Boosts
     whois_boost = 0
@@ -225,12 +295,10 @@ async def evaluate_url(url: str, db: Session) -> dict:
                 logger.info("Probe Dampener: -15 (Correctly rejected creds)")
             else:
                 probe_adjustment = -20  # Strong exculpatory: page reachable, no cred harvesting at all
-                logger.info("Probe Dampener: -20 (No login form found — not a credential harvester)")
+                logger.info("Probe Dampener: -20 (No login form found - not a credential harvester)")
     
-    # ── Safe Domain Dampener ──
-    if _should_skip_probe(url):
-        risk_score -= 30
-        logger.info(f"Safe Domain Dampener: -30 (Domain is in KNOWN_SAFE_DOMAINS)")
+    # Apply all forensic boosts and behavioral adjustments
+    risk_score += whois_boost + brand_boost + vision_boost + tld_boost + login_boost + probe_adjustment
 
     risk_score = max(0.0, min(100.0, risk_score))
     
@@ -241,21 +309,55 @@ async def evaluate_url(url: str, db: Session) -> dict:
             is_unreachable = True
 
     # Final Level and Recommendation Assignment
-    if is_unreachable:
+    # --- Offline Status Override Logic ---
+    # We ONLY override to 0.0 if the domain is EXPLICITLY offline (DNS failure/Refused).
+    # If it was just a timeout, we keep the ML score (XGB/BERT/LLM) so the user sees a risk level.
+    is_hard_offline = getattr(probe_result, "explicitly_offline", False)
+
+    if is_hard_offline:
         final_level = "Unknown"
-        recommendation = "💤 Site is Offline - Safe to ignore"
+        recommendation = "Site is Offline - Safe to ignore"
         risk_score = 0.0
-        llm_result["explanation"] = "The target URL is currently unreachable, offline, or does not exist. Since no content could be loaded, it currently poses no active threat."
-        logger.info(f"Unreachable Domain Override: Score set to 0.0 for {url}")
-    elif risk_score >= 71:
+        llm_result["explanation"] = "The target domain is confirmed offline (NXDOMAIN or connection refused). It currently poses no active threat."
+        logger.info(f"Explicit Offline Override: Score set to 0.0 for {url}")
+        verdict = {
+            "url": url,
+            "risk_score": 0.0,
+            "risk_level": final_level,
+            "explanation": llm_result["explanation"],
+            "brand_impersonation": False,
+            "brand_name": None,
+            "recommendation": recommendation,
+            "verdictTitle": "Target Offline",
+            "technicalDetails": {},
+            "mitigationAdvice": ["No action needed for offline sites."],
+            "agentReport": {"activeProbing": None},
+            "whois_info": whois_result,
+            "threat_intel": threat_result,
+            "visual_forensics": visual_result,
+            "fusion_trace": {
+                "xgb_prob": round(xgb_prob, 3),
+                "bert_prob": round(bert_prob, 3) if bert_prob is not None else None,
+                "llm_score": llm_score,
+                "note": "Hard offline domain override"
+            }
+        }
+        _save_to_db(verdict, db)
+        return verdict
+        
+    # For Timeouts/Partial loads, we proceed with the ML score
+    if is_unreachable and not is_hard_offline:
+        logger.info(f"Probe Timed Out for {url}: Maintaining ML Risk Score {risk_score}")
+            
+    if risk_score >= 71:
         final_level = "High"
-        recommendation = "🛑 Dangerous - Do Not Open"
+        recommendation = "Dangerous - Do Not Open"
     elif risk_score >= 31:
         final_level = "Medium"
-        recommendation = "⚠️ Suspicious - Proceed with Caution"
+        recommendation = "Suspicious - Proceed with Caution"
     else:
         final_level = "Low"
-        recommendation = "✅ Safe - You can proceed"
+        recommendation = "Safe - You can proceed"
 
     # Construct Verdict
     verdict = {
@@ -275,6 +377,7 @@ async def evaluate_url(url: str, db: Session) -> dict:
         "visual_forensics": visual_result,
         "fusion_trace": {
             "xgb_score": raw_xgb_score,
+            "bert_score": raw_bert_score,
             "llm_score": llm_score,
             "whois_boost": whois_boost,
             "brand_boost": brand_boost,

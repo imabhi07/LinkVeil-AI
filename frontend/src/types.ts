@@ -69,4 +69,57 @@ export interface BackendScanResponse {
 
 export interface ScanHistoryItem extends AnalysisResult {
   id: string;
+  type: 'url';
+}
+
+export interface EmailScanHistoryItem {
+  id: string;
+  type: 'email';
+  timestamp: number;
+  result: EmailScanResponse;
+}
+
+export type HistoryItem = ScanHistoryItem | EmailScanHistoryItem;
+export interface EmailScanRequest {
+  from_name?: string;
+  from_email?: string;
+  reply_to?: string;
+  subject?: string;
+  body?: string;
+  raw_email?: string;
+}
+
+export interface EmailScanResponse {
+  email_risk_score: number;
+  email_risk_level: string;
+  reasons: string[];
+  suspicious_indicators: Record<string, boolean>;
+  extracted_urls: string[];
+  link_results: BackendScanResponse[];
+  parsed_email?: {
+    from_name?: string;
+    from_email?: string;
+    reply_to?: string;
+    subject?: string;
+    body?: string;
+  };
+  auth_results?: {
+    spf: string;
+    dkim: string;
+    dmarc: string;
+  };
+  triage_stats?: Record<string, number>;
+  skipped_urls?: Array<{ url: string; type: string; reason: string }>;
+  scanned_count: number;
+  total_extracted: number;
+  heuristic_score: number;
+  link_score: number;
+  forensic_errors: Array<{ url: string; stage: string; message: string }>;
+  deep_dive_target?: string;
+  unwrap_events?: Array<{
+    found_url: string;
+    destination_url: string;
+    status: string;
+    reason: string;
+  }>;
 }
