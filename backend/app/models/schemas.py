@@ -42,24 +42,60 @@ class EmailScanRequest(BaseModel):
     raw_email: Optional[str] = None
 
 class EmailScanResponse(BaseModel):
+    schema_version: str = "forensics++-v1"
+    scan_id: str
+    scanned_at: str
+    scan_type: str = "email"
+    input_type: str  # "manual" | "paste" | "eml"
+
+    # Scoring
     email_risk_score: float
-    email_risk_level: str
-    reasons: list[str]
-    suspicious_indicators: dict
-    extracted_urls: list[str]
-    link_results: list[ScanResponse]
-    parsed_email: Optional[dict] = None
+    link_risk_score: float
+    final_risk_score: float
+    verdict_label: str  # "safe" | "suspicious" | "malicious" | "inconclusive"
+    final_verdict_source: str  # "email" | "link" | "tie"
+
+    analysis_quality: str  # "high" | "medium" | "low"
+    confidence: dict  # { level: "high" | "medium" | "low", reasons: list[str] }
     
-    # Triage Info
-    auth_results: Optional[dict] = None
-    triage_stats: Optional[dict] = None
-    skipped_urls: Optional[list[dict]] = None
-    scanned_count: int = 0
-    total_extracted: int = 0
-    
-    # Forensic Transparency
-    heuristic_score: float = 0.0
-    link_score: float = 0.0
+    # Granular Scores
+    score_identity: float = 0.0
+    score_linguistic: float = 0.0
+
+    # Score Breakdown
+    score_breakdown: Optional[dict] = None
+
+    # Failures / Partial Results
     forensic_errors: list[dict] = []
-    deep_dive_target: Optional[str] = None
+
+    # Link Triage Explainability
+    triage_stats: dict
+
+    # Identity
+    identity: dict
+
+    # Authentication
+    auth: dict
+
+    # HTML Forensics
+    html_findings: dict
+
+    # Social Engineering
+    social_engineering: dict
+
+    # Evidence (PII-safe)
+    evidence: dict
+
+    # Attachments
+    attachments: list[dict] = []
+
+    # Legacy compatibility / Link details (Optional)
+    link_results: list[ScanResponse] = []
+    extracted_urls: list[str] = []
+    reasons: list[str] = []
     unwrap_events: list[dict] = []
+    deep_dive_target: Optional[str] = None
+
+    model_config = {
+        "from_attributes": True
+    }
