@@ -11,9 +11,10 @@ import { InfoTip } from './InfoTip';
 interface ResultDetailsProps {
   result: AnalysisResult;
   hideHeader?: boolean;
+  onRetry?: () => void;
 }
 
-export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideHeader }) => {
+export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideHeader, onRetry }) => {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['agentLog']));
 
@@ -43,7 +44,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
 
   const getBorderColor = () => {
     switch (result.riskLevel) {
-      case 'SAFE': return 'border-emerald-200 dark:border-ornex-green/40 bg-emerald-50/50 dark:bg-ornex-green/5 shadow-[0_0_50px_rgba(16,185,129,0.15)] dark:shadow-[0_0_50px_rgba(57,255,20,0.1)]';
+      case 'SAFE': return 'border-emerald-200 dark:border-ornex-green/40 bg-emerald-50/50 dark:bg-zinc-900/50 shadow-[0_0_50px_rgba(16,185,129,0.15)] dark:shadow-[0_0_50px_rgba(57,255,20,0.1)]';
       case 'SUSPICIOUS': return 'border-amber-500/40 bg-amber-500/10 shadow-[0_0_50px_rgba(245,158,11,0.1)]';
       case 'MALICIOUS': return 'border-rose-500/40 bg-rose-500/10 shadow-[0_0_50px_rgba(244,63,94,0.1)]';
       default: return 'border-zinc-200 dark:border-white/20 bg-zinc-50 dark:bg-white/5 shadow-xl';
@@ -54,6 +55,39 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
 
   return (
     <div className="w-full space-y-6">
+      {/* Degradation Warning Banner */}
+      {result.degraded_engines && result.degraded_engines.length > 0 && (
+        <div className="p-4 rounded-2xl border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/5 flex items-center justify-between gap-4 animate-in slide-in-from-top-2 duration-300 backdrop-blur-md">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0" />
+            <div>
+              <p className="text-xs font-black uppercase tracking-widest text-amber-700 dark:text-amber-400">
+                Partial Analysis
+              </p>
+              <p className="text-[11px] text-amber-600 dark:text-amber-500/80 font-medium">
+                Some checks failed ({result.degraded_engines.map(e => 
+                  e === 'llm' ? 'AI Analysis' : 
+                  e === 'xgboost' ? 'ML Model' : 
+                  e === 'bert' ? 'Deep Learning' :
+                  e === 'probe' ? 'Active Probe' :
+                  e.toUpperCase()
+                ).join(', ')}). Showing results from available engines.
+              </p>
+            </div>
+          </div>
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              className="px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 
+                         rounded-full text-xs font-bold uppercase tracking-widest text-amber-600 
+                         dark:text-amber-400 transition-all shrink-0"
+            >
+              Retry Scan
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Dynamic Recommendation Header */}
       {!hideHeader && result.recommendation && (
         <div className={`p-5 rounded-2xl border flex items-center gap-4 animate-in slide-in-from-top-4 duration-500 backdrop-blur-md ${
@@ -117,7 +151,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
 
         {/* Agent Investigation Report */}
         {result.agentReport && (
-          <div className="lg:col-span-2 glass-panel rounded-3xl p-8 dark:border-ornex-green/20 dark:bg-ornex-green/5 overflow-hidden relative">
+          <div className="lg:col-span-2 glass-panel rounded-3xl p-8 dark:border-ornex-green/20 dark:bg-zinc-900/40 overflow-hidden relative">
             <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
                <Bot className="w-32 h-32 text-cyber-light-accent dark:text-ornex-green" />
             </div>
@@ -261,11 +295,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
             <div className={`accordion-content ${expandedSections.has('technical') ? 'expanded' : 'collapsed'}`}>
               <div className="pt-6 space-y-5">
               {(() => {
-                const cleanText = (text: string) => {
-                  if (!text) return "Data unavailable for this analysis stage.";
-                  if (text.includes("API error")) return "Analysis partial due to check limit. Refer to Forensic Alert banner.";
-                  return text;
-                };
+                const cleanText = (text: string) => text || "Data unavailable for this analysis stage.";
                 return (
                   <>
                     <div>
@@ -330,7 +360,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
             <div className={`accordion-content ${expandedSections.has('findings') ? 'expanded' : 'collapsed'}`}>
               <div className="pt-6 space-y-6">
                  {/* Key Findings */}
-                 <div className="rounded-2xl p-6 bg-white/50 dark:bg-black/20 border border-zinc-200 dark:border-white/5 relative overflow-hidden">
+                 <div className="rounded-2xl p-6 bg-white/50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-white/5 relative overflow-hidden">
                    <div className="absolute top-0 right-0 p-3 opacity-5 pointer-events-none">
                        <Activity className="w-24 h-24" />
                    </div>
@@ -352,7 +382,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                </div>
 
                {/* Advice */}
-               <div className="rounded-2xl p-6 border border-cyber-light-accent/30 bg-cyber-light-accent/5 dark:bg-ornex-green/5 shadow-[0_0_40px_rgba(0,200,83,0.05)] relative overflow-hidden">
+                <div className="rounded-2xl p-6 border border-cyber-light-accent/30 bg-cyber-light-accent/5 dark:bg-zinc-900/40 shadow-[0_0_40px_rgba(0,200,83,0.05)] relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
                      <ShieldCheck className="w-24 h-24 text-cyber-light-accent" />
                   </div>
@@ -362,7 +392,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                   </h4>
               <div className="grid grid-cols-1 gap-4">
                  {(result.mitigationAdvice && result.mitigationAdvice.length > 0) ? result.mitigationAdvice.map((advice, idx) => (
-                   <div key={idx} className="flex items-start gap-3 p-4 rounded-2xl bg-white/60 dark:bg-black/60 border border-cyber-light-accent/30 backdrop-blur-md shadow-sm">
+                   <div key={idx} className="flex items-start gap-3 p-4 rounded-2xl bg-white/60 dark:bg-zinc-900/60 border border-cyber-light-accent/30 backdrop-blur-md shadow-sm">
                       <div className="w-6 h-6 rounded-full bg-cyber-light-accent/10 dark:bg-ornex-green/10 flex items-center justify-center flex-shrink-0 text-cyber-light-accent dark:text-ornex-green font-bold text-xs">
                          {idx + 1}
                       </div>
@@ -371,7 +401,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                       </p>
                    </div>
                  )) : (
-                    <div className="flex items-center gap-3 p-4 rounded-2xl bg-white/60 dark:bg-black/60 border border-cyber-light-accent/30 backdrop-blur-md shadow-sm">
+                    <div className="flex items-center gap-3 p-4 rounded-2xl bg-white/60 dark:bg-zinc-900/60 border border-cyber-light-accent/30 backdrop-blur-md shadow-sm">
                       <Info className="w-4 h-4 text-cyber-light-accent" />
                       <p className="text-sm text-cyber-light-text/70 italic">No specific mitigation required at this time.</p>
                     </div>

@@ -88,6 +88,8 @@ export function mapToAnalysisResult(raw: BackendScanResponse): AnalysisResult {
     visual_forensics: raw.visual_forensics,
     fusion_trace: raw.fusion_trace,
     mitigationAdvice: raw.mitigationAdvice,
-    probe_artifacts: raw.probe_artifacts
+    probe_artifacts: raw.probe_artifacts,
+    forensic_errors: raw.forensic_errors || [],
+    degraded_engines: raw.degraded_engines || []
   };
 }

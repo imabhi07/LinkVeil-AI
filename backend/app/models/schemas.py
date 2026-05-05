@@ -26,6 +26,10 @@ class ScanResponse(BaseModel):
     fusion_trace: Optional[dict] = None
     analytics_summary: Optional[dict] = None
     
+    # Graceful Degradation
+    forensic_errors: list[dict] = []
+    degraded_engines: list[str] = []
+
     model_config = {
         "from_attributes": True
     }

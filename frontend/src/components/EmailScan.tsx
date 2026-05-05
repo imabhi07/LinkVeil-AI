@@ -186,7 +186,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <div className="glass-panel p-8 rounded-3xl dark:bg-black/40 border-zinc-200 dark:border-white/10 shadow-xl shadow-black/5">
+      <div className="glass-panel p-8 rounded-3xl dark:bg-zinc-900/40 border-zinc-200 dark:border-white/10 shadow-xl shadow-black/5">
         <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-10">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-cyber-light-accent/10 dark:bg-ornex-green/10 rounded-2xl border border-cyber-light-accent/20 dark:border-ornex-green/20">
@@ -240,7 +240,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
 
         {showGuide && (
           <div className="mb-8 space-y-6 animate-slide-down">
-            <div className="p-8 rounded-[2rem] bg-zinc-50 dark:bg-black/40 border border-[#00C853]/20 dark:border-ornex-green/20 backdrop-blur-xl shadow-2xl relative overflow-hidden group">
+            <div className="p-8 rounded-[2rem] bg-zinc-50 dark:bg-zinc-900/40 border border-[#00C853]/20 dark:border-ornex-green/20 backdrop-blur-xl shadow-2xl relative overflow-hidden group">
               {/* Background Decoration */}
               <div className="absolute top-0 right-0 w-64 h-64 bg-cyber-light-accent/5 dark:bg-ornex-green/5 blur-[100px] -mr-32 -mt-32 pointer-events-none" />
               
@@ -653,14 +653,17 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
 
               {/* Forensic Warnings */}
               {result.forensic_errors && result.forensic_errors.length > 0 && (
-                <div className="space-y-3">
-                  {result.forensic_errors.map((err, i) => (
-                    <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-amber-500/5 border border-amber-500/10 text-amber-500/80 text-[11px] font-mono">
-                      <AlertCircle className="w-4 h-4" />
-                      <span className="uppercase font-bold">[{err.stage}]:</span>
-                      <span>{err.message}</span>
-                    </div>
-                  ))}
+                <div className="p-4 rounded-2xl border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/5 flex items-center gap-3 backdrop-blur-md">
+                  <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-widest text-amber-700 dark:text-amber-400">
+                      Partial Analysis
+                    </p>
+                    <p className="text-[11px] text-amber-600 dark:text-amber-500/80 font-medium">
+                      Some checks failed ({[...new Set(result.forensic_errors.map(e => e.stage))].join(', ')}). 
+                      Showing partial results.
+                    </p>
+                  </div>
                 </div>
               )}
 
@@ -682,7 +685,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Detection Reasons */}
-                <div className="glass-panel p-6 rounded-3xl dark:bg-black/20 border-zinc-200 dark:border-white/10 space-y-4">
+                <div className="glass-panel p-6 rounded-3xl dark:bg-zinc-900/20 border-zinc-200 dark:border-white/10 space-y-4">
                   <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400 flex items-center gap-2">
                     <AlertCircle className="w-4 h-4" />
                     Forensic Detection Logs
@@ -698,7 +701,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                 </div>
 
                 {/* Link Profile */}
-                <div className="glass-panel p-6 rounded-3xl dark:bg-black/20 border-zinc-200 dark:border-white/10 space-y-4">
+                <div className="glass-panel p-6 rounded-3xl dark:bg-zinc-900/20 border-zinc-200 dark:border-white/10 space-y-4">
                   <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400 flex items-center gap-2">
                     <Layout className="w-4 h-4" />
                     Analyzed Link Profile

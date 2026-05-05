@@ -85,7 +85,7 @@ const AGENT_STEPS = [
 // Memoized FeatureCard - prevents re-renders when parent state changes
 // ---------------------------------------------------------------------------
 const FeatureCard = memo(({ icon, title, desc }: { icon: React.ReactNode, title: string, desc: string }) => (
-  <div className="p-6 rounded-2xl glass-panel frosted-card-light dark:bg-black/40 card-gradient-border group h-full transition-all duration-500 hover:shadow-xl hover:-translate-y-1">
+  <div className="p-6 rounded-2xl glass-panel frosted-card-light dark:bg-zinc-900/40 card-gradient-border group h-full transition-all duration-500 hover:shadow-xl hover:-translate-y-1">
     <div className="flex items-start gap-4 mb-4">
       <div className="p-2.5 bg-white/80 dark:bg-ornex-black rounded-xl border border-zinc-100 dark:border-white/10 group-hover:border-[#00C853]/50 dark:group-hover:border-ornex-green/50 transition-all shadow-sm">
         {icon}
@@ -207,11 +207,10 @@ function App() {
     return () => cancelIdleCallback(id);
   }, [emailHistory]);
 
-  const handleAnalyze = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!url.trim()) return;
+  const performAnalyze = useCallback(async (targetUrl: string) => {
+    if (!targetUrl.trim()) return;
 
-    if (!url.includes('.') || url.length < 4) {
+    if (!targetUrl.includes('.') || targetUrl.length < 4) {
       setError("Please enter a valid URL.");
       return;
     }
@@ -232,7 +231,7 @@ function App() {
       const response = await fetch(`${API_BASE_URL}/api/v1/scan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: url.includes('://') ? url : `https://${url}` }),
+        body: JSON.stringify({ url: targetUrl.includes('://') ? targetUrl : `https://${targetUrl}` }),
         signal: controller.signal,
       });
 
@@ -263,7 +262,12 @@ function App() {
     } finally {
       setLoading(false);
     }
-  }, [url]);
+  }, []);
+
+  const handleAnalyze = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    performAnalyze(url);
+  }, [url, performAnalyze]);
 
   const clearHistory = useCallback(() => {
     if (window.confirm("Are you sure you want to clear your scan history?")) {
@@ -563,9 +567,12 @@ function App() {
 
               {/* Results Display */}
               <div id="url-results" className="scroll-mt-32">
-                {currentResult && !loading && (
+                 {currentResult && !loading && (
                   <div className="animate-fade-in">
-                     <ResultDetails result={currentResult} />
+                     <ResultDetails 
+                       result={currentResult} 
+                       onRetry={() => performAnalyze(currentResult.url)}
+                     />
                   </div>
                 )}
               </div>

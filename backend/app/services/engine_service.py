@@ -68,8 +68,18 @@ def _root_domain(url: str) -> str:
 
 
 def _should_skip_probe(url: str) -> bool:
-    """Skip Playwright probe for well-known safe domains."""
-    return _root_domain(url) in KNOWN_SAFE_DOMAINS
+    """Skip Playwright probe for well-known safe domains, UNLESS they look like redirectors."""
+    root = _root_domain(url)
+    if root not in KNOWN_SAFE_DOMAINS:
+        return False
+        
+    # Exceptions: Even if the domain is safe, skip if it's a known storage/redirector pattern
+    # these are frequently abused for hosting phishing HTML
+    redirector_patterns = ["storage.googleapis.com", "drive.google.com", "onedrive.live.com", "dropbox.com/s/"]
+    if any(p in url.lower() for p in redirector_patterns):
+        return False
+        
+    return True
 
 
 def _get_trusted_verdict(url: str) -> dict:
@@ -117,6 +127,95 @@ def _set_cache(url: str, result: dict):
     if len(_result_cache) > 200:
         oldest_key = min(_result_cache, key=lambda k: _result_cache[k][0])
         del _result_cache[oldest_key]
+
+
+class FusionEngine:
+    def fuse(self, scores: dict, degraded_engines: list[str]) -> tuple[float, dict]:
+        """Combine engine scores with weights that adjust based on availability."""
+        llm_score = scores.get("llm", 0.0)
+        xgb_score = scores.get("xgb", 0.0)
+        bert_score = scores.get("bert", 0.0)
+        
+        trace = {}
+        
+        if "llm" in degraded_engines:
+            # ML-only blend (50/50 XGB/BERT)
+            if "bert" in degraded_engines:
+                risk_score = xgb_score
+                trace["engines_used"] = ["xgb"]
+            else:
+                risk_score = (xgb_score * 0.50) + (bert_score * 0.50)
+                trace["engines_used"] = ["xgb", "bert"]
+        else:
+            # Normal tri-model blend: 60% LLM, 20% XGB, 20% BERT
+            if "bert" in degraded_engines:
+                risk_score = (llm_score * 0.70) + (xgb_score * 0.30)
+                trace["engines_used"] = ["llm", "xgb"]
+            else:
+                risk_score = (llm_score * 0.60) + (xgb_score * 0.20) + (bert_score * 0.20)
+                trace["engines_used"] = ["llm", "xgb", "bert"]
+                
+        return risk_score, trace
+
+    def create_verdict(self, 
+                       url: str,
+                       risk_score: float, 
+                       explanation: str, 
+                       forensic_results: dict, 
+                       forensic_errors: list, 
+                       degraded_engines: list, 
+                       fusion_trace: dict) -> dict:
+        """Construct the final verdict dictionary."""
+        
+        # Cleanup explanation
+        clean_explanation = explanation
+        if "llm" in degraded_engines:
+            # Replace technical strings
+            for tech_err in ["API error", "TimeoutError", "Service Unavailable"]:
+                clean_explanation = clean_explanation.replace(tech_err, "forensic engine failure")
+            
+            # Prepend indicator if not already present
+            if "[Partial Analysis]" not in clean_explanation:
+                clean_explanation = f"[Partial Analysis] {clean_explanation}"
+                
+            if len(clean_explanation.strip()) < 40: # If it's too short/generic
+                clean_explanation = "Partial analysis complete. Verdict computed from ML models and forensic signals as AI deep analysis was unavailable."
+        
+        # Determine risk level
+        if risk_score >= 71:
+            level = "High"
+            rec = "Dangerous - Do Not Open"
+        elif risk_score >= 31:
+            level = "Medium"
+            rec = "Suspicious - Proceed with Caution"
+        else:
+            level = "Low"
+            rec = "Safe - You can proceed"
+
+        llm_res = forensic_results.get("llm", {})
+        brand_res = forensic_results.get("brand", {})
+        
+        return {
+            "url": url,
+            "risk_score": round(risk_score, 2),
+            "risk_level": level,
+            "recommendation": rec,
+            "explanation": clean_explanation,
+            "brand_impersonation": brand_res.get("is_mismatch", False) or llm_res.get("brand_impersonation", False),
+            "brand_name": brand_res.get("brand_detected") or llm_res.get("brand_name"),
+            "verdictTitle": f"{level} Risk Analysis",
+            "technicalDetails": llm_res.get("technicalDetails", {}),
+            "mitigationAdvice": llm_res.get("mitigationAdvice", []),
+            "agentReport": {"summary": clean_explanation},
+            "whois_info": forensic_results.get("whois", {}),
+            "threat_intel": forensic_results.get("threat", {}),
+            "visual_forensics": forensic_results.get("visual", {}),
+            "forensic_errors": forensic_errors,
+            "degraded_engines": degraded_engines,
+            "fusion_trace": fusion_trace
+        }
+
+fusion_engine = FusionEngine()
 
 
 async def evaluate_url(url: str, db: Session) -> dict:
@@ -174,12 +273,45 @@ async def evaluate_url(url: str, db: Session) -> dict:
     results = await asyncio.gather(*tasks, return_exceptions=True)
     t_parallel = time.perf_counter()
 
+    # ── Structured Error Collection ──
+    forensic_errors: list[dict] = []
+    degraded_engines: list[str] = []
+
     xgb_prob = results[0] if not isinstance(results[0], Exception) else 0.5
+    if isinstance(results[0], Exception):
+        forensic_errors.append({"stage": "XGBoost", "message": f"ML model error: {str(results[0])[:100]}"})
+        degraded_engines.append("xgboost")
+
     llm_result = results[1] if not isinstance(results[1], Exception) else {}
+    llm_failed = isinstance(results[1], Exception) or (
+        isinstance(llm_result, dict) and "API error" in llm_result.get("explanation", "")
+    )
+    if llm_failed:
+        forensic_errors.append({
+            "stage": "LLM Analysis",
+            "message": "AI analysis unavailable. Verdict computed from ML models and forensic signals."
+        })
+        degraded_engines.append("llm")
+
     probe_result = results[2] if not isinstance(results[2], Exception) else None
+    if isinstance(results[2], Exception):
+        forensic_errors.append({"stage": "Active Probe", "message": f"Probe agent error: {str(results[2])[:100]}"})
+        degraded_engines.append("probe")
+
     whois_result = results[3] if not isinstance(results[3], Exception) else {}
+    if isinstance(results[3], Exception):
+        forensic_errors.append({"stage": "WHOIS", "message": "Domain registration lookup failed."})
+        degraded_engines.append("whois")
+
     brand_result = results[4] if not isinstance(results[4], Exception) else {}
+    if isinstance(results[4], Exception):
+        forensic_errors.append({"stage": "Brand Detection", "message": "Brand mismatch check unavailable."})
+        degraded_engines.append("brand")
+
     bert_prob = results[5] if not isinstance(results[5], Exception) else None
+    if isinstance(results[5], Exception):
+        forensic_errors.append({"stage": "BERT/DL", "message": f"Deep learning model error: {str(results[5])[:100]}"})
+        degraded_engines.append("bert")
 
     # ── 4. Vision Analysis (Delayed for Early Exit check) ──
     visual_result = None
@@ -189,12 +321,16 @@ async def evaluate_url(url: str, db: Session) -> dict:
     raw_bert_score = (bert_prob * 100) if bert_prob is not None else 0.0
     
     # Cap ML scores for known safe domains to prevent lexical false positives
-    # Lexical models flag unusual URL structures (UUIDs, .ai TLD) as suspicious,
-    # but these are expected patterns on legitimate platforms
-    if _should_skip_probe(url):
+    # But ONLY if it's truly a safe path (no .html on storage domains)
+    is_storage_path = any(p in url.lower() for p in ["storage.googleapis.com", "drive.google.com", "onedrive.live.com"])
+    is_html_extension = url.lower().split('?')[0].endswith(('.html', '.htm', '.php'))
+    
+    if _should_skip_probe(url) and not (is_storage_path and is_html_extension):
         raw_xgb_score = min(raw_xgb_score, 15.0)
         raw_bert_score = min(raw_bert_score, 15.0)
         logger.info(f"ML Score Cap: XGB={raw_xgb_score:.1f}, BERT={raw_bert_score:.1f} (Known safe domain)")
+    elif is_storage_path:
+        logger.info(f"Forensic Alert: Storage-hosted redirector detected ({url}). Skipping ML cap.")
 
     # Dynamic fallback: if AI fails, be more lenient for known safe domains
     default_score = 15.0 if _should_skip_probe(url) else 35.0
@@ -203,12 +339,9 @@ async def evaluate_url(url: str, db: Session) -> dict:
         try: llm_score = float(llm_score)
         except: llm_score = default_score
 
-    # Base blend (Tri-model ensemble: 60% LLM, 20% XGB, 20% BERT)
-    # If BERT is at fallback (None), we revert to original 70/30 blend
-    if bert_prob is not None:
-        risk_score = (llm_score * 0.60) + (raw_xgb_score * 0.20) + (raw_bert_score * 0.20)
-    else:
-        risk_score = (llm_score * 0.70) + (raw_xgb_score * 0.30)
+    # Fusion processing using the new FusionEngine class
+    scores_dict = {"llm": llm_score, "xgb": raw_xgb_score, "bert": raw_bert_score}
+    risk_score, fusion_trace = fusion_engine.fuse(scores_dict, degraded_engines)
     
     # ── 4.5 Late Vision Analysis (with Early Exit) ──
     if probe_result and hasattr(probe_result, "screenshot_path") and probe_result.screenshot_path:
@@ -349,33 +482,21 @@ async def evaluate_url(url: str, db: Session) -> dict:
     if is_unreachable and not is_hard_offline:
         logger.info(f"Probe Timed Out for {url}: Maintaining ML Risk Score {risk_score}")
             
-    if risk_score >= 71:
-        final_level = "High"
-        recommendation = "Dangerous - Do Not Open"
-    elif risk_score >= 31:
-        final_level = "Medium"
-        recommendation = "Suspicious - Proceed with Caution"
-    else:
-        final_level = "Low"
-        recommendation = "Safe - You can proceed"
-
-    # Construct Verdict
-    verdict = {
-        "url": url,
-        "risk_score": round(risk_score, 2),
-        "risk_level": final_level,
-        "recommendation": recommendation,
-        "explanation": llm_result.get("explanation", "Analysis complete."),
-        "brand_impersonation": brand_result.get("is_mismatch", False) or llm_result.get("brand_impersonation", False),
-        "brand_name": brand_result.get("brand_detected") or llm_result.get("brand_name"),
-        "verdictTitle": f"{final_level} Risk Analysis",
-        "technicalDetails": llm_result.get("technicalDetails", {}),
-        "mitigationAdvice": llm_result.get("mitigationAdvice", []),
-        "agentReport": {"summary": llm_result.get("explanation", "")},
-        "whois_info": whois_result,
-        "threat_intel": threat_result,
-        "visual_forensics": visual_result,
-        "fusion_trace": {
+    # Construct Verdict via FusionEngine
+    verdict = fusion_engine.create_verdict(
+        url=url,
+        risk_score=risk_score,
+        explanation=llm_result.get("explanation", "Analysis complete."),
+        forensic_results={
+            "llm": llm_result,
+            "whois": whois_result,
+            "brand": brand_result,
+            "threat": threat_result,
+            "visual": visual_result
+        },
+        forensic_errors=forensic_errors,
+        degraded_engines=degraded_engines,
+        fusion_trace={
             "xgb_score": raw_xgb_score,
             "bert_score": raw_bert_score,
             "llm_score": llm_score,
@@ -385,9 +506,10 @@ async def evaluate_url(url: str, db: Session) -> dict:
             "tld_boost": tld_boost,
             "login_boost": login_boost,
             "probe_adjustment": probe_adjustment,
-            "final_score": risk_score
+            "final_score": risk_score,
+            "engines_used": fusion_trace.get("engines_used", [])
         }
-    }
+    )
 
     # Integrate Probe artifacts
     # Integrate Probe results (Bug #8 fix - flatten into agentReport)

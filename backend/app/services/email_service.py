@@ -5,20 +5,22 @@ from typing import List, Dict, Any
 # Keyword lists based on requirements
 URGENCY_PHRASES = [
     "act immediately", "action required", "within 24 hours", "suspended permanently",
-    "final notice", "urgent security", "asap", "deadline approaching", "urgent", "immediately"
+    "final notice", "urgent security", "asap", "deadline approaching", "urgent", "immediately",
+    "expires soon", "within 48 hours", "immediate attention", "restricted access"
 ]
 
 CREDENTIAL_PHRASES = [
     "verify your account", "confirm your identity", "sign-in detected",
     "reset your password", "authorize access", "validate credentials",
     "login to your", "security verification", "one-time passcode", "otp is",
-    "verify", "credentials", "password reset"
+    "verify", "credentials", "password reset", "confirm details", "identify verification"
 ]
 
 BILLING_PHRASES = [
     "invoice for", "payment received", "payment failed", "refund processed",
     "transaction details", "billing statement", "subscription active", 
-    "overdue balance", "receipt for", "card ending in"
+    "overdue balance", "receipt for", "card ending in", "payment of", "received a payment",
+    "wire transfer", "unpaid invoice", "remittance", "payment confirmation"
 ]
 
 MARKETING_REWARDS_PHRASES = [
@@ -62,6 +64,17 @@ def analyze_email(
     subject = subject or ""
     body = body or ""
     from_name = from_name or ""
+    
+    # Normalize Unicode characters to standard ASCII-like forms (NFKC)
+    # This prevents bypasses using bold/italic Unicode or similar homographs
+    import unicodedata
+    def normalize(t):
+        return unicodedata.normalize('NFKC', t)
+        
+    subject = normalize(subject)
+    body = normalize(body)
+    from_name = normalize(from_name)
+    
     combined_text = (from_name + " " + subject + " " + body).lower()
     
     flags = {
@@ -103,24 +116,24 @@ def analyze_email(
                 reasons.append(f"Sender name '{from_name}' claims to be a major service but domain '{root_domain}' is not recognized.")
                 break
 
-    # 1. Urgency Check (+8)
+    # 1. Urgency Check (+15)
     if contains_any(combined_text, URGENCY_PHRASES):
         flags["urgency"] = True
-        score += 8
+        score += 15
         reasons.append("Email uses strong urgency or high-pressure language.")
         
-    # 2. Credential Check (+12)
+    # 2. Credential Check (+20)
     # Only flag if it's an INSTRUCTIONAL phrase, not just a mention
     if contains_any(combined_text, CREDENTIAL_PHRASES):
         flags["credential_request"] = True
         # Dampen significantly if trusted/authenticated
-        # If it's a trusted security email, score is 0. If it's a suspicious email, score is 12.
-        f_score = 0 if is_trusted else 12
+        # If it's a trusted security email, score is 0. If it's a suspicious email, score is 20.
+        f_score = 0 if is_trusted else 20
         score += f_score
         if not is_trusted:
             reasons.append("Email contains specific instructions to verify credentials or identity.")
         
-    # 3. Finance Check (+6)
+    # 3. Finance Check (+25)
     is_billing = contains_any(combined_text, BILLING_PHRASES)
     is_marketing = contains_any(combined_text, MARKETING_REWARDS_PHRASES)
     is_newsletter = contains_any(combined_text, NEWSLETTER_INDICATORS)
@@ -129,15 +142,15 @@ def analyze_email(
         flags["financial_hook"] = True
         f_score = 0
         if is_billing:
-            f_score = 6
-            reasons.append("Email mentions a specific financial transaction or billing event.")
+            f_score = 25
+            reasons.append("Email mentions a specific financial transaction or billing event (High sensitivity).")
         elif is_marketing:
-            f_score = 3
+            f_score = 10
             reasons.append("Email uses promotional rewards or marketing incentives.")
             
         # Dampen if it's a likely newsletter OR trusted
         if is_newsletter or is_trusted:
-            f_score = max(0, f_score - 4)
+            f_score = max(0, f_score - 15)
             
         score += f_score
         

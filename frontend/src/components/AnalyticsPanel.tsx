@@ -251,7 +251,7 @@ export function AnalyticsPanel({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="relative w-full max-w-6xl max-h-[95vh] overflow-hidden bg-white dark:bg-black border border-cyber-light-border dark:border-white/10 rounded-3xl shadow-[0_0_80px_rgba(0,0,0,0.8)] flex flex-col">
+      <div className="relative w-full max-w-6xl max-h-[95vh] overflow-hidden bg-white dark:bg-ornex-panel border border-cyber-light-border dark:border-white/10 rounded-3xl shadow-[0_0_80px_rgba(0,0,0,0.8)] flex flex-col">
         {/* Background Depth Glows */}
         <div className="absolute top-0 left-1/4 w-1/2 h-64 bg-ornex-green/5 blur-[120px] pointer-events-none" />
         <div className="absolute bottom-0 right-1/4 w-1/2 h-64 bg-ornex-green/3 blur-[120px] pointer-events-none" />
@@ -319,7 +319,7 @@ export function AnalyticsPanel({ onClose }: { onClose: () => void }) {
                     className={`relative p-6 border rounded-3xl cursor-pointer transition-all duration-700 ease-[cubic-bezier(0.2,0,0,1)] overflow-hidden flex flex-col h-full
                       ${isActive 
                         ? 'bg-white dark:bg-ornex-panel border-ornex-green/40 shadow-[0_25px_60px_rgba(0,0,0,0.9),0_0_20px_rgba(0,255,65,0.15)] scale-[1.02]' 
-                        : 'bg-white/60 dark:bg-white/[0.06] border-zinc-200/50 dark:border-white/10 hover:bg-white/80 dark:hover:bg-white/[0.12] shadow-xl hover:shadow-ornex-green/10 hover:-translate-y-2'}`}
+                        : 'bg-white/60 dark:bg-zinc-900/50 border-zinc-200/50 dark:border-white/10 hover:bg-white/80 dark:hover:bg-zinc-900/80 shadow-xl hover:shadow-ornex-green/10 hover:-translate-y-2'}`}
                   >
                     {/* Background Glow Effect */}
                     <div className={`absolute -top-20 -right-20 w-40 h-40 rounded-full blur-[80px] transition-opacity duration-700 ${isActive ? 'opacity-10' : 'opacity-0'} ${riskColor}`} />
@@ -377,7 +377,7 @@ export function AnalyticsPanel({ onClose }: { onClose: () => void }) {
                 Showing last {data.daily_volume.length} days
               </span>
             </div>
-            <div className="h-64 bg-white/40 dark:bg-white/[0.03] rounded-3xl p-6 pb-10 border border-cyber-light-border dark:border-white/10 flex items-end gap-2 relative overflow-visible shadow-inner">
+            <div className="h-64 bg-white/40 dark:bg-zinc-900/40 rounded-3xl p-6 pb-10 border border-cyber-light-border dark:border-white/10 flex items-end gap-2 relative overflow-visible shadow-inner">
               <div className="absolute inset-0 bg-gradient-to-t from-ornex-green/5 to-transparent pointer-events-none rounded-3xl" />
               {data.daily_volume.map((v, i) => {
                 const max = Math.max(...data.daily_volume.map(d => d.count), 1);

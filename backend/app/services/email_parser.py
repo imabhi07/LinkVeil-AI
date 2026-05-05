@@ -34,7 +34,22 @@ def extract_body(msg: email.message.Message) -> dict:
                 
             if content_type in ("text/html", "text/plain"):
                 try:
+                    encoding = part.get("Content-Transfer-Encoding", "").lower()
                     payload = part.get_payload(decode=True)
+                    
+                    # Robust Fallback: If payload still looks like base64 or encoding is non-standard
+                    # and decode=True didn't result in plain text, try manual base64 decoding.
+                    import base64
+                    if b'<' not in payload and b' ' not in payload and len(payload) > 20:
+                        try:
+                            # Try to see if it's base64 despite labeling
+                            candidate = base64.b64decode(payload, validate=True)
+                            if len(candidate) > 10:
+                                payload = candidate
+                                logger.info("Forensic Hit: Mislabeled base64 part successfully decoded.")
+                        except:
+                            pass
+
                     decoded = payload.decode(part.get_content_charset() or 'utf-8', errors='ignore')
                     parts_content.append(decoded)
                     if content_type == "text/plain" and not text_part:

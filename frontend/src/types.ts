@@ -46,6 +46,8 @@ export interface AnalysisResult {
   visual_forensics?: Record<string, any>;
   fusion_trace?: Record<string, any>;
   probe_artifacts?: Record<string, any>;
+  forensic_errors?: Array<{ stage: string; message: string }>;
+  degraded_engines?: string[];
 }
 
 export interface BackendScanResponse {
@@ -65,6 +67,8 @@ export interface BackendScanResponse {
   visual_forensics?: Record<string, any>;
   fusion_trace?: Record<string, any>;
   probe_artifacts?: Record<string, any>;
+  forensic_errors?: Array<{ stage: string; message: string }>;
+  degraded_engines?: string[];
 }
 
 export interface ScanHistoryItem extends AnalysisResult {
