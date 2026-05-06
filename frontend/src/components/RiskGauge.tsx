@@ -53,6 +53,11 @@ export const RiskGauge: React.FC<RiskGaugeProps> = memo(({ score, level }) => {
       strokeClass = 'stroke-rose-500 dark:stroke-rose-400';
       shadowColor = 'rgba(244, 63, 94, 0.5)';
       break;
+    case 'INCONCLUSIVE':
+      colorClass = 'text-blue-500 dark:text-blue-400 drop-shadow-[0_0_12px_rgba(59,130,246,0.6)]';
+      strokeClass = 'stroke-blue-500 dark:stroke-blue-400';
+      shadowColor = 'rgba(59, 130, 246, 0.5)';
+      break;
   }
 
   const radius = 50;

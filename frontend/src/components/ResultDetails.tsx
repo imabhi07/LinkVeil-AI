@@ -2,8 +2,8 @@ import React, { memo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { AnalysisResult } from '../types';
 import { 
-  ShieldCheck, ShieldAlert, ShieldX, Activity, Globe, AlertTriangle, 
-  ExternalLink, ArrowRight, Bot, Eye, Terminal, Zap, Image as ImageIcon, Info, X, ChevronDown
+  ShieldCheck, ShieldX, Activity, Globe, AlertTriangle, 
+  ExternalLink, ArrowRight, Bot, Eye, Terminal, Zap, Image as ImageIcon, Info, X, ChevronDown, RefreshCw
 } from 'lucide-react';
 import { RiskGauge } from './RiskGauge';
 import { InfoTip } from './InfoTip';
@@ -32,24 +32,6 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
 
   // Safety check for critical data
   if (!result) return null;
-
-  const getIcon = () => {
-    switch (result.riskLevel) {
-      case 'SAFE': return <ShieldCheck className="w-10 h-10 text-emerald-500 dark:text-ornex-green" />;
-      case 'SUSPICIOUS': return <ShieldAlert className="w-10 h-10 text-amber-500" />;
-      case 'MALICIOUS': return <ShieldX className="w-10 h-10 text-rose-500" />;
-      default: return <Activity className="w-10 h-10 text-zinc-500" />;
-    }
-  };
-
-  const getBorderColor = () => {
-    switch (result.riskLevel) {
-      case 'SAFE': return 'border-emerald-200 dark:border-ornex-green/40 bg-emerald-50/50 dark:bg-zinc-900/50 shadow-[0_0_50px_rgba(16,185,129,0.15)] dark:shadow-[0_0_50px_rgba(57,255,20,0.1)]';
-      case 'SUSPICIOUS': return 'border-amber-500/40 bg-amber-500/10 shadow-[0_0_50px_rgba(245,158,11,0.1)]';
-      case 'MALICIOUS': return 'border-rose-500/40 bg-rose-500/10 shadow-[0_0_50px_rgba(244,63,94,0.1)]';
-      default: return 'border-zinc-200 dark:border-white/20 bg-zinc-50 dark:bg-white/5 shadow-xl';
-    }
-  };
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -88,61 +70,103 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
         </div>
       )}
 
-      {/* Dynamic Recommendation Header */}
-      {!hideHeader && result.recommendation && (
-        <div className={`p-5 rounded-2xl border flex items-center gap-4 animate-in slide-in-from-top-4 duration-500 backdrop-blur-md ${
-          result.riskLevel === 'SAFE' ? 'bg-[#ECFDF5] border-[#D1FAE5] text-[#065F46] dark:bg-ornex-green/20 dark:border-ornex-green/30 dark:text-ornex-green' :
-          result.riskLevel === 'SUSPICIOUS' ? 'bg-[#FFFBEB] border-[#FEF3C7] text-[#92400E] dark:bg-amber-500/25 dark:border-amber-500/40 dark:text-white' :
-          result.riskLevel === 'MALICIOUS' ? 'bg-[#FEF2F2] border-[#FEE2E2] text-[#991B1B] dark:bg-rose-500/25 dark:border-rose-500/40 dark:text-white' :
-          'bg-zinc-50 dark:bg-zinc-900/80 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400'
-        } shadow-sm shadow-black/5`}>
-          <div className={`p-2.5 rounded-xl ${
-            result.riskLevel === 'SAFE' ? 'bg-white/80 dark:bg-emerald-500/20' :
-            result.riskLevel === 'SUSPICIOUS' ? 'bg-white/80 dark:bg-amber-500/20' :
-            result.riskLevel === 'MALICIOUS' ? 'bg-white/80 dark:bg-rose-500/20' :
-            'bg-white/80 dark:bg-zinc-500/20'
-          } shadow-inner`}>
-            {result.riskLevel === 'SAFE' ? <ShieldCheck className="w-5 h-5" /> :
-             result.riskLevel === 'SUSPICIOUS' ? <AlertTriangle className="w-5 h-5" /> :
-             result.riskLevel === 'MALICIOUS' ? <ShieldX className="w-5 h-5" /> :
-             <Activity className="w-5 h-5" />}
-          </div>
-          <div>
-            <p className="text-[11px] font-mono uppercase tracking-widest mb-0.5 dark:text-white/90 font-bold">Sentinel Recommendation</p>
-            <p className="text-lg font-bold tracking-tight dark:text-white">{result.recommendation}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Header Card */}
+      {/* Unified Action-Oriented Forensic Header */}
       {!hideHeader && (
-        <div className={`p-8 rounded-3xl border glass-panel flex flex-col md:flex-row items-center justify-between gap-8 transition-all ${getBorderColor()}`}>
-          <div className="flex items-center gap-6">
-            <div className="p-4 rounded-2xl bg-white dark:bg-black shadow-lg border border-zinc-100 dark:border-white/10 transition-colors">
-              {getIcon()}
+        <div className={`p-10 rounded-[2.5rem] border-2 shadow-2xl flex flex-col lg:flex-row items-center justify-between gap-10 animate-in zoom-in-95 duration-500 transition-all ${
+          result.riskLevel === 'SAFE' ? 'bg-emerald-500/5 border-emerald-500/20' :
+          result.riskLevel === 'SUSPICIOUS' ? 'bg-amber-500/5 border-amber-500/20' :
+          result.riskLevel === 'MALICIOUS' ? 'bg-rose-500/5 border-rose-500/20 shadow-rose-500/10' :
+          'bg-zinc-500/5 border-zinc-500/20'
+        }`}>
+          <div className="flex flex-col md:flex-row items-center md:items-start gap-8 flex-1">
+            <div className={`p-8 rounded-[2rem] shadow-2xl border-4 ${
+              result.riskLevel === 'SAFE' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600' :
+              result.riskLevel === 'SUSPICIOUS' ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' :
+              result.riskLevel === 'MALICIOUS' ? 'bg-rose-500/10 border-rose-500/30 text-rose-600' :
+              'bg-zinc-500/10 border-zinc-500/30 text-zinc-500'
+            }`}>
+              {result.riskLevel === 'SAFE' ? <ShieldCheck className="w-12 h-12" /> :
+               result.riskLevel === 'SUSPICIOUS' ? <AlertTriangle className="w-12 h-12" /> :
+               result.riskLevel === 'MALICIOUS' ? <ShieldX className="w-12 h-12" /> :
+               <Activity className="w-12 h-12" />}
             </div>
-            <div>
-              <div className="flex items-center gap-3 mb-1">
-                <h2 className="text-xs font-bold text-cyber-light-text dark:text-zinc-300 uppercase tracking-widest">Analysis Verdict</h2>
-                {result.riskLevel === 'UNKNOWN' && (
-                  <span className="px-2 py-0.5 rounded border text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900/20 font-black text-xs uppercase tracking-[0.12em] shadow-sm flex items-center gap-1.5">
-                    <Globe className="w-2.5 h-2.5 opacity-50" />
-                    Unknown
-                  </span>
-                )}
+            
+            <div className="space-y-4 text-center md:text-left flex-1">
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
+                <span className={`px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest border-2 ${
+                  result.riskLevel === 'SAFE' ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-700 dark:text-emerald-300' :
+                  result.riskLevel === 'SUSPICIOUS' ? 'bg-amber-500/20 border-amber-500/40 text-amber-700 dark:text-amber-300' :
+                  result.riskLevel === 'MALICIOUS' ? 'bg-rose-500/20 border-rose-500/40 text-rose-700 dark:text-rose-300' :
+                  'bg-zinc-500/20 border-zinc-500/40 text-zinc-700 dark:text-zinc-300'
+                }`}>
+                  {result.riskLevel} VERDICT
+                </span>
                 {result.threat_intel?.is_known_malicious && (
-                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-500 text-xs font-bold border border-rose-500/20 uppercase tracking-tighter animate-pulse">
-                    <Zap className="w-3 h-3" />
-                    Intel Match: {result.threat_intel.source}
+                  <span className="flex items-center gap-2 px-3 py-1 rounded-full bg-rose-600 text-white text-[10px] font-black uppercase tracking-tighter animate-pulse shadow-lg shadow-rose-600/20">
+                    <Zap className="w-3 h-3" /> INTEL HIT: {result.threat_intel.source}
                   </span>
                 )}
               </div>
-              <h1 className="text-3xl md:text-4xl font-bold text-cyber-light-heading dark:text-white tracking-tight uppercase">{result.verdictTitle || 'Unknown Verdict'}</h1>
-              <p className="text-cyber-light-text dark:text-zinc-200 mt-2 font-mono text-xs break-all">{result.url}</p>
+              
+              <div>
+                <h1 className="text-4xl md:text-5xl font-black tracking-tight uppercase leading-tight dark:text-white mb-2">
+                  {result.verdictTitle}
+                </h1>
+                <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 max-w-xl line-clamp-1 opacity-80 italic">
+                  {result.url}
+                </p>
+              </div>
+              
+              <div className="p-6 rounded-2xl bg-white/50 dark:bg-black/20 border border-black/5 dark:border-white/10 shadow-inner">
+                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] mb-2 text-zinc-400">
+                   <Zap className="w-3 h-3 text-amber-500" /> Executive Recommendation
+                </div>
+                <p className="text-lg font-black leading-tight dark:text-zinc-100">
+                  {result.recommendation || (
+                    result.riskLevel === 'SAFE' ? 'Safe to proceed. No malicious patterns detected.' :
+                    result.riskLevel === 'SUSPICIOUS' ? 'Caution required. Avoid interacting with forms or downloads.' :
+                    result.riskLevel === 'MALICIOUS' ? 'DO NOT OPEN. This link is confirmed as an active phishing threat.' :
+                    'Scanning in progress...'
+                  )}
+                </p>
+              </div>
             </div>
           </div>
-          <div className="flex-shrink-0">
-            <RiskGauge score={result.riskScore ?? 0} level={result.riskLevel || 'UNKNOWN'} />
+
+          <div className="flex flex-col items-center lg:items-end gap-6 shrink-0 pt-6 lg:pt-0 border-t lg:border-t-0 lg:border-l border-zinc-200 dark:border-white/10 lg:pl-10">
+             <div className="flex items-center gap-8">
+                <div className="text-right">
+                   <p className="text-xs font-black uppercase tracking-widest opacity-40 mb-1">Threat Score</p>
+                   <p className={`text-6xl font-black tracking-tighter ${
+                     result.riskLevel === 'SAFE' ? 'text-emerald-500' :
+                     result.riskLevel === 'SUSPICIOUS' ? 'text-amber-500' :
+                     'text-rose-500'
+                   }`}>{result.riskScore}<span className="text-xl opacity-20 ml-1">/100</span></p>
+                </div>
+                <div className="w-32 h-32">
+                   <RiskGauge score={result.riskScore ?? 0} level={result.riskLevel} />
+                </div>
+             </div>
+             
+             <div className="w-full flex gap-3">
+                {result.riskLevel === 'MALICIOUS' ? (
+                  <div className="flex-1 px-8 py-5 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl font-black text-sm uppercase tracking-widest text-center shadow-2xl shadow-rose-600/40 transition-all cursor-not-allowed flex items-center justify-center gap-3">
+                    <ShieldX className="w-5 h-5" /> BLOCK LINK
+                  </div>
+                ) : (
+                  <div className="flex-1 px-8 py-5 bg-emerald-600/10 dark:bg-emerald-500/10 border-2 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl font-black text-sm uppercase tracking-widest text-center">
+                    SECURE DESTINATION
+                  </div>
+                )}
+                {onRetry && (
+                   <button 
+                     onClick={onRetry}
+                     className="p-5 bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 rounded-2xl transition-all"
+                   >
+                     <RefreshCw className="w-5 h-5" />
+                   </button>
+                )}
+             </div>
           </div>
         </div>
       )}
@@ -231,11 +255,13 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                      <div className="mt-2 pt-2 border-t border-cyber-light-border dark:border-white/10">
                         <p className="text-cyber-light-text dark:text-zinc-400 mb-1">Visual Evidence:</p>
                         <p className="text-cyber-light-heading dark:text-zinc-300">
-                           {result.visual_forensics?.brand_match 
-                              ? `Detected high-fidelity impersonation of ${result.visual_forensics.brand_match}` 
-                              : "No significant visual impersonation detected."}
+                           {result.visual_forensics?.explanation || (
+                             result.visual_forensics?.brand_match 
+                               ? `Detected high-fidelity impersonation of ${result.visual_forensics.brand_match}` 
+                               : "No significant visual impersonation detected."
+                           )}
                         </p>
-                     </div>
+                      </div>
                   </div>
                </div>
 
@@ -246,26 +272,34 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                        <span>Evidence Capture</span>
                     </div>
                   </InfoTip>
-                  <div className="relative group/screenshot overflow-hidden rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-zinc-900/50 aspect-video cursor-zoom-in">
-                    {result.agentReport?.activeProbing?.screenshotPath ? (
-                        <img 
-                          src={`${API_BASE_URL}/${result.agentReport?.activeProbing?.screenshotPath.replace(/^\//, '')}`} 
-                          alt="Phishing Page Screenshot"
-                          className="w-full h-full object-cover object-top opacity-90 group-hover/screenshot:opacity-100 transition-opacity"
-                          onClick={() => setIsImageModalOpen(true)}
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = 'https://placehold.co/600x400/f4f4f5/71717a?text=Evidence+Load+Failed';
-                          }}
-                        />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(255,255,255,0.05)_10px,rgba(255,255,255,0.05)_20px)] dark:bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(255,255,255,0.02)_10px,rgba(255,255,255,0.02)_20px)] border-2 border-dashed border-zinc-300 dark:border-white/20 animate-pulse-slow">
-                        <ImageIcon className="w-8 h-8 text-zinc-400 dark:text-zinc-500 opacity-50" />
-                        <div className="text-center">
-                          <span className="text-[11px] uppercase font-bold tracking-widest text-zinc-500 dark:text-zinc-400 block">No Screenshot Captured</span>
-                          <span className="text-[9px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Target not probed or failed</span>
+                   <div className="relative group/screenshot overflow-hidden rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-zinc-900/50 aspect-video cursor-zoom-in">
+                    {(() => {
+                      const screenshotPath = result.agentReport?.activeProbing?.screenshotPath || result.visual_forensics?.screenshot_path;
+                      
+                      if (screenshotPath) {
+                        return (
+                          <img 
+                            src={`${API_BASE_URL}/${screenshotPath.replace(/^\//, '')}`} 
+                            alt="Phishing Page Screenshot"
+                            className="w-full h-full object-cover object-top opacity-90 group-hover/screenshot:opacity-100 transition-opacity"
+                            onClick={() => setIsImageModalOpen(true)}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = `https://placehold.co/600x400/18181b/71717a?text=Evidence+Render+Failed`;
+                            }}
+                          />
+                        );
+                      }
+                      
+                      return (
+                        <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(255,255,255,0.05)_10px,rgba(255,255,255,0.05)_20px)] dark:bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(255,255,255,0.02)_10px,rgba(255,255,255,0.02)_20px)] border-2 border-dashed border-zinc-300 dark:border-white/20 animate-pulse-slow">
+                          <ImageIcon className="w-8 h-8 text-zinc-400 dark:text-zinc-500 opacity-50" />
+                          <div className="text-center">
+                            <span className="text-[11px] uppercase font-bold tracking-widest text-zinc-500 dark:text-zinc-400 block">No Screenshot Captured</span>
+                            <span className="text-[9px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Selective Vision Skip or Timeout</span>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover/screenshot:opacity-100 transition-opacity flex items-end p-3 pointer-events-none">
                       <p className="text-[11px] text-white font-mono flex items-center gap-1">
                         <ExternalLink className="w-3 h-3" /> CLICK TO VIEW FULLSCREEN
@@ -305,7 +339,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                           <span>URL Structure</span>
                         </div>
                       </InfoTip>
-                      <p className="text-sm text-cyber-light-heading dark:text-zinc-100 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md p-5 rounded-2xl border border-cyber-light-border dark:border-white/5 font-mono shadow-sm hover:shadow-md transition-all duration-300 break-all">
+                      <p className="text-sm text-cyber-light-heading dark:text-zinc-100 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md p-5 rounded-2xl border border-cyber-light-border dark:border-white/5 font-mono shadow-sm hover:shadow-md transition-all duration-300 break-words whitespace-pre-wrap">
                         {cleanText(result.technicalDetails?.urlStructure)}
                       </p>
                     </div>
@@ -317,7 +351,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                           <span>Domain Reputation</span>
                         </div>
                       </InfoTip>
-                      <p className="text-sm text-cyber-light-heading dark:text-zinc-100 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md p-5 rounded-2xl border border-cyber-light-border dark:border-white/5 font-mono shadow-sm hover:shadow-md transition-all duration-300 break-words">
+                      <p className="text-sm text-cyber-light-heading dark:text-zinc-100 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md p-5 rounded-2xl border border-cyber-light-border dark:border-white/5 font-mono shadow-sm hover:shadow-md transition-all duration-300 break-words whitespace-pre-wrap">
                         {cleanText(result.technicalDetails?.domainReputation)}
                       </p>
                     </div>
@@ -329,7 +363,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                           <span>Social Engineering</span>
                         </div>
                       </InfoTip>
-                      <p className="text-sm text-cyber-light-heading dark:text-zinc-100 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md p-5 rounded-2xl border border-cyber-light-border dark:border-white/5 font-mono shadow-sm hover:shadow-md transition-all duration-300 break-words">
+                      <p className="text-sm text-cyber-light-heading dark:text-zinc-100 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md p-5 rounded-2xl border border-cyber-light-border dark:border-white/5 font-mono shadow-sm hover:shadow-md transition-all duration-300 break-words whitespace-pre-wrap">
                         {cleanText(result.technicalDetails?.socialEngineeringTricks)}
                       </p>
                     </div>

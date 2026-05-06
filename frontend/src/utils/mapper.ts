@@ -9,14 +9,17 @@ export function mapToAnalysisResult(raw: BackendScanResponse): AnalysisResult {
   
   switch (raw.risk_level?.toLowerCase()) {
     case 'high':
+    case 'malicious':
       riskLevel = 'MALICIOUS';
       verdictTitle = 'Malicious Site Detected';
       break;
     case 'medium':
+    case 'suspicious':
       riskLevel = 'SUSPICIOUS';
       verdictTitle = 'Suspicious Activity Found';
       break;
     case 'low':
+    case 'safe':
       riskLevel = 'SAFE';
       verdictTitle = 'Verified Safe';
       break;
@@ -60,14 +63,23 @@ export function mapToAnalysisResult(raw: BackendScanResponse): AnalysisResult {
     urlStructure = `Protocol: ${u.protocol} | Host: ${u.hostname} | Path: ${u.pathname}`;
   } catch { /* use raw url */ }
 
+  const techSource = raw.technicalDetails || {};
+  
   const technicalDetails = {
-    urlStructure,
-    domainReputation: raw.whois_info?.domain_age_days != null
-      ? `Domain age: ${raw.whois_info.domain_age_days} days. Registrar: ${raw.whois_info.registrar || 'Unknown'}.${raw.whois_info.is_new_domain ? ' ⚠️ Recently registered.' : ''}${raw.whois_info.has_privacy ? ' ⚠️ Uses privacy protection.' : ''}`
-      : (riskLevel === 'SAFE' ? 'Domain registration appears legitimate.' : 'Domain reputation check inconclusive.'),
-    socialEngineeringTricks: raw.brand_impersonation
+    urlStructure: techSource.urlDeepDive || urlStructure,
+    domainReputation: (() => {
+      const whoisText = raw.whois_info?.domain_age_days != null
+        ? `\n\nWHOIS EVIDENCE:\n• Age: ${raw.whois_info.domain_age_days} days\n• Registrar: ${raw.whois_info.registrar || 'Unknown'}${raw.whois_info.is_new_domain ? '\n• ⚠️ WARNING: RECENTLY REGISTERED' : ''}${raw.whois_info.has_privacy ? '\n• Privacy Protection: ENABLED' : ''}`
+        : "";
+      
+      if (techSource.domainForensics) {
+        return techSource.domainForensics + whoisText;
+      }
+      return whoisText.trim() || (riskLevel === 'SAFE' ? 'Domain registration appears legitimate.' : 'Domain reputation check inconclusive.');
+    })(),
+    socialEngineeringTricks: techSource.socialEngineering || (raw.brand_impersonation
       ? `Impersonates ${raw.brand_name} branding to trick users into submitting credentials.`
-      : reasoning[0] || 'No social engineering patterns detected.',
+      : 'No social engineering patterns detected.'),
     visualPrediction: raw.visual_forensics?.brand_match 
       ? `Visual logo match detected for ${raw.visual_forensics.brand_match} (score: ${raw.visual_forensics.score})`
       : 'No visual logo matches detected.'

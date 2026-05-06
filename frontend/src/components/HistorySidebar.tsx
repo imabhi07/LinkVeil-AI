@@ -14,20 +14,22 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = memo(({ history, mo
     const getLevelColor = (level: RiskLevel | string) => {
       const normalized = (level || 'UNKNOWN').toString().toUpperCase();
       switch (normalized) {
+        case 'MALICIOUS':
+        case 'HIGH':
+          return 'text-[#991B1B] dark:text-rose-500 border-[#FECACA] dark:border-rose-500/30 bg-[#FEE2E2] dark:bg-rose-500/10';
         case 'SAFE':
         case 'LOW': 
           return 'text-[#166534] dark:text-ornex-green border-[#BBF7D0] dark:border-ornex-green/30 bg-[#DCFCE7] dark:bg-ornex-green/10';
         case 'SUSPICIOUS':
         case 'MEDIUM':
           return 'text-[#92400E] dark:text-amber-500 border-[#FEF3C7] dark:border-amber-500/30 bg-[#FFFBEB] dark:bg-amber-500/10';
-        case 'MALICIOUS':
-        case 'HIGH':
-          return 'text-[#991B1B] dark:text-rose-500 border-[#FECACA] dark:border-rose-500/30 bg-[#FEE2E2] dark:bg-rose-500/10';
+        case 'INCONCLUSIVE':
+          return 'text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/10';
         case 'UNKNOWN':
-          return 'text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900/20 font-black uppercase tracking-[0.12em] shadow-sm';
-        default: return 'text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/5 font-bold uppercase tracking-wider';
+          return 'text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900/20';
+        default: return 'text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/5';
       }
-  };
+    };
 
   return (
     <div className="glass-panel w-full h-full max-h-[600px] rounded-3xl dark:border-white/10 flex flex-col overflow-hidden transition-colors">
@@ -55,12 +57,14 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = memo(({ history, mo
         ) : (
           history.map((item) => {
             const isEmail = item.type === 'email';
-            const riskLevel = isEmail ? (item.result?.email_risk_level?.toUpperCase() || 'UNKNOWN') : item.riskLevel;
+            const riskLevel = isEmail 
+              ? (item.result?.verdict_label?.toUpperCase() || (item.result as any)?.email_risk_level?.toUpperCase() || 'UNKNOWN') 
+              : item.riskLevel;
             const title = isEmail 
-              ? (item.result?.parsed_email?.subject || 'Untitled Email Analysis')
+              ? (item.result?.identity?.subject || (item.result as any)?.parsed_email?.subject || 'Untitled Email Analysis')
               : item.verdictTitle;
             const subtitle = isEmail
-              ? (item.result?.parsed_email?.from_email || 'Unknown Sender')
+              ? (item.result?.identity?.from?.email || (item.result as any)?.parsed_email?.from_email || 'Unknown Sender')
               : item.url;
 
             return (
