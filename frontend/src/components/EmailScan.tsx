@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
-import { Mail, Shield, AlertCircle, ChevronDown, AlertTriangle, FileUp, Clipboard, Layout, ArrowRight, Info, CheckCircle2, Zap, Copy, ExternalLink, ShieldAlert } from 'lucide-react';
+import { Mail, Shield, AlertCircle, ChevronDown, AlertTriangle, FileUp, Clipboard, Layout, ArrowRight, Info, CheckCircle2, Zap, Copy, ExternalLink, ShieldAlert, ShieldCheck, ShieldX, Fingerprint, MessageSquare, Link2 } from 'lucide-react';
 import type { EmailScanRequest, EmailScanResponse, AnalysisResult } from '../types';
 import { ResultDetails } from './ResultDetails';
 import { InfoTip } from './InfoTip';
+import { RiskGauge } from './RiskGauge';
+import { EmailForensicInsight } from './EmailForensicInsight';
 
 interface EmailScanProps {
   onResult?: (result: EmailScanResponse) => void;
@@ -145,11 +147,19 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
   };
 
   const getRiskColor = (level: string) => {
-    switch (level?.toLowerCase()) {
-      case 'high': return 'text-rose-700 dark:text-rose-500 bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/20';
-      case 'medium': return 'text-amber-900 dark:text-amber-500 bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20';
-      case 'low': return 'text-emerald-900 dark:text-ornex-green bg-emerald-50 dark:bg-ornex-green/10 border-emerald-200 dark:border-ornex-green/20';
-      case 'inconclusive': return 'text-zinc-700 dark:text-zinc-500 bg-zinc-50 dark:bg-zinc-500/10 border-zinc-200 dark:border-zinc-500/20';
+    const normalized = level?.toLowerCase();
+    switch (normalized) {
+      case 'high':
+      case 'malicious': 
+        return 'text-rose-700 dark:text-rose-500 bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/20';
+      case 'medium':
+      case 'suspicious':
+        return 'text-amber-900 dark:text-amber-500 bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20';
+      case 'low':
+      case 'safe':
+        return 'text-emerald-900 dark:text-ornex-green bg-emerald-50 dark:bg-ornex-green/10 border-emerald-200 dark:border-ornex-green/20';
+      case 'inconclusive': 
+        return 'text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20';
       default: return 'text-zinc-700 dark:text-zinc-500 bg-zinc-50 dark:bg-zinc-500/10 border-zinc-200 dark:border-zinc-500/20';
     }
   };
@@ -240,7 +250,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
 
         {showGuide && (
           <div className="mb-8 space-y-6 animate-slide-down">
-            <div className="p-8 rounded-[2rem] bg-zinc-50 dark:bg-zinc-900/40 border border-[#00C853]/20 dark:border-ornex-green/20 backdrop-blur-xl shadow-2xl relative overflow-hidden group">
+            <div className="p-8 rounded-[2rem] bg-zinc-50 dark:bg-zinc-900/40 border border-[#00C853]/20 dark:border-ornex-green/20 shadow-2xl relative overflow-hidden group">
               {/* Background Decoration */}
               <div className="absolute top-0 right-0 w-64 h-64 bg-cyber-light-accent/5 dark:bg-ornex-green/5 blur-[100px] -mr-32 -mt-32 pointer-events-none" />
               
@@ -528,82 +538,133 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
       </div>
 
       {result && (
-        <div id="email-results" className="animate-fade-in space-y-8 pb-12 scroll-mt-32">
-          {/* Main Risk Banner */}
-          {((result.email_risk_score >= 65 || result.link_score >= 65) || (result.email_risk_level.toLowerCase() !== 'low')) && (
-            <div className={`p-4 rounded-2xl border-2 flex items-center gap-4 shadow-lg backdrop-blur-md animate-pulse-subtle ${
-              (result.email_risk_score >= 75 || result.link_score >= 75) 
-                ? 'bg-rose-500/10 border-rose-500/20 text-rose-500' 
-                : 'bg-[#FFFBEB] dark:bg-amber-500/10 border-[#FEF3C7] dark:border-amber-500/20 text-[#92400E] dark:text-amber-500'
+        <div id="email-results" className="animate-fade-in space-y-10 pb-12 scroll-mt-32">
+          {/* Unified Forensic Command Center - Compact Overall Email Verdict */}
+          <div className={`p-8 md:p-10 rounded-[2.5rem] border-2 shadow-2xl flex flex-col lg:flex-row items-center justify-between gap-8 animate-in zoom-in-95 duration-500 transition-all ${
+            result.verdict_label.toUpperCase() === 'SAFE' && (result.identity.mismatches || []).length === 0 ? 'bg-emerald-500/5 border-emerald-500/20' :
+            result.verdict_label.toUpperCase() === 'SAFE' || result.verdict_label.toUpperCase() === 'SUSPICIOUS' ? 'bg-amber-500/5 border-amber-500/20' :
+            'bg-rose-500/5 border-rose-500/20 shadow-rose-500/10'
+          }`}>
+          <div className="flex flex-col md:flex-row items-center md:items-start gap-8 flex-1">
+            <div className={`p-6 md:p-8 rounded-[2rem] shadow-2xl border-4 shrink-0 ${
+              result.verdict_label.toUpperCase() === 'SAFE' && (result.identity.mismatches || []).length === 0 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600' :
+              result.verdict_label.toUpperCase() === 'SAFE' || result.verdict_label.toUpperCase() === 'SUSPICIOUS' ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' :
+              'bg-rose-500/10 border-rose-500/30 text-rose-600'
             }`}>
-              <AlertTriangle className="w-6 h-6 flex-shrink-0" />
-              <div className="flex flex-col">
-                <p className="text-xs font-black uppercase tracking-widest">
-                  {result.email_risk_score >= 75 ? 'Critical Threat Detected' : 'Suspicious - Proceed with Caution'}
-                </p>
-                <p className="text-[11px] font-semibold opacity-90">
-                  {result.email_risk_score >= 75 
-                    ? 'This content matches high-confidence phishing patterns. Immediate isolation recommended.' 
-                    : result.link_score >= 65 
-                      ? 'Link analysis indicates potential deception or tracking markers. Handle with care.'
-                      : 'Heuristic analysis detected unusual patterns in the email structure.'}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Subtle Caution Banner */}
-          {result.email_risk_level.toLowerCase() === 'low' && result.link_score >= 30 && result.link_score < 65 && (
-            <div className="p-4 rounded-2xl border-2 bg-[#FFFBEB] dark:bg-amber-500/5 border-[#FEF3C7] dark:border-amber-500/10 text-[#92400E] dark:text-amber-500/80 flex items-center gap-4">
-              <Info className="w-5 h-5 flex-shrink-0" />
-              <p className="text-[11px] font-bold uppercase tracking-widest">
-                Caution: One link looks slightly unusual (tracking/long URL markers)
-              </p>
-            </div>
-          )}
-
-          {/* Summary Header */}
-          <div className={`relative p-8 rounded-3xl border-2 backdrop-blur-md ${getRiskColor(result.email_risk_level)} shadow-xl group`}>
-            {/* Glow Container - Handles masking */}
-            <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-current opacity-10 blur-3xl -mr-16 -mt-16 transition-opacity group-hover:opacity-20" />
+              {result.verdict_label.toUpperCase() === 'SAFE' && (result.identity.mismatches || []).length === 0 ? <ShieldCheck className="w-10 h-10" /> :
+               result.verdict_label.toUpperCase() === 'SAFE' || result.verdict_label.toUpperCase() === 'SUSPICIOUS' ? <AlertTriangle className="w-10 h-10" /> :
+               <ShieldX className="w-10 h-10" />}
             </div>
             
-            <div className="relative flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
-              <div className="flex items-center gap-6">
-                <div className="flex flex-col items-center justify-center w-20 h-20 rounded-2xl bg-white/20 dark:bg-white/10 border border-current/30 shadow-inner backdrop-blur-sm relative">
-                  <span className="text-3xl font-black leading-none tracking-tighter drop-shadow-sm">{Math.round(result.email_risk_score)}</span>
-                  <span className="text-[11px] font-mono opacity-70 uppercase tracking-tighter mt-1">Forensic</span>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-3xl font-black uppercase tracking-tighter drop-shadow-sm">{result.email_risk_level} RISK</h3>
-                    <div className="h-4 w-px bg-current opacity-30" />
-                    <span className="text-xs font-mono uppercase tracking-widest opacity-80 font-bold">Verdict</span>
+            <div className="space-y-4 text-center md:text-left flex-1 min-w-0">
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
+                {/* Primary Action Pill - High Visibility Tactical Indicator */}
+                {result.final_risk_score >= 70 || result.verdict_label.toUpperCase() === 'MALICIOUS' ? (
+                  <div className="px-4 py-1.5 bg-rose-600 text-white rounded-full font-black text-[10px] uppercase tracking-widest shadow-lg shadow-rose-600/20 flex items-center gap-2 border border-rose-500">
+                    <ShieldX className="w-3.5 h-3.5" /> BLOCK EMAIL
                   </div>
-                  <div className="flex flex-wrap items-center gap-4 text-xs font-mono opacity-90 pt-1 font-medium">
-                    <InfoTip title="Heuristic Analysis" content="Score based on email headers, auth signals, and linguistic threat markers.">
-                      <span className="flex items-center gap-1.5">
-                        Heuristics: {result.heuristic_score}/40
-                      </span>
-                    </InfoTip>
-                    <InfoTip title="Link Intelligence" content="Worst-case risk score identified across all scanned destination URLs.">
-                      <span className="flex items-center gap-1.5">
-                        Link Risk: {result.link_score}/100
-                      </span>
-                    </InfoTip>
+                ) : (
+                  <div className={`px-4 py-1.5 rounded-full font-black text-[10px] uppercase tracking-widest flex items-center gap-2 border ${
+                    (result.identity.mismatches || []).length > 0
+                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-600'
+                    : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                  }`}>
+                    { (result.identity.mismatches || []).length > 0 ? <AlertTriangle className="w-3.5 h-3.5" /> : <ShieldCheck className="w-3.5 h-3.5" /> }
+                    { (result.identity.mismatches || []).length > 0 ? 'TRIAGE REQUIRED' : 'SECURE CONTENT' }
                   </div>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2 lg:justify-end max-w-sm">
-                {Object.entries(result.suspicious_indicators).map(([key, active]) => active && (
-                  <span key={key} className="px-2.5 py-1 rounded-lg border bg-white/10 border-current/20 text-current text-[11px] font-bold uppercase tracking-widest whitespace-nowrap">
-                    {key.replace(/_/g, ' ')}
+                )}
+                
+                {(result.identity.mismatches || []).map((m: string, i: number) => (
+                  <span key={i} className="px-3 py-1 rounded-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-[9px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
+                    {m.replace(/_/g, ' ')}
                   </span>
                 ))}
               </div>
+              
+              <div>
+                <h1 className="text-2xl md:text-3xl font-black tracking-tight uppercase leading-none dark:text-white mb-2">
+                  {result.verdict_label.toUpperCase() === 'SAFE' && (result.identity.mismatches || []).length === 0 ? 'Secure Communication' : 
+                   (result.identity.mismatches || []).length > 0 ? 'Sender Discrepancy' :
+                   result.verdict_label.toUpperCase() === 'SUSPICIOUS' ? 'Suspicious Markers' : 
+                   'Malicious Threat'}
+                </h1>
+                <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 opacity-60 truncate">
+                  {result.identity.from?.email || 'Forensic Analysis Session'}
+                </p>
+              </div>
+              
+              <div className="p-4 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 backdrop-blur-sm">
+                <p className="text-sm font-bold leading-snug dark:text-zinc-200">
+                  {result.final_risk_score >= 75 
+                    ? 'Critical threat indicators identified. Automated recommendation: Immediate Block.' 
+                    : result.final_risk_score >= 40 
+                      ? 'Suspicious patterns detected. Exercise caution before interacting with links.'
+                      : (result.identity.mismatches || []).length > 0
+                        ? 'Technical forensic discrepancies found in mail headers. Verify sender authenticity.'
+                        : 'No active threats or evasion tactics identified in this forensic session.'}
+                </p>
+              </div>
+
+              {/* Score Breakdown - Tactical Transparency */}
+              <div className="flex flex-wrap gap-x-8 gap-y-4 pt-4 border-t border-black/5 dark:border-white/5 mt-4">
+                <div className="space-y-2 flex-1 min-w-[120px]">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 opacity-60">
+                      <Fingerprint className="w-3 h-3 text-zinc-500" />
+                      <span className="text-[9px] font-black uppercase tracking-[0.15em] text-zinc-500">Identity Risk</span>
+                    </div>
+                    <span className="text-[10px] font-mono font-bold text-zinc-400">{Math.round(result.score_identity)}%</span>
+                  </div>
+                  <div className="w-full h-1 bg-zinc-200 dark:bg-white/5 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full transition-all duration-1000 ${result.score_identity >= 75 ? 'bg-rose-500' : result.score_identity >= 40 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                      style={{ width: `${Math.min(result.score_identity, 100)}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2 flex-1 min-w-[120px]">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 opacity-60">
+                      <MessageSquare className="w-3 h-3 text-zinc-500" />
+                      <span className="text-[9px] font-black uppercase tracking-[0.15em] text-zinc-500">Linguistic Risk</span>
+                    </div>
+                    <span className="text-[10px] font-mono font-bold text-zinc-400">{Math.round(result.score_linguistic)}%</span>
+                  </div>
+                  <div className="w-full h-1 bg-zinc-200 dark:bg-white/5 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full transition-all duration-1000 ${result.score_linguistic >= 75 ? 'bg-rose-500' : result.score_linguistic >= 40 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                      style={{ width: `${Math.min(result.score_linguistic, 100)}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2 flex-1 min-w-[120px]">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 opacity-60">
+                      <Link2 className="w-3 h-3 text-zinc-500" />
+                      <span className="text-[9px] font-black uppercase tracking-[0.15em] text-zinc-500">Link Forensics</span>
+                    </div>
+                    <span className="text-[10px] font-mono font-bold text-zinc-400">{Math.round(result.link_risk_score)}%</span>
+                  </div>
+                  <div className="w-full h-1 bg-zinc-200 dark:bg-white/5 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full transition-all duration-1000 ${result.link_risk_score >= 75 ? 'bg-rose-500' : result.link_risk_score >= 40 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                      style={{ width: `${Math.min(result.link_risk_score, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
+
+          {/* Centered Risk Gauge - Singular Source of Truth */}
+          <div className="flex items-center justify-center shrink-0 pt-6 lg:pt-0 border-t lg:border-t-0 lg:border-l border-zinc-200 dark:border-white/10 lg:pl-10">
+             <div className="w-32 h-32 flex items-center justify-center bg-white/5 rounded-full p-2 border border-white/5 shadow-2xl">
+                <RiskGauge score={result.final_risk_score ?? 0} level={result.verdict_label.toUpperCase() as any} />
+             </div>
+          </div>
+        </div>
 
           {/* Main Forensic Details Card */}
           <div className="p-10 bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-white/10 shadow-2xl relative group">
@@ -614,14 +675,14 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-100 dark:bg-white/5 rounded-xl border border-zinc-200 dark:border-white/10">
                       <Zap className="w-3 h-3 text-cyber-light-accent dark:text-ornex-green" />
                       <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Total:</span>
-                      <span className="text-xs font-black text-cyber-light-heading dark:text-white">{result.total_extracted}</span>
+                      <span className="text-xs font-black text-cyber-light-heading dark:text-white">{result.triage_stats.total_found}</span>
                     </div>
                   </InfoTip>
                   <InfoTip title="Scanned Destinations" content="High-priority unique destinations subjected to full forensic analysis.">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-cyber-light-accent/5 dark:bg-ornex-green/5 rounded-xl border border-cyber-light-accent/10 dark:border-ornex-green/10 text-cyber-light-accent dark:text-ornex-green">
                       <Shield className="w-3 h-3" />
                       <span className="text-[10px] font-black uppercase tracking-widest">Scanned:</span>
-                      <span className="text-xs font-black">{result.scanned_count}</span>
+                      <span className="text-xs font-black">{result.triage_stats.analyzed}</span>
                     </div>
                   </InfoTip>
                 {(result.triage_stats?.wrappers_unwrapped ?? 0) > 0 && (
@@ -633,12 +694,12 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                     </div>
                   </InfoTip>
                 )}
-                {(result.triage_stats?.pii_scrubbed_count ?? 0) > 0 && (
+                {(result.triage_stats?.pii_scrubbed ?? 0) > 0 && (
                   <InfoTip title="Identity Protection" content="Personal data (such as your email address) was securely removed from these links prior to analysis to ensure your privacy.">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/5 rounded-xl border border-blue-500/10 text-blue-400">
                       <ShieldAlert size={12} />
                       <span className="text-[10px] font-black uppercase tracking-widest">Privacy Protected:</span>
-                      <span className="text-xs font-black">{result.triage_stats?.pii_scrubbed_count}</span>
+                      <span className="text-xs font-black">{result.triage_stats?.pii_scrubbed}</span>
                     </div>
                   </InfoTip>
                 )}
@@ -646,21 +707,21 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-100 dark:bg-white/5 rounded-xl border border-zinc-200 dark:border-white/10 opacity-60">
                       <CheckCircle2 className="w-3 h-3 text-zinc-400" />
                       <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Skipped:</span>
-                      <span className="text-xs font-black text-zinc-600 dark:text-zinc-400">{(result.total_extracted ?? 0) - (result.scanned_count ?? 0)}</span>
+                      <span className="text-xs font-black text-zinc-600 dark:text-zinc-400">{(result.triage_stats.total_found ?? 0) - (result.triage_stats.analyzed ?? 0)}</span>
                     </div>
                   </InfoTip>
               </div>
 
               {/* Forensic Warnings */}
               {result.forensic_errors && result.forensic_errors.length > 0 && (
-                <div className="p-4 rounded-2xl border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/5 flex items-center gap-3 backdrop-blur-md">
+                <div className="p-4 rounded-2xl border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/5 flex items-center gap-3">
                   <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0" />
                   <div>
                     <p className="text-xs font-black uppercase tracking-widest text-amber-700 dark:text-amber-400">
                       Partial Analysis
                     </p>
                     <p className="text-[11px] text-amber-600 dark:text-amber-500/80 font-medium">
-                      Some checks failed ({[...new Set(result.forensic_errors.map(e => e.stage))].join(', ')}). 
+                      Some checks failed ({[...new Set(result.forensic_errors.map(e => e.engine))].join(', ')}). 
                       Showing partial results.
                     </p>
                   </div>
@@ -675,9 +736,9 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                   { key: 'dmarc', title: 'DMARC Policy', content: 'A protocol that uses SPF and DKIM to tell receiving servers how to handle emails that fail authentication.' }
                 ].map(({ key, title, content }) => (
                   <InfoTip key={key} title={title} content={content} className="w-full relative flex items-center">
-                    <div className={`flex items-center justify-between p-3.5 rounded-2xl border backdrop-blur-sm w-full ${getAuthColor(result.auth_results?.[key as keyof typeof result.auth_results] || 'none')}`}>
+                    <div className={`flex items-center justify-between p-3.5 rounded-2xl border w-full ${getAuthColor(result.auth?.[key as keyof typeof result.auth] as string || 'none')}`}>
                       <span className="text-[11px] font-black uppercase tracking-widest">{key}</span>
-                      <span className="text-[11px] font-bold uppercase opacity-80">{result.auth_results?.[key as keyof typeof result.auth_results] || 'none'}</span>
+                      <span className="text-[11px] font-bold uppercase opacity-80">{result.auth?.[key as keyof typeof result.auth] as string || 'none'}</span>
                     </div>
                   </InfoTip>
                 ))}
@@ -691,7 +752,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                     Forensic Detection Logs
                   </h4>
                   <ul className="space-y-3">
-                    {result.reasons.map((reason, idx) => (
+                    {(result.reasons || []).map((reason: string, idx: number) => (
                       <li key={idx} className="flex items-start gap-3 text-sm text-cyber-light-text dark:text-zinc-300">
                         <ArrowRight className="w-4 h-4 text-cyber-light-accent dark:text-ornex-green mt-0.5 flex-shrink-0" />
                         <span className="leading-relaxed">{reason}</span>
@@ -716,7 +777,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                         >
                           <div className="flex flex-col gap-2">
                             {(() => {
-                              const unwrapEvent = result.unwrap_events?.find(e => e.destination_url === link.url);
+                              const unwrapEvent = result.unwrap_events?.find((e: any) => e.destination_url === link.url);
                               return (
                                 <div className="space-y-2 overflow-hidden">
                                   {unwrapEvent && (
@@ -745,7 +806,10 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                                         )}
                                       </div>
                                       {link.risk_level === 'INCONCLUSIVE' && (
-                                        <span className="px-2 py-0.5 rounded bg-zinc-500/10 text-[11px] font-bold uppercase text-zinc-500 border border-zinc-500/20">FETCH ERROR (404)</span>
+                                        <span className="px-2 py-0.5 rounded bg-zinc-500/10 text-[11px] font-bold uppercase text-zinc-500 border border-zinc-500/20">Analysis Inconclusive</span>
+                                      )}
+                                      {link.explanation?.includes('[Partial Analysis]') && (
+                                        <span className="px-2 py-0.5 rounded bg-amber-500/10 text-[11px] font-bold uppercase text-amber-500 border border-amber-500/20">Partial Analysis</span>
                                       )}
                                     </div>
                                     <div className="flex items-center gap-3">
@@ -769,7 +833,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                         <div className="space-y-1">
                           <p className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">No Forensic Links Identified</p>
                           <p className="text-[11px] text-zinc-500 max-w-[280px] leading-relaxed mx-auto">
-                            All extracted URLs ({result.total_extracted}) were identified as low-risk assets (CSS, Images, Tracking Pixels) and skipped to optimize forensic efficiency.
+                            All extracted URLs ({result.triage_stats.total_found}) were identified as low-risk assets (CSS, Images, Tracking Pixels) and skipped to optimize forensic efficiency.
                           </p>
                         </div>
                         <div className="pt-2">
@@ -782,6 +846,9 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                   </div>
                 </div>
               </div>
+
+              {/* Advanced Forensic Insights (Forensics++) */}
+              <EmailForensicInsight result={result} />
 
               {/* Expanded Deep Dives */}
               <div className="space-y-8 pt-4">
@@ -817,9 +884,10 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                                 
                                 if (flags.length > 0) return flags.join(" • ");
                                 
-                                if (link.risk_level?.toLowerCase() === 'high') return "Multiple High-Risk Indicators";
-                                if (link.risk_level?.toLowerCase() === 'medium') return "Suspicious Heuristics Detected";
-                                if (link.risk_level?.toLowerCase() === 'low') return "Safe Baseline Confirmed";
+                                const level = link.risk_level?.toLowerCase();
+                                if (level === 'high' || level === 'malicious') return "Multiple High-Risk Indicators";
+                                if (level === 'medium' || level === 'suspicious') return "Suspicious Heuristics Detected";
+                                if (level === 'low' || level === 'safe') return "Safe Baseline Confirmed";
                                 return "Analysis Inconclusive";
                               })()}
                             </span>
@@ -834,11 +902,48 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                           )}
                         </div>
                         
-                        <div className="flex items-center gap-3 shrink-0 pt-1">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Verdict:</span>
-                          <div className={`px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest border ${getRiskColor(link.risk_level)} shadow-sm`}>
-                            {link.risk_level}
+                        <div className="flex flex-col items-end gap-3 shrink-0 pt-1">
+                          <div className="flex items-center gap-3">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Verdict:</span>
+                            <div className={`px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest border ${
+                              (() => {
+                                const l = link.risk_level?.toLowerCase();
+                                if (l === 'high' || l === 'malicious') return 'bg-rose-500/10 border-rose-500/20 text-rose-600';
+                                if (l === 'medium' || l === 'suspicious') return 'bg-amber-500/10 border-amber-500/20 text-amber-600';
+                                if (l === 'low' || l === 'safe') return 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600';
+                                return 'bg-zinc-500/10 border-zinc-500/20 text-zinc-600';
+                              })()
+                            } shadow-sm`}>
+                              {link.risk_level}
+                            </div>
                           </div>
+                          
+                          {/* Integrated Action Button */}
+                          {link.risk_level?.toLowerCase() === 'malicious' || link.risk_level?.toLowerCase() === 'high' ? (
+                            <div className="px-4 py-2 bg-rose-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest animate-pulse shadow-lg shadow-rose-600/20 flex items-center gap-2">
+                              <ShieldX className="w-3 h-3" /> BLOCK LINK
+                            </div>
+                          ) : (
+                            <div className="px-4 py-2 bg-emerald-600/10 dark:bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl font-bold text-[10px] uppercase tracking-widest flex items-center gap-2">
+                              <ShieldCheck className="w-3 h-3" /> SECURE CONTENT
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Action Recommendation Sub-header */}
+                      <div className="mb-8 p-5 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 flex items-center justify-between gap-6">
+                        <div className="flex-1">
+                           <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">
+                              <Zap className="w-3 h-3 text-amber-500" /> Recommended Action
+                           </div>
+                           <p className="text-sm font-bold leading-relaxed dark:text-zinc-200">
+                             {link.recommendation || (
+                                link.risk_level?.toLowerCase() === 'malicious' || link.risk_level?.toLowerCase() === 'high' 
+                                ? 'CRITICAL: This link is part of a phishing campaign. Do not open or provide information.'
+                                : 'No suspicious patterns found in this specific destination.'
+                             )}
+                           </p>
                         </div>
                       </div>
                       

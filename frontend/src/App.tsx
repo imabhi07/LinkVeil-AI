@@ -340,8 +340,13 @@ function App() {
     setEmailHistory(prev => {
       // Deduplicate emails by subject + sender (like URL dedupe)
       const filtered = prev.filter(item => {
-        const sameSubject = item.result.parsed_email?.subject === res.parsed_email?.subject;
-        const sameSender = item.result.parsed_email?.from_email === res.parsed_email?.from_email;
+        const itemSub = (item.result as any)?.identity?.subject || (item.result as any)?.parsed_email?.subject;
+        const resSub = res.identity?.subject || (res as any).parsed_email?.subject;
+        const itemFrom = (item.result as any)?.identity?.from?.email || (item.result as any)?.parsed_email?.from_email;
+        const resFrom = res.identity?.from?.email || (res as any).parsed_email?.from_email;
+        
+        const sameSubject = itemSub === resSub;
+        const sameSender = itemFrom === resFrom;
         return !(sameSubject && sameSender);
       });
       return [historyItem, ...filtered].slice(0, 50);
