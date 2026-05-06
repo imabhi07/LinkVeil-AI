@@ -229,21 +229,32 @@ def run_probe(url: str) -> ProbeResult:
             # Set a standard desktop viewport to avoid mobile-style distortion
             page.set_viewport_size({"width": 1280, "height": 1080})
             
-            # 'commit' is the fastest check - returns as soon as headers are received
-            page.goto(url, timeout=NAVIGATION_TIMEOUT_MS, wait_until="commit")
+            # Identify if it's a known aggressive bot-blocker
+            headers = {}
+            if "t.co" in url or "wa.me" in url:
+                # Mimic a click from a social app or standard browser
+                headers["Referer"] = "https://t.co/" if "t.co" in url else "https://wa.me/"
+            
+            # 'domcontentloaded' is safer for modern SPAs to ensure initial JS has executed
+            if headers:
+                page.set_extra_http_headers(headers)
+            page.goto(url, timeout=NAVIGATION_TIMEOUT_MS, wait_until="domcontentloaded")
             result.reachable = True
             
-            # Now wait a bit for meaningful content for forensics
+            # Now wait for full load and additional time for dynamic assets/hydration
             try:
-                page.wait_for_load_state("load", timeout=5000)
+                page.wait_for_load_state("load", timeout=10000)
             except:
-                pass # Proceed even if load times out, as we committed successfully
+                pass 
             
             result.page_title = page.title()
             result.final_url = page.url
             logger.info(f"Probe: loaded '{result.page_title}' at {result.final_url}")
             
             # --- Capture Screenshot ---
+            # Increased delay to 5s for modern SPAs (Discord, SPA Login flows) to finish rendering
+            page.wait_for_timeout(5000)
+            
             url_hash = hashlib.md5(url.encode()).hexdigest()
             screenshot_path = f"data/screenshots/{url_hash}.png"
             os.makedirs("data/screenshots", exist_ok=True)
@@ -364,10 +375,10 @@ def run_probe(url: str) -> ProbeResult:
 
         if not result.login_form_found:
             result.outcome = (
-                f"No login form detected on target page. "
-                f"Page title: '{result.page_title}'. "
-                "The page does not appear to be a credential harvester — "
-                "no password input fields were found in the DOM."
+                f"Successfully reached target: '{result.page_title}'. "
+                f"Final Destination: {result.final_url}. "
+                "Analysis: No password fields or login forms were detected in the page layout. "
+                "The site appears to be an informational page, redirector, or landing page rather than a credential harvester."
             )
             result.behavior_risk = "Low"
             return result

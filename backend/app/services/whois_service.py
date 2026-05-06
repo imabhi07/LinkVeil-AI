@@ -9,6 +9,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional, Tuple
 import asyncio
+from dateutil import parser as date_parser
 
 logger = logging.getLogger(__name__)
 
@@ -53,12 +54,19 @@ class WhoisService:
                         d = d.astimezone(timezone.utc).replace(tzinfo=None)
                     normalized.append(d)
                 creation_date = min(normalized) if normalized else None
-            
+            if isinstance(creation_date, str):
+                try:
+                    # Robust parsing for varied WHOIS date formats (e.g., Gandi/GG: "26th February 2015...")
+                    creation_date = date_parser.parse(creation_date)
+                except Exception as e:
+                    logger.warning(f"Could not parse WHOIS date string: {creation_date} - {e}")
+                    creation_date = None
+
             age_days = None
             is_new = False
-            if creation_date:
-                # Remove timezone if present to compare with utcnow()
-                if hasattr(creation_date, 'tzinfo') and creation_date.tzinfo is not None:
+            if creation_date and isinstance(creation_date, datetime):
+                # Ensure it's naive for comparison or both are aware
+                if creation_date.tzinfo is not None:
                     creation_date = creation_date.astimezone(timezone.utc).replace(tzinfo=None)
                 
                 delta = datetime.utcnow() - creation_date
