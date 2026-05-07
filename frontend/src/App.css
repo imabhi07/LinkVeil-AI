@@ -60,3 +60,10 @@
   mask-composite: exclude;
   pointer-events: none;
 }
+
+/* Responsive marquee - slower on mobile for readability */
+@media (max-width: 640px) {
+  .animate-marquee {
+    animation-duration: 120s;
+  }
+}

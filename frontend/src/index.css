@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700&family=Tektur:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500&display=swap');
 @import "tailwindcss";
 @config "../tailwind.config.js";
 
@@ -23,6 +23,10 @@ html, body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.3s, color 0.3s;
+}
+
+.font-tektur {
+  font-family: 'Tektur', sans-serif;
 }
 
 ::selection {
@@ -111,6 +115,27 @@ html, body {
   background: #39FF14;
 }
 
+/* Custom scrollbar utility */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 200, 83, 0.2);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 200, 83, 0.5);
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 200, 83, 0.3);
+}
+
 /* ── Fade-in animation ── */
 .animate-fade-in {
   animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
@@ -185,3 +210,70 @@ html, body {
   max-height: 2000px;
   opacity: 1;
 }
+
+/* ── Custom Animations for PhishGuard ── */
+@keyframes hazardPulse {
+  0% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.4); }
+  70% { box-shadow: 0 0 0 15px rgba(244, 63, 94, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0); }
+}
+
+.active-hazard-glow {
+  animation: hazardPulse 2s infinite;
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-hover {
+  transition: transform 0.3s ease;
+}
+
+.animate-hover:hover {
+  animation: spin-slow 1.5s linear infinite;
+}
+
+/* ── Responsive Utilities ── */
+
+/* Fluid base font scaling */
+html {
+  font-size: clamp(14px, 0.875rem + 0.25vw, 16px);
+}
+
+/* Prevent horizontal overflow globally */
+body {
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Safe area padding for notched devices */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+}
+
+/* Touch target minimum (48px per WCAG) */
+@media (pointer: coarse) {
+  button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Responsive text truncation utility */
+.text-responsive-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* Prevent layout-breaking long URLs/strings */
+.break-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+

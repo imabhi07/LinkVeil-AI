@@ -7,6 +7,18 @@ export default {
   ],
   theme: {
     extend: {
+      container: {
+        center: true,
+        padding: {
+          DEFAULT: '1rem',
+          sm: '1.5rem',
+          lg: '2rem',
+          xl: '2.5rem',
+        },
+      },
+      screens: {
+        'xs': '480px',
+      },
       colors: {
         ornex: {
           black: '#000000',
