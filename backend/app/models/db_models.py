@@ -33,3 +33,40 @@ class ScanResult(Base):
 
     # Phase 5: Explainability
     fusion_trace = Column(Text, nullable=True)  # JSON blob
+    
+    # Forensic Analytics Enhancements
+    tld = Column(String, nullable=True)              # e.g., "xyz", "com", "top"
+    functional_category = Column(String, nullable=True)  # e.g., "Login Page"
+
+class EmailScanResult(Base):
+    __tablename__ = "email_scans"
+
+    id = Column(Integer, primary_key=True, index=True)
+    scan_id = Column(String, unique=True, index=True)
+    verdict_label = Column(String)              # safe | suspicious | malicious
+    final_risk_score = Column(Float)
+    email_risk_score = Column(Float)
+    link_risk_score = Column(Float)
+    
+    # Social Engineering (for Attack Vector analytics)
+    se_categories = Column(Text, nullable=True)  # JSON blob
+    se_score = Column(Float, default=0.0)
+    
+    # Authentication (for Auth Posture analytics)
+    spf_result = Column(String, nullable=True)   # pass | fail | none
+    dkim_result = Column(String, nullable=True)
+    dmarc_result = Column(String, nullable=True)
+    sender_domain = Column(String, nullable=True)
+    
+    # Obfuscation (for Heat Map analytics)
+    obfuscation_techniques = Column(Text, nullable=True)  # JSON blob
+    
+    # Quality (for Confidence analytics)
+    analysis_quality = Column(String, nullable=True)  # high | medium | low
+    confidence_level = Column(String, nullable=True)
+    
+    # Links analyzed
+    links_total = Column(Integer, default=0)
+    links_malicious = Column(Integer, default=0)
+    
+    timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))

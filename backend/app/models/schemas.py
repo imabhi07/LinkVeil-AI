@@ -2,7 +2,8 @@ from pydantic import BaseModel, HttpUrl
 from typing import Optional
 
 class URLRequest(BaseModel):
-    url: HttpUrl
+    url: str
+    force_refresh: bool = False
 
 class ScanResponse(BaseModel):
     url: str
@@ -12,6 +13,8 @@ class ScanResponse(BaseModel):
     explanation: str
     brand_impersonation: bool
     brand_name: Optional[str] = None
+    functional_category: Optional[str] = None
+    functional_description: Optional[str] = None
     verdictTitle: dict | str | None = None
     technicalDetails: dict | None = None
     mitigationAdvice: list[str] = []
@@ -40,6 +43,7 @@ class EmailScanRequest(BaseModel):
     subject: Optional[str] = None
     body: Optional[str] = None
     raw_email: Optional[str] = None
+    force_refresh: bool = False
 
 class EmailScanResponse(BaseModel):
     schema_version: str = "forensics++-v1"
@@ -91,6 +95,7 @@ class EmailScanResponse(BaseModel):
 
     # Legacy compatibility / Link details (Optional)
     link_results: list[ScanResponse] = []
+    functional_description: Optional[str] = None
     extracted_urls: list[str] = []
     reasons: list[str] = []
     unwrap_events: list[dict] = []

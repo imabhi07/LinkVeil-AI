@@ -22,6 +22,7 @@ export interface AgentReport {
     pageTitle?: string;
     finalUrl?: string;
     screenshotPath?: string;
+    screenshots?: string[];
     redirectChain?: string[];
     formFields?: Record<string, any>;
     contentSnippet?: string;
@@ -33,6 +34,8 @@ export interface AnalysisResult {
   riskScore: number;
   riskLevel: RiskLevel;
   verdictTitle: string;
+  functional_category?: string;
+  functional_description?: string;
   recommendation?: string;
   reasoning: string[];
   technicalDetails: AnalysisDetails;
@@ -58,6 +61,8 @@ export interface BackendScanResponse {
   explanation: string;
   brand_impersonation: boolean;
   brand_name: string | null;
+  functional_category?: string;
+  functional_description?: string;
   verdictTitle: string;
   technicalDetails: Record<string, any>;
   mitigationAdvice: string[];
@@ -81,6 +86,7 @@ export interface EmailScanHistoryItem {
   type: 'email';
   timestamp: number;
   result: EmailScanResponse;
+  inputData?: string;
 }
 
 export type HistoryItem = ScanHistoryItem | EmailScanHistoryItem;
@@ -91,6 +97,7 @@ export interface EmailScanRequest {
   subject?: string;
   body?: string;
   raw_email?: string;
+  force_refresh?: boolean;
 }
 
 export interface EmailScanResponse {
@@ -139,15 +146,16 @@ export interface EmailScanResponse {
   };
 
   // Identity
-  identity: {
-    subject: string;
-    from: { name: string; email: string; domain: string };
-    reply_to: { email: string; domain: string } | null;
-    return_path: { email: string; domain: string } | null;
-    mismatches: Array<string>;
-    mailing_list_detected: boolean;
-    mailing_list_signals?: string[];
-  };
+    identity: {
+      subject: string;
+      from: { name: string; email: string; domain: string };
+      reply_to: { email: string; domain: string } | null;
+      return_path: { email: string; domain: string } | null;
+      mismatches: Array<string>;
+      is_safe_harbor?: boolean;
+      mailing_list_detected: boolean;
+      mailing_list_signals?: string[];
+    };
 
   // Authentication
   auth: {
@@ -214,6 +222,7 @@ export interface EmailScanResponse {
 
   // Legacy compatibility / Link details (Optional)
   link_results: BackendScanResponse[];
+  functional_description?: string;
   extracted_urls: string[];
   reasons: string[];
   deep_dive_target?: string;
