@@ -2,6 +2,7 @@ import email
 from email import policy
 from email.utils import parseaddr
 import re
+import asyncio
 import logging
 import unicodedata
 from bs4 import BeautifulSoup
@@ -91,8 +92,10 @@ async def extract_links_forensic(html_content: str, text_content: str) -> Dict[s
                 temp_urls.add(tag['href'].strip())
 
     if text_content:
+        import html
         for raw_url in URL_REGEX.findall(text_content):
             cleaned = raw_url.rstrip('.,;?!)]}')
+            cleaned = html.unescape(cleaned)
             temp_urls.add(cleaned)
 
     # Triage and Unwrap
@@ -102,14 +105,15 @@ async def extract_links_forensic(html_content: str, text_content: str) -> Dict[s
     
     from backend.app.services.engine_service import KNOWN_SAFE_DOMAINS, _root_domain
 
-    for url in temp_urls:
+    async def process_url(url):
+        nonlocal triage_stats
         triage_stats["total_found"] += 1
         
         # 1. Mailto/Tel check
         if any(url.lower().startswith(p) for p in ['mailto:', 'tel:', 'sms:']):
             triage_stats["ignored"] += 1
             triage_stats["ignored_breakdown"]["mailto_tel_sms"] += 1
-            continue
+            return None
 
         # 2. Asset & Whitelist Optimization
         url_root = _root_domain(url)
@@ -118,7 +122,7 @@ async def extract_links_forensic(html_content: str, text_content: str) -> Dict[s
         if is_whitelisted and url.split('?')[0].lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.svg', '.css', '.js')):
             triage_stats["ignored"] += 1
             triage_stats["ignored_breakdown"]["assets"] += 1
-            continue
+            return None
 
         # 3. Unwrap check (Heuristic + Async Network)
         # First check heuristic (query params)
@@ -140,17 +144,25 @@ async def extract_links_forensic(html_content: str, text_content: str) -> Dict[s
         if not safe:
             triage_stats["filtered"] += 1
             triage_stats["filtered_breakdown"][reason if reason in triage_stats["filtered_breakdown"] else "unsupported_schemes"] += 1
-            continue
+            return None
             
         # 5. Normalize & Dedup
         norm = _normalize_url(url)
+        return {"original": url, "norm": norm}
+
+    tasks = [process_url(u) for u in temp_urls]
+    results = await asyncio.gather(*tasks)
+
+    for res in results:
+        if not res: continue
+        norm = res["norm"]
         if norm in seen_normalized:
             triage_stats["ignored"] += 1
             triage_stats["ignored_breakdown"]["duplicates"] += 1
             continue
         
         seen_normalized.add(norm)
-        final_urls.append(url)
+        final_urls.append(res["original"])
         triage_stats["analyzed"] += 1
 
     return {
@@ -333,7 +345,7 @@ async def parse_email_message(msg: email.message.Message) -> dict:
         
     return {
         "identity": {
-            "subject": norm_subject,
+            "subject": norm_subject or ((norm_text or norm_html_text)[:50].strip() + "..." if (norm_text or norm_html_text) else "Untitled Forensic Analysis"),
             "raw_subject": msg.get("Subject", ""),
             "has_unicode_obfuscation": has_unicode_obfuscation,
             "from": {"name": from_name, "email": from_email, "domain": from_email.split('@')[-1] if '@' in from_email else ""},

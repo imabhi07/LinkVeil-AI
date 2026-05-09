@@ -176,12 +176,48 @@ class ForensicsBrain:
         # 4. Social Engineering
         se_results = analyze_social_engineering(parsed_data.get("clean_body", ""))
         score_linguistic = se_results["overall_threat"]
-        se_weighted = score_linguistic * 0.4
+        
+        # ── 5. Safe Harbor Logic (Anti-False-Positive) ──
+        is_safe_harbor = False
+        # If DMARC/SPF pass and domain is high-authority, suppress linguistic flags
+        dmarc = auth.get("dmarc", "none").lower()
+        spf = auth.get("spf", "none").lower()
+        dkim = auth.get("dkim", "none").lower()
+        
+        # Check if from_domain is in a list of trusted high-authority domains
+        from backend.app.services.engine_service import KNOWN_SAFE_DOMAINS
+        is_trusted_brand = from_domain in KNOWN_SAFE_DOMAINS
+        
+        # Determine dampening factor
+        dampener = 1.0
+        if dmarc == "pass" and dkim == "pass" and spf == "pass" and is_trusted_brand:
+            dampener = 0.1  # 90% reduction for authenticated trusted brands
+            is_safe_harbor = True
+            signals.append({"signal": "Safe Harbor", "points": -50, "reason": f"Verified official communication from {from_domain}. Forensic flags suppressed."})
+            reasons.append(f"Trust Signal: This is a cryptographically verified email from the official {from_domain} domain.")
+        elif dmarc == "pass" and is_trusted_brand:
+            dampener = 0.3 # 70% reduction if at least DMARC passes
+            reasons.append(f"Trust Signal: Authenticated brand communication ({from_domain}).")
+            
+        se_weighted = (score_linguistic * 0.4) * dampener
         if se_weighted > 0:
-            signals.append({"signal": "Social Engineering", "points": int(se_weighted), "reason": f"Detected {len(se_results['matches'])} threat patterns."})
+            categories = ", ".join(list(set(m['category'] for m in se_results['matches'])))
+            signals.append({
+                "signal": "Social Engineering", 
+                "points": round(se_weighted), 
+                "reason": f"Linguistic analysis detected {categories} patterns."
+            })
         
         # Calculate final combined email score
         total_email_score = min(score_identity + se_weighted, 100)
+        
+        # If it's a perfect Safe Harbor, ensure score is low
+        if dampener < 0.2:
+            total_email_score = min(total_email_score, 15.0)
+        
+        # Update parsed data for downstream UI
+        if "identity" in parsed_data:
+            parsed_data["identity"]["is_safe_harbor"] = is_safe_harbor
         
         return {
             "score": round(total_email_score, 2),
@@ -189,8 +225,37 @@ class ForensicsBrain:
             "score_linguistic": min(score_linguistic, 100),
             "reasons": reasons,
             "signals": signals,
-            "social_engineering": se_results
+            "social_engineering": se_results,
+            "functional_description": ForensicsBrain.get_email_functional_description(parsed_data, {
+                "score": total_email_score,
+                "social_engineering": se_results
+            })
         }
+
+    @staticmethod
+    def get_email_functional_description(parsed_data: Dict[str, Any], email_risk: Dict[str, Any]) -> str:
+        """Generates a professional description of the email's intent."""
+        from_domain = parsed_data.get("identity", {}).get("from", {}).get("domain", "the sender's domain")
+        se_results = email_risk.get("social_engineering", {})
+        se_matches = se_results.get("matches", [])
+        
+        if not se_matches:
+            if email_risk.get("score", 0) < 20:
+                return f"This communication appears to be a standard informational or transactional message from the {from_domain} infrastructure."
+            return f"This email is a general communication originating from {from_domain}, currently undergoing forensic verification."
+
+        # Find the most prominent category
+        category = se_matches[0]["category"]
+        if category == "Urgency":
+            return f"This email serves as an urgent administrative notification from {from_domain}, requiring immediate user intervention."
+        if category == "Credential Lure":
+            return f"This communication is an identity verification request from {from_domain}, designed to facilitate account or password management."
+        if category == "Financial Bait":
+            return f"This message is a billing-related notification from {from_domain}, pertaining to transaction processing or invoice management."
+        if category == "Authority Impersonation":
+            return f"This email is structured as an official system administration notice from the {from_domain} support desk."
+            
+        return f"This is a {category.lower()} notification originating from {from_domain} intended for user-targeted communication."
 
 
     @staticmethod
