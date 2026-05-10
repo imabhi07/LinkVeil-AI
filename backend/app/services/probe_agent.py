@@ -26,66 +26,66 @@ from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
-FAKE_USER = "test_admin@linkveil.local"
-FAKE_PASS = "Phish@Guard#Fake!2024"
+FAKE_USER = "security.audit@gmail.com"
+FAKE_PASS = "Audit#Verify_992!Auth"
 
 NAVIGATION_TIMEOUT_MS = 30000   # increased from 20s for heavy/global sites
 FORM_WAIT_MS = 4000             # increased from 2.5s for modern JS/SPA rendering
 
 TRUSTED_REDIRECT_DOMAINS = {
-    "google.com", "google.co", "accounts.google.com",
-    "microsoft.com", "live.com", "login.microsoftonline.com",
-    "apple.com", "appleid.apple.com",
-    "facebook.com", "github.com", "twitter.com", "x.com",
-    "linkedin.com", "amazon.com", "yahoo.com",
-    "netflix.com", "paytm.com", "flipkart.com", "spotify.com",
+    "google.com", "google.co", "accounts.google.com", "gmail.com",
+    "microsoft.com", "live.com", "login.microsoftonline.com", "outlook.com", "office.com",
+    "apple.com", "appleid.apple.com", "icloud.com",
+    "facebook.com", "fb.com", "instagram.com", "github.com", "twitter.com", "x.com",
+    "linkedin.com", "amazon.com", "amazon.in", "yahoo.com",
+    "paytm.com", "flipkart.com", "spotify.com",
     "dropbox.com", "uber.com", "airbnb.com", "pinterest.com",
-    "razorpay.com", "phonepe.com",
+    "razorpay.com", "phonepe.com", "stripe.com", "paypal.com",
+    "slack.com", "trello.com", "zoom.us", "canva.com",
+    "discord.com", "discord.gg", "atlassian.com", "jira.com", "bitbucket.org", "gitlab.com",
+    "adobe.com", "salesforce.com", "okta.com", "auth0.com",
+    "vercel.com", "vercel.app", "netlify.com", "netlify.app", "digitalocean.com",
+    "heroku.com", "cloudflare.com", "notion.so", "figma.com", "intercom.com"
 }
 
 
-# ── Browser Singleton ──
-_browser_lock = threading.Lock()
-_pw_instance = None
-_browser = None
 
+# ── Browser Thread-Local Storage ──
+_thread_local = threading.local()
 
 def _get_browser():
     """
-    Lazily launch a SHARED Chromium instance.
-    Thread-safe. Reused across all probe calls to avoid cold-start overhead.
+    Lazily launch a thread-local Chromium instance.
+    Reused across probe calls on the same thread to avoid cold-start overhead,
+    while completely avoiding cross-thread Playwright crashes.
     """
-    global _pw_instance, _browser
-    if _browser is not None:
+    if hasattr(_thread_local, 'browser') and _thread_local.browser is not None:
         try:
             # Quick health check — if browser crashed, re-launch
-            _browser.contexts
-            return _browser
+            _thread_local.browser.contexts
+            return _thread_local.browser
         except Exception:
-            _browser = None
+            _thread_local.browser = None
+            _thread_local.pw_instance = None
 
-    with _browser_lock:
-        if _browser is not None:
-            return _browser
-
-        try:
-            from playwright.sync_api import sync_playwright
-            _pw_instance = sync_playwright().start()
-            _browser = _pw_instance.chromium.launch(
-                headless=True,
-                args=[
-                    '--no-sandbox',
-                    '--disable-blink-features=AutomationControlled',
-                    '--disable-dev-shm-usage',
-                    '--disable-gpu',
-                    '--disable-extensions',
-                ],
-            )
-            logger.info("Playwright Chromium browser launched (singleton)")
-            return _browser
-        except Exception as e:
-            logger.error(f"Failed to launch Chromium: {e}")
-            return None
+    try:
+        from playwright.sync_api import sync_playwright
+        _thread_local.pw_instance = sync_playwright().start()
+        _thread_local.browser = _thread_local.pw_instance.chromium.launch(
+            headless=True,
+            args=[
+                '--no-sandbox',
+                '--disable-blink-features=AutomationControlled',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--disable-extensions',
+            ],
+        )
+        logger.info(f"Playwright Chromium browser launched on thread {threading.get_ident()}")
+        return _thread_local.browser
+    except Exception as e:
+        logger.error(f"Failed to launch Chromium on thread {threading.get_ident()}: {e}")
+        return None
 
 
 def _root_domain(url: str) -> str:
@@ -152,7 +152,8 @@ class ProbeResult:
     explicitly_offline: bool = False # NEW: True ONLY for NXDOMAIN/Refused, not for Timeouts
     
     # New Forensic Fields
-    screenshot_path: Optional[str] = None
+    screenshot_path: Optional[str] = None # Deprecated: use screenshots list
+    screenshots: List[str] = field(default_factory=list)
     redirect_chain: List[str] = field(default_factory=list)
     form_fields: Dict = field(default_factory=dict)
     content_snippet: str = ""
@@ -235,9 +236,12 @@ def run_probe(url: str) -> ProbeResult:
                 # Mimic a click from a social app or standard browser
                 headers["Referer"] = "https://t.co/" if "t.co" in url else "https://wa.me/"
             
-            # 'domcontentloaded' is safer for modern SPAs to ensure initial JS has executed
             if headers:
                 page.set_extra_http_headers(headers)
+            
+            # Use 'domcontentloaded' to avoid infinite timeouts on sites with websockets/streams.
+            # Playwright automatically follows HTTP redirects, so this will trigger on the final page.
+            # We handle heavy dynamic content with explicit scrolling and waits below.
             page.goto(url, timeout=NAVIGATION_TIMEOUT_MS, wait_until="domcontentloaded")
             result.reachable = True
             
@@ -252,14 +256,23 @@ def run_probe(url: str) -> ProbeResult:
             logger.info(f"Probe: loaded '{result.page_title}' at {result.final_url}")
             
             # --- Capture Screenshot ---
-            # Increased delay to 5s for modern SPAs (Discord, SPA Login flows) to finish rendering
-            page.wait_for_timeout(5000)
+            # Multi-stage wait for heavy media sites (like IPTV hubs)
+            try:
+                # Trigger lazy loading by scrolling
+                page.evaluate("window.scrollTo(0, 800)")
+                page.wait_for_timeout(1500)
+                page.evaluate("window.scrollTo(0, 0)")
+                # Wait for any transition animations or overlays to clear
+                page.wait_for_timeout(3500)
+            except Exception:
+                page.wait_for_timeout(5000)
             
             url_hash = hashlib.md5(url.encode()).hexdigest()
-            screenshot_path = f"data/screenshots/{url_hash}.png"
+            initial_screenshot = f"data/screenshots/{url_hash}_initial.png"
             os.makedirs("data/screenshots", exist_ok=True)
-            page.screenshot(path=screenshot_path)
-            result.screenshot_path = screenshot_path
+            page.screenshot(path=initial_screenshot)
+            result.screenshots.append(initial_screenshot)
+            result.screenshot_path = initial_screenshot # Fallback for old UI
             
             # --- Capture Content Snippet ---
             result.content_snippet = page.content()[:2000]
@@ -362,6 +375,11 @@ def run_probe(url: str) -> ProbeResult:
 
                     # Wait for step 2 to render (JS-heavy forms need time)
                     page.wait_for_timeout(3000)
+                    
+                    # Capture intermediate step for forensics
+                    step_screenshot = f"data/screenshots/{url_hash}_step1.png"
+                    page.screenshot(path=step_screenshot)
+                    result.screenshots.append(step_screenshot)
 
                     # Re-check for password field after advancing
                     password_fields = page.query_selector_all('input[type="password"]')
@@ -456,68 +474,105 @@ def run_probe(url: str) -> ProbeResult:
         success_keywords = [
             "welcome back", "dashboard", "logout", "sign out",
             "my profile", "inbox", "success", "verified", "you're in",
-            "logged in", "my account"
+            "logged in", "my account", "workspace", "home", "settings",
+            "search", "notifications", "activity"
         ]
 
         showed_error = any(kw in page_text for kw in error_keywords)
         showed_success = any(kw in page_text for kw in success_keywords)
 
         # --- Step 6: Classify ---
-        if showed_error or same_domain_redirect:
+        # Logic: Re-verify safety by checking the final state of the page.
+        # If we are still on a login page after submitting fake creds, they were likely rejected.
+        final_password_fields = [f for f in page.query_selector_all('input[type="password"]') if f.is_visible()]
+        still_on_login = len(final_password_fields) > 0
+        
+        # Take a post-submit screenshot to capture the final forensic state
+        try:
+            final_screenshot_path = f"data/screenshots/{url_hash}_final.png"
+            page.screenshot(path=final_screenshot_path)
+            result.screenshots.append(final_screenshot_path)
+            result.screenshot_path = final_screenshot_path
+            result.content_snippet = page.content()[:2000]
+        except:
+            pass
+
+        is_trusted = _is_trusted_domain(post_submit_url)
+
+        if showed_error or (still_on_login and same_domain_redirect):
             result.accepted_fake_creds = False
             result.behavior_risk = "Low"
-            if showed_error:
+            result.outcome = (
+                f"Fake credentials were rejected — {'an error was shown' if showed_error else 'the login form persisted'}. "
+                f"This is the expected behavior of a secure, legitimate service. "
+                f"Final state: '{post_title}'."
+            )
+
+        elif same_domain_redirect and not showed_success:
+            # Re-verify: Same-domain transitions are typical for safe sites (multi-step)
+            result.accepted_fake_creds = False
+            result.behavior_risk = "Low" if is_trusted else "Medium"
+            
+            risk_desc = "Safe (Trusted Domain)" if is_trusted else "Ambiguous (Unknown Domain)"
+            result.outcome = (
+                f"Redirect occurred within the same domain family ({_root_domain(post_submit_url)}). "
+                f"Classification: {risk_desc}. "
+                "This behavior is typical of multi-step login flows or internal authentication routing. "
+                f"Final state: '{post_title}'."
+            )
+
+        elif not url_changed and not showed_success:
+            # Stayed on the same page: Check if it's a trusted brand
+            result.accepted_fake_creds = False
+            result.behavior_risk = "Low" if is_trusted else "Medium"
+            
+            risk_desc = "Safe (Trusted Domain)" if is_trusted else "Ambiguous (Unknown Domain)"
+            result.outcome = (
+                f"Remained on the same page ({_root_domain(post_submit_url)}). "
+                f"Classification: {risk_desc}. "
+                "No immediate redirect or error was detected. "
+                f"{'Typical of SPA/JavaScript applications on trusted sites.' if is_trusted else 'Ambiguous outcome — no conclusive evidence of harvesting or rejection.'}"
+            )
+
+        elif cross_domain_redirect:
+            # Cross-domain redirects after submission are EXTREMELY suspicious
+            landing_on_trusted_final = _is_trusted_domain(post_submit_url)
+            result.accepted_fake_creds = True
+            result.behavior_risk = "High"
+            
+            if landing_on_trusted_final:
                 result.outcome = (
-                    f"Fake credentials were correctly rejected — an error message was displayed. "
-                    f"This is consistent with a legitimate service that validates credentials server-side. "
-                    f"Page title after submit: '{post_title}'."
+                    f"⚠️  LIKELY CREDENTIAL HARVESTER: Fake credentials were submitted and the page "
+                    f"redirected to a trusted third-party domain ({_root_domain(post_submit_url)}). "
+                    "This is a classic phishing kit pattern — harvest credentials, "
+                    "then redirect the victim to the real site to avoid suspicion."
                 )
             else:
                 result.outcome = (
-                    f"Redirect occurred within the same domain family "
-                    f"({_root_domain(pre_submit_url)} → {_root_domain(post_submit_url)}). "
-                    "This is normal SSO/auth flow behaviour, not a phishing signal. "
-                    f"Page title: '{post_title}'."
+                    f"⚠️  CREDENTIAL HARVESTER CONFIRMED: After submitting fake credentials, "
+                    f"the page redirected to an external domain: {post_submit_url}. "
+                    "Phishing kits harvest credentials silently then redirect to a different site "
+                    "to avoid suspicion. This is a definitive threat signature."
                 )
 
-        elif cross_domain_redirect and not landing_on_trusted:
-            result.accepted_fake_creds = True
-            result.behavior_risk = "High"
-            result.outcome = (
-                f"⚠️  CREDENTIAL HARVESTER CONFIRMED: After submitting fake credentials, "
-                f"the page redirected to a different domain: {post_submit_url}. "
-                "Phishing kits harvest credentials silently then redirect to the real site "
-                "to avoid suspicion. This cross-domain redirect is the defining signature."
-            )
-
-        elif cross_domain_redirect and landing_on_trusted:
-            result.accepted_fake_creds = True
-            result.behavior_risk = "High"
-            result.outcome = (
-                f"⚠️  LIKELY CREDENTIAL HARVESTER: Fake credentials were submitted and the page "
-                f"redirected to a trusted domain ({_root_domain(post_submit_url)}). "
-                "This is a classic phishing kit pattern — harvest credentials, "
-                "then redirect the victim to the real site to avoid suspicion."
-            )
-
-        elif showed_success and not _is_trusted_domain(pre_submit_url):
-            result.accepted_fake_creds = True
-            result.behavior_risk = "High"
-            result.outcome = (
-                f"⚠️  CREDENTIAL HARVESTER CONFIRMED: Fake credentials were accepted "
-                f"and a success-like response was shown on an untrusted domain. "
-                "Legitimate services never accept obviously fake credentials. "
-                f"Page title: '{post_title}'."
-            )
+        elif showed_success and not is_trusted:
+             result.accepted_fake_creds = True
+             result.behavior_risk = "High"
+             result.outcome = (
+                 f"⚠️  CREDENTIAL HARVESTER CONFIRMED: Fake credentials were accepted "
+                 f"and a success-like response was shown on an unverified domain. "
+                 "Legitimate services never accept obviously fake credentials. "
+                 f"Page title: '{post_title}'."
+             )
 
         else:
             result.accepted_fake_creds = False
             result.behavior_risk = "Medium"
             result.outcome = (
-                "Login form found and credentials submitted, but the response was ambiguous — "
-                "no clear accept or reject signal detected. "
-                f"{'Redirect to: ' + post_submit_url if url_changed else 'No redirect occurred.'} "
-                "Manual review recommended."
+                "Login form interaction completed, but the outcome was inconclusive. "
+                "No explicit error or successful cross-domain redirect detected. "
+                f"Final state: '{post_title}' on {_root_domain(post_submit_url)}. "
+                "Forensic Capture: Post-submission state recorded for manual verification."
             )
 
         return result
@@ -540,12 +595,9 @@ def run_probe(url: str) -> ProbeResult:
                 pass
 
 
-# ── Dedicated single-thread executor for Playwright ──
-# Playwright's sync API has strict thread affinity: the browser must always
-# be accessed from the SAME thread it was created on. asyncio.to_thread()
-# dispatches to random pool threads, causing "Cannot switch to a different
-# thread" crashes. This executor pins ALL probe work to one persistent thread.
-_probe_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="pw-probe")
+# ── Dedicated multi-thread executor for Playwright ──
+# We use a small pool to allow parallel probing of multiple links.
+_probe_executor = ThreadPoolExecutor(max_workers=5, thread_name_prefix="pw-probe")
 
 
 async def run_probe_async(url: str) -> ProbeResult:
@@ -571,6 +623,7 @@ def probe_result_to_dict(r: ProbeResult) -> dict:
         "error": r.error,
         # New Forensic Fields
         "screenshotPath": r.screenshot_path,
+        "screenshots": r.screenshots,
         "redirectChain": r.redirect_chain,
         "explicitlyOffline": r.explicitly_offline,
         "formFields": r.form_fields,

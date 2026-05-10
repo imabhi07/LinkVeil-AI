@@ -15,7 +15,7 @@ from backend.app.services.llm_service import analyze_url
 from backend.app.services.probe_agent import run_probe_async, probe_result_to_dict, FAKE_USER
 from backend.app.services.threat_intel_service import threat_intel_service
 from backend.app.services.whois_service import whois_service
-from backend.app.services.brand_service import detect_brand_mismatch
+from backend.app.services.brand_service import detect_brand_mismatch, get_legit_domains
 from backend.app.services.vision_service import vision_service
 from backend.app.features.url_features import extract_features
 from backend.app.models.db_models import ScanResult
@@ -30,16 +30,30 @@ CACHE_TTL_SECONDS = 300  # 5 minutes
 KNOWN_SAFE_DOMAINS = frozenset({
     "google.com", "youtube.com", "facebook.com", "instagram.com",
     "twitter.com", "x.com", "linkedin.com", "github.com",
-    "microsoft.com", "apple.com", "amazon.com", "netflix.com",
+    "microsoft.com", "apple.com", "amazon.com", 
     "wikipedia.org", "reddit.com", "stackoverflow.com",
     "paypal.com", "yahoo.com", "bing.com", "whatsapp.com",
-    "zoom.us", "slack.com", "dropbox.com", "spotify.com",
-    "paytm.com", "flipkart.com", "razorpay.com", "phonepe.com",
-    "uber.com", "airbnb.com", "stripe.com", "twitch.tv",
+    "zoom.us", "slack.com", "dropbox.com", "uber.com", "airbnb.com", "pinterest.com",
+    "razorpay.com", "phonepe.com", "stripe.com", "twitch.tv",
     "perplexity.ai", "chatgpt.com", "openai.com", "claude.ai", "anthropic.com",
     "infosys.com", "pepsicoindia.co.in", "pepsico.com", "tata.com", "reliance.com",
     "hdfcbank.com", "icicibank.com", "sbi.co.in", "irctc.co.in",
-    "discord.com", "discord.gg", "coderabbit.ai", "customer.io", "customeriomail.com"
+    "discord.com", "discord.gg", "coderabbit.ai", "customer.io", "customeriomail.com",
+    "trello.com", "canva.com", "notion.so", "figma.com", "intercom.com", "intercom-mail.com",
+    "atlassian.com", "jira.com", "bitbucket.org", "gitlab.com",
+    "adobe.com", "salesforce.com", "okta.com", "auth0.com",
+    "inflection.io", "vercel.com", "netlify.com",
+    "digitalocean.com", "heroku.com", "cloudflare.com", "cloudinary.com",
+    "sendgrid.net", "sendgrid.com", "mcsv.net", "hubspotemail.net", "hubspot.com",
+    "amazonses.com", "mandrillapp.com", "mailchimp.com"
+})
+
+# ── Shared Hosting Platforms: Frequently abused for phishing (e.g. realbnb.vercel.app) ──
+# We NEVER short-circuit these for subdomains; we force full forensic analysis.
+SHARED_HOSTING_DOMAINS = frozenset({
+    "vercel.app", "netlify.app", "github.io", "firebaseapp.com", 
+    "pages.dev", "railway.app", "surge.sh", "render.com", 
+    "s3.amazonaws.com", "storage.googleapis.com", "web.app", "onrender.com"
 })
 
 # Analysis Heuristics
@@ -76,6 +90,13 @@ def _should_skip_probe(url: str) -> bool:
     if root not in KNOWN_SAFE_DOMAINS:
         return False
         
+    # Shared hosting subdomains NEVER skip probe
+    if root in SHARED_HOSTING_DOMAINS:
+        # Check if it's just the root domain (e.g. vercel.app) or a user site (e.g. myphish.vercel.app)
+        ext = tldextract.extract(url)
+        if ext.subdomain:
+            return False
+            
     # Exceptions: Even if the domain is safe, skip if it's a known storage/redirector pattern
     # these are frequently abused for hosting phishing HTML
     redirector_patterns = ["storage.googleapis.com", "drive.google.com", "onedrive.live.com", "dropbox.com/s/"]
@@ -96,6 +117,8 @@ def _get_trusted_verdict(url: str) -> dict:
         "explanation": f"This domain ({domain}) is a verified high-authority corporate or service platform and is pre-cleared by the PhishGuard Global Whitelist.",
         "brand_impersonation": False,
         "brand_name": domain.split('.')[0].capitalize(),
+        "functional_category": "Official Service",
+        "functional_description": "This link belongs to a verified, high-authority domain that is part of the global trusted infrastructure.",
         "verdictTitle": "Trusted Domain Verified",
         "technicalDetails": {
             "urlStructure": "Verified legitimate structure.",
@@ -103,7 +126,13 @@ def _get_trusted_verdict(url: str) -> dict:
             "socialEngineeringTricks": "None detected."
         },
         "mitigationAdvice": ["No action required. This is an official domain."],
-        "agentReport": {"performed": False, "outcome": "Skipped for trusted domain."},
+        "agentReport": {
+            "activeProbing": {
+                "performed": False, 
+                "reachable": True,
+                "outcome": "Skipped for trusted domain."
+            }
+        },
         "whois_info": {"domain_age_days": 5000, "is_new_domain": False}, # Representative value
         "threat_intel": {"is_known_malicious": False},
         "visual_forensics": None,
@@ -186,13 +215,13 @@ class FusionEngine:
         
         # Determine risk level
         if risk_score >= 71:
-            level = "High"
+            level = "MALICIOUS"
             rec = "Dangerous - Do Not Open"
         elif risk_score >= 31:
-            level = "Medium"
+            level = "SUSPICIOUS"
             rec = "Suspicious - Proceed with Caution"
         else:
-            level = "Low"
+            level = "SAFE"
             rec = "Safe - You can proceed"
 
         llm_res = forensic_results.get("llm", {})
@@ -217,13 +246,13 @@ class FusionEngine:
         mitigation = llm_res.get("mitigationAdvice") or []
         if not mitigation:
 
-            if level == "High":
+            if level == "MALICIOUS":
                 mitigation = [
                     "CRITICAL: Do not click any links or download attachments from this URL.",
                     "Delete this email immediately and report it to your security team.",
                     "If you have already entered credentials, change your password immediately."
                 ]
-            elif level == "Medium":
+            elif level == "SUSPICIOUS":
                 mitigation = [
                     "Proceed with extreme caution. Verify the sender's identity through a secondary channel.",
                     "Check for subtle typos in the domain name (e.g., 'micros0ft.com').",
@@ -241,15 +270,35 @@ class FusionEngine:
         agent_report = {
             "summary": clean_explanation,
             "activeProbing": {
-                "performed": True if probe_data else False,
-                "screenshotPath": (probe_res or {}).get("screenshot_path") or probe_data.get("screenshot_path"),
-                "loginFormFound": probe_data.get("login_form_found", False),
-                "pageTitle": probe_data.get("page_title"),
-                "finalUrl": probe_data.get("final_url"),
-                "behaviorRisk": "HIGH" if risk_score > 70 else "MEDIUM" if risk_score > 30 else "LOW",
+                "performed": True if (probe_data and probe_data.get("performed")) else False,
+                "screenshotPath": (probe_res or {}).get("screenshot_path") or probe_data.get("screenshotPath"),
+                "loginFormFound": probe_data.get("loginFormFound", False),
+                "pageTitle": probe_data.get("pageTitle"),
+                "finalUrl": probe_data.get("finalUrl"),
+                "behaviorRisk": probe_data.get("behaviorRisk") or ("HIGH" if risk_score > 70 else "MEDIUM" if risk_score > 30 else "LOW"),
                 "outcome": probe_data.get("outcome") or clean_explanation
             }
         }
+
+        # Dynamic conclusion title based on findings
+        is_impersonation = bool(brand_res.get("is_mismatch", False) or llm_res.get("brand_impersonation", False))
+        brand_name = brand_res.get("brand_detected") or llm_res.get("brand_name")
+        
+        if level == "SAFE":
+            if risk_score < 10:
+                title = "Secure Destination Verified"
+            else:
+                title = "No Active Threats Detected"
+        elif level == "SUSPICIOUS":
+            if is_impersonation:
+                title = "Suspicious Brand Discrepancy"
+            else:
+                title = "Anomalous Activity Detected"
+        else:  # MALICIOUS
+            if is_impersonation:
+                title = f"Critical: {brand_name.title()} Impersonation" if brand_name else "Malicious Brand Impersonation"
+            else:
+                title = "Active Malicious Threat"
 
         return {
             "url": url,
@@ -257,9 +306,11 @@ class FusionEngine:
             "risk_level": level,
             "recommendation": rec,
             "explanation": clean_explanation,
-            "brand_impersonation": bool(brand_res.get("is_mismatch", False) or llm_res.get("brand_impersonation", False)),
-            "brand_name": brand_res.get("brand_detected") or llm_res.get("brand_name"),
-            "verdictTitle": f"{level} Risk Analysis",
+            "brand_impersonation": is_impersonation,
+            "brand_name": brand_name,
+            "functional_category": llm_res.get("functional_category", "Web Resource"),
+            "functional_description": llm_res.get("functional_description", "This is a standard web destination with no specific risk category identified."),
+            "verdictTitle": title,
             "technicalDetails": tech_details,
             "mitigationAdvice": mitigation,
             "agentReport": agent_report,
@@ -274,22 +325,43 @@ class FusionEngine:
 fusion_engine = FusionEngine()
 
 
-async def evaluate_url(url: str, db: Session, auth_context: Optional[dict] = None) -> dict:
+async def evaluate_url(url: str, db: Session, auth_context: Optional[dict] = None, force_refresh: bool = False) -> dict:
     """
     Hybrid evaluation pipeline:
-    1. Cache check
-    2. Email Auth Trust (Short-circuit for verified senders)
-    3. Threat Intel short-circuit
-    4. Parallel execution (XGB, LLM, Probe, WHOIS, Brand detect)
+    1. Check Protocol (Safety for local resources)
+    2. Cache check
+    3. Email Auth Trust (Short-circuit for verified senders)
+    4. Threat Intel short-circuit
+    5. Parallel execution (XGB, LLM, Probe, WHOIS, Brand detect)
     """
+    # ── 0. Protocol Validation ──
+    parsed = urlparse(url)
+    if parsed.scheme not in ["http", "https"]:
+        logger.info(f"Non-Web Protocol Detected: {url}")
+        return {
+            "url": url,
+            "risk_score": 0.0,
+            "risk_level": "Safe",
+            "explanation": f"This is a '{parsed.scheme}' resource, which is internal to your browser or system. These protocols are typically used for extensions or local files and are not subject to external phishing analysis.",
+            "verdictTitle": "Internal System Resource",
+            "recommendation": "Safe - Browser/System Resource",
+            "brand_impersonation": False,
+            "technicalDetails": {"urlStructure": f"Protocol: {parsed.scheme} (Non-analyzable)"},
+            "mitigationAdvice": ["No action required for internal system links."],
+            "agentReport": {"activeProbing": {"performed": False, "outcome": "Skipped (Non-Web Protocol)"}}
+        }
+
     t0 = time.perf_counter()
     logger.info(f"Starting hybrid evaluation for URL: {url}")
 
     # ── 1. Check cache ──
-    cached = _get_cached(url)
-    if cached is not None:
-        _save_to_db(cached, db)
-        return cached
+    if not force_refresh:
+        cached = _get_cached(url)
+        if cached is not None:
+            _save_to_db(cached, db)
+            return cached
+    else:
+        logger.info(f"Forcing REFRESH for {url} (Cache bypassed)")
 
     # ── 2. Email Auth Trust ──
     url_root = _root_domain(url)
@@ -307,7 +379,11 @@ async def evaluate_url(url: str, db: Session, auth_context: Optional[dict] = Non
             return verdict
 
     # ── 2.5 Global Whitelist Short-circuit ──
-    if url_root in KNOWN_SAFE_DOMAINS:
+    # ONLY short-circuit if it's a known safe domain AND NOT a shared hosting provider with a subdomain
+    ext = tldextract.extract(url)
+    is_shared_hosting = url_root in SHARED_HOSTING_DOMAINS
+    
+    if url_root in KNOWN_SAFE_DOMAINS or (is_shared_hosting and not ext.subdomain):
         logger.info(f"Global Whitelist HIT: Short-circuiting for {url}")
         verdict = _get_trusted_verdict(url)
         verdict["explanation"] = f"✅ Safe Authority: {url_root} is a verified, high-authority domain. Deep forensic analysis skipped for this trusted infrastructure."
@@ -406,13 +482,17 @@ async def evaluate_url(url: str, db: Session, auth_context: Optional[dict] = Non
     is_storage_path = any(p in url.lower() for p in ["storage.googleapis.com", "drive.google.com", "onedrive.live.com"])
     is_html_extension = url.lower().split('?')[0].endswith(('.html', '.htm', '.php'))
     
-    if _should_skip_probe(url) and not (is_storage_path and is_html_extension):
-        raw_xgb_score = min(raw_xgb_score, 15.0)
-        raw_bert_score = min(raw_bert_score, 15.0)
-        logger.info(f"ML Score Cap: XGB={raw_xgb_score:.1f}, BERT={raw_bert_score:.1f} (Known safe domain)")
-    elif is_storage_path:
-        logger.info(f"Forensic Alert: Storage-hosted redirector detected ({url}). Skipping ML cap.")
-
+    # ── Reputation-Based ML Capping (Anti-False-Positive) ──
+    # If the domain is old (>1 year) and not on a suspicious TLD, 
+    # we cap the lexical models to prevent false positives from long URLs.
+    domain_age = (whois_result.get("domain_age_days") or whois_result.get("age_days") or 0)
+    is_suspicious_tld = tldextract.extract(url).suffix.lower() in SUSPICIOUS_TLDS
+    
+    if domain_age > 365 and not is_suspicious_tld and not is_storage_path:
+        raw_xgb_score = min(raw_xgb_score, 35.0)
+        raw_bert_score = min(raw_bert_score, 35.0)
+        logger.info(f"Reputation Cap: XGB={raw_xgb_score:.1f}, BERT={raw_bert_score:.1f} (Established domain, age={domain_age}d)")
+    
     # Extract LLM score, ensuring we handle degradation without hardcoded fallbacks
     llm_score = llm_result.get("riskScore") if not llm_failed else None
     if isinstance(llm_score, str):
@@ -472,19 +552,51 @@ async def evaluate_url(url: str, db: Session, auth_context: Optional[dict] = Non
     
     # Brand Mismatch Boost
     brand_boost = 0
-    if brand_result.get("is_mismatch"): brand_boost += 25
-    
-    # Vision Boost
-    vision_boost = 0
-    if visual_result and visual_result["visual_score"] > 0.7:
-        # Only apply vision boost if corroborated by brand_service OR probe found login form
-        has_brand_mismatch = brand_result.get("is_mismatch", False)
-        probe_found_login = probe_result and hasattr(probe_result, "login_form_found") and probe_result.login_form_found
-        if has_brand_mismatch or probe_found_login:
-            vision_boost += 30
-            logger.info(f"Vision Boost: +30 (corroborated by brand={has_brand_mismatch}, login_form={probe_found_login})")
+    if brand_result.get("is_mismatch"):
+        # Suppress mismatch penalty if domain is established
+        domain_age_val = (whois_result.get("domain_age_days") or whois_result.get("age_days") or 0)
+        is_established = domain_age_val > 365
+        
+        if not is_established:
+            brand_boost = 25
+            logger.info(f"Brand Mismatch Penalty: +25 (New domain claiming to be {brand_result.get('brand_detected')})")
         else:
-            logger.info(f"Vision Boost: SUPPRESSED (visual_score={visual_result['visual_score']:.2f} but no brand mismatch and no login form)")
+            logger.info(f"Brand Mismatch Suppressed: Established domain ({domain_age_val}d) containing brand token.")
+    
+    # Vision Boost & Trust Logic
+    vision_boost = 0
+    if visual_result and visual_result.get("visual_score", 0) > 0.7:
+        brand_match = visual_result.get("brand_match")
+        legit_domains = get_legit_domains(brand_match) if brand_match else []
+        current_root = _root_domain(url)
+
+        # ── Vision Trust: If brand is matched on its OFFICIAL domain, it's a strong safety signal ──
+        # ── Vision Trust: If brand is matched on its OFFICIAL domain, it's a strong safety signal ──
+        if legit_domains and current_root in legit_domains:
+            vision_boost = -40
+            visual_result["explanation"] = f"Vision Trust: Verified official {brand_match} identity on its legitimate domain ({current_root}). Analysis favors safety."
+            logger.info(f"Vision Trust HIT: Official {brand_match} domain detected. Applying safety dampener (-40).")
+        else:
+            # ── Vision Reputation Check: Is this domain established? ──
+            # If the domain is old (>1yr), we are MUCH more lenient about unverified branding
+            # to avoid false positives on legitimate SaaS that aren't in our hardcoded whitelist.
+            domain_age_val = (whois_result.get("domain_age_days") or whois_result.get("age_days") or 0)
+            is_established = domain_age_val > 365
+            
+            # ── Vision Boost: If brand is matched on an UNTRUSTED domain, it's a strong threat signal ──
+            has_brand_mismatch = brand_result.get("is_mismatch", False)
+            probe_found_login = probe_result and hasattr(probe_result, "login_form_found") and probe_result.login_form_found
+            
+            if (has_brand_mismatch or probe_found_login) and not is_established:
+                vision_boost = 30
+                visual_result["explanation"] = f"Visual Warning: Detected {brand_match or 'sensitive'} branding on a young/unverified domain. This is a high-fidelity impersonation risk."
+                logger.info(f"Vision Boost: +30 (Potential {brand_match or 'Unknown'} impersonation corroborated by context)")
+            elif is_established:
+                visual_result["explanation"] = f"Vision Integrity: {brand_match} branding detected on an established domain ({domain_age_val} days old). Impersonation penalty suppressed."
+                logger.info(f"Vision Boost: SUPPRESSED (Domain age {domain_age_val}d provides safe harbor for detected branding)")
+            else:
+                visual_result["explanation"] = f"Visual ambiguity: {brand_match or 'Brand'} detected but lacking corroborating forensic mismatch. Proceed with caution."
+                logger.info(f"Vision Boost: SUPPRESSED (No corroborating forensic context for visual match)")
 
     # ── New Heuristic Boosts (Bug #7) ──
     tld_boost = 0
@@ -544,40 +656,47 @@ async def evaluate_url(url: str, db: Session, auth_context: Optional[dict] = Non
 
     # Final Level and Recommendation Assignment
     # --- Offline Status Override Logic ---
-    # We ONLY override to 0.0 if the domain is EXPLICITLY offline (DNS failure/Refused).
-    # If it was just a timeout, we keep the ML score (XGB/BERT/LLM) so the user sees a risk level.
     is_hard_offline = getattr(probe_result, "explicitly_offline", False)
 
     if is_hard_offline:
-        final_level = "Unknown"
-        recommendation = "Site is Offline - Safe to ignore"
-        risk_score = 0.0
-        llm_result["explanation"] = "The target domain is confirmed offline (NXDOMAIN or connection refused). It currently poses no active threat."
-        logger.info(f"Explicit Offline Override: Score set to 0.0 for {url}")
-        verdict = {
-            "url": url,
-            "risk_score": 0.0,
-            "risk_level": final_level,
-            "explanation": llm_result["explanation"],
-            "brand_impersonation": False,
-            "brand_name": None,
-            "recommendation": recommendation,
-            "verdictTitle": "Target Offline",
-            "technicalDetails": {},
-            "mitigationAdvice": ["No action needed for offline sites."],
-            "agentReport": {"activeProbing": None},
-            "whois_info": whois_result,
-            "threat_intel": threat_result,
-            "visual_forensics": visual_result,
-            "fusion_trace": {
-                "xgb_prob": round(xgb_prob, 3),
-                "bert_prob": round(bert_prob, 3) if bert_prob is not None else None,
-                "llm_score": llm_score,
-                "note": "Hard offline domain override"
+        # If the domain itself is highly suspicious (lexical/AI flags), don't zero it out.
+        # This prevents "Target Offline" from masking typosquatting/brand impersonation traps.
+        if risk_score > 40:
+            logger.info(f"Offline but SUSPICIOUS: Maintaining risk score {risk_score} for {url}")
+            llm_result["explanation"] = f"DORMANT THREAT: Although the site is currently offline (NXDOMAIN or connection refused), forensic models detected high risk in the URL structure. This domain may be part of a dormant phishing campaign. {llm_result.get('explanation', '')}"
+        else:
+            final_level = "Unknown"
+            recommendation = "Site is Offline - Safe to ignore"
+            risk_score = 0.0
+            llm_result["explanation"] = "The target domain is confirmed offline (NXDOMAIN or connection refused). It currently poses no active threat."
+            logger.info(f"Explicit Offline Override: Score set to 0.0 for {url}")
+            verdict = {
+                "url": url,
+                "risk_score": 0.0,
+                "risk_level": final_level,
+                "explanation": llm_result["explanation"],
+                "brand_impersonation": False,
+                "brand_name": None,
+                "recommendation": recommendation,
+                "verdictTitle": "Target Offline",
+                "technicalDetails": {
+                    "urlStructure": "Domain is unreachable. No active payload detected.",
+                    "domainReputation": "DNS lookup failed (NXDOMAIN).",
+                },
+                "mitigationAdvice": ["No action needed for offline sites."],
+                "agentReport": {"activeProbing": {"performed": True, "reachable": False, "outcome": "Site is explicitly offline."}},
+                "whois_info": whois_result,
+                "threat_intel": threat_result,
+                "visual_forensics": visual_result,
+                "fusion_trace": {
+                    "xgb_prob": round(xgb_prob, 3),
+                    "bert_prob": round(bert_prob, 3) if bert_prob is not None else None,
+                    "llm_score": llm_score,
+                    "note": "Hard offline domain override"
+                }
             }
-        }
-        _save_to_db(verdict, db)
-        return verdict
+            _save_to_db(verdict, db)
+            return verdict
         
     # For Timeouts/Partial loads, we proceed with the ML score
     if is_unreachable and not is_hard_offline:
@@ -594,7 +713,7 @@ async def evaluate_url(url: str, db: Session, auth_context: Optional[dict] = Non
             "brand": brand_result,
             "threat": threat_result,
             "visual": visual_result,
-            "probe": probe_result_to_dict(probe_result) if probe_result else None
+            "probe": probe_result_to_dict(probe_result) if isinstance(probe_result, object) and probe_result != "SKIPPED" else None
         },
         forensic_errors=forensic_errors,
         degraded_engines=degraded_engines,
@@ -616,7 +735,13 @@ async def evaluate_url(url: str, db: Session, auth_context: Optional[dict] = Non
     # Integrate Probe artifacts
     # Integrate Probe results (Bug #8 fix - flatten into agentReport)
     if probe_result == "SKIPPED":
-        verdict["agentReport"].update({"performed": False, "outcome": "Skipped for trusted domain."})
+        if "activeProbing" not in verdict["agentReport"]:
+            verdict["agentReport"]["activeProbing"] = {}
+        verdict["agentReport"]["activeProbing"].update({
+            "performed": False, 
+            "reachable": True, 
+            "outcome": "Skipped for trusted domain."
+        })
     elif probe_result:
         # Map probe_result to dict and merge into agentReport's activeProbing sub-object
         probe_data = probe_result_to_dict(probe_result)
@@ -643,14 +768,18 @@ def _save_to_db(verdict: dict, db: Session):
         whois = verdict.get("whois_info", {})
         vision = verdict.get("visual_forensics", {})
         
+        # Extract TLD for analytics
+        ext = tldextract.extract(verdict.get("url", ""))
+        tld_val = ext.suffix if ext.suffix else None
+
         db_scan = ScanResult(
-            url=verdict["url"],
-            risk_score=verdict["risk_score"],
-            risk_level=verdict["risk_level"],
+            url=verdict.get("url", "unknown"),
+            risk_score=verdict.get("risk_score", 0.0),
+            risk_level=verdict.get("risk_level", "Unknown"),
             recommendation=verdict.get("recommendation"),
-            explanation=verdict["explanation"],
-            brand_impersonation=verdict["brand_impersonation"],
-            brand_name=str(verdict["brand_name"]).title() if verdict.get("brand_name") else None,
+            explanation=verdict.get("explanation", "No explanation available."),
+            brand_impersonation=verdict.get("brand_impersonation", False),
+            brand_name=str(verdict.get("brand_name")).title() if verdict.get("brand_name") else None,
             screenshot_path=vision.get("screenshot_path") if vision else None,
             visual_score=vision.get("visual_score") if vision else None,
             brand_logo_guess=vision.get("brand_logo_guess") if vision else None,
@@ -661,6 +790,8 @@ def _save_to_db(verdict: dict, db: Session):
             threat_intel_match=verdict.get("threat_intel", {}).get("is_known_malicious", False),
             threat_intel_source=verdict.get("threat_intel", {}).get("source"),
             fusion_trace=json.dumps(verdict.get("fusion_trace")),
+            tld=tld_val,
+            functional_category=verdict.get("functional_category"),
             timestamp=datetime.now(timezone.utc),
         )
         db.add(db_scan)
