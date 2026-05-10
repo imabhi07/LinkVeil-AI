@@ -5,9 +5,10 @@ import { InfoTip } from './InfoTip';
 interface RiskGaugeProps {
   score: number;
   level: RiskLevel;
+  size?: number;
 }
 
-export const RiskGauge: React.FC<RiskGaugeProps> = memo(({ score, level }) => {
+export const RiskGauge: React.FC<RiskGaugeProps> = memo(({ score, level, size = 120 }) => {
   // ── Animated count-up ──
   const [displayScore, setDisplayScore] = useState(0);
 
@@ -60,13 +61,13 @@ export const RiskGauge: React.FC<RiskGaugeProps> = memo(({ score, level }) => {
       break;
   }
 
-  const radius = 50;
+  const radius = 48;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (displayScore / 100) * circumference;
 
   return (
-    <div className="relative flex flex-col items-center justify-center">
-      <div className="relative w-32 h-32 transform -rotate-90">
+    <div className="relative flex flex-col items-center justify-center" style={{ width: size, height: size }}>
+      <div className="relative w-full h-full transform -rotate-90">
         <svg className="w-full h-full" viewBox="0 0 120 120" aria-label={`Risk score: ${score}`}>
           <circle
             cx="60"
@@ -99,12 +100,12 @@ export const RiskGauge: React.FC<RiskGaugeProps> = memo(({ score, level }) => {
           className="flex flex-col items-center justify-center text-center cursor-help pointer-events-auto"
         >
           <div className="flex flex-col items-center leading-none select-none">
-            <span className={`text-5xl font-black font-mono tracking-tighter transition-all duration-500 ${colorClass}`}>
+            <span className={`font-bold font-tektur tracking-tight transition-all duration-500 ${colorClass}`} style={{ fontSize: size * 0.30 }}>
               {displayScore}
             </span>
-            <div className="flex flex-col items-center mt-1">
-              <span className="text-[9px] text-cyber-light-text dark:text-zinc-400 uppercase tracking-[0.25em] font-black opacity-90">Risk</span>
-              <span className="text-[9px] text-cyber-light-text dark:text-zinc-400 uppercase tracking-[0.25em] font-black opacity-90 mt-0.5">Score</span>
+            <div className="flex flex-col items-center mt-2">
+              <span className="text-[7.5px] text-cyber-light-text dark:text-zinc-400 uppercase tracking-[0.3em] font-bold font-tektur opacity-60">Risk</span>
+              <span className="text-[7.5px] text-cyber-light-text dark:text-zinc-400 uppercase tracking-[0.3em] font-bold font-tektur opacity-60 mt-0.5">Score</span>
             </div>
           </div>
         </InfoTip>
