@@ -2,7 +2,7 @@ from pydantic import BaseModel, HttpUrl
 from typing import Optional
 
 class URLRequest(BaseModel):
-    url: str
+    url: HttpUrl
     force_refresh: bool = False
 
 class ScanResponse(BaseModel):
@@ -15,7 +15,7 @@ class ScanResponse(BaseModel):
     brand_name: Optional[str] = None
     functional_category: Optional[str] = None
     functional_description: Optional[str] = None
-    verdictTitle: dict | str | None = None
+    verdictTitle: Optional[str] = None
     technicalDetails: dict | None = None
     mitigationAdvice: list[str] = []
     agentReport: dict | None = None

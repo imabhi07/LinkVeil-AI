@@ -5,7 +5,10 @@ from backend.app.database import get_db
 from backend.app.models.db_models import ScanResult, EmailScanResult
 from sqlalchemy import func
 import json
+import logging
 from collections import Counter
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -56,7 +59,6 @@ def get_analytics(
     url_risk_dist = {r[0]: r[1] for r in url_risk_raw}
     
     # URL Daily Volume (unique scans per day)
-    # Note: We count the daily unique activity based on when the LATEST scan for each URL occurred
     url_daily_raw = db.query(
         func.date(ScanResult.timestamp),
         func.count(ScanResult.id)
@@ -94,24 +96,26 @@ def get_analytics(
      .limit(5).all()
     top_brands = [{"brand": b[0].title(), "count": b[1]} for b in top_brands_raw]
 
-    # Top Malicious TLDs (on unique urls)
-    malicious_tlds_raw = db.query(ScanResult.tld, func.count(ScanResult.id)) \
-        .filter(ScanResult.id.in_(url_latest_ids)) \
-        .filter(ScanResult.risk_level.in_(["High", "Malicious"]))\
-        .group_by(ScanResult.tld)\
-        .order_by(func.count(ScanResult.id).desc())\
-        .limit(5).all()
-    
-    top_malicious_tlds = []
-    for tld_val, m_count in malicious_tlds_raw:
-        if not tld_val: continue
-        # Total unique scans for this specific TLD
-        tld_total = db.query(ScanResult).filter(ScanResult.id.in_(url_latest_ids), ScanResult.tld == tld_val).count()
-        top_malicious_tlds.append({
-            "tld": f".{tld_val}",
-            "count": m_count,
-            "malicious_pct": round((m_count / tld_total * 100), 1) if tld_total > 0 else 0
-        })
+    # Optimized TLD Aggregation (Phase 5B)
+    tld_counts_raw = db.query(
+        ScanResult.tld,
+        func.count(ScanResult.id).label("total"),
+        func.sum(
+            func.case(
+                (ScanResult.risk_level.in_(["High", "Malicious"]), 1),
+                else_=0
+            )
+        ).label("malicious_count")
+    ).filter(
+        ScanResult.id.in_(url_latest_ids),
+        ScanResult.tld != None
+    ).group_by(ScanResult.tld).all()
+
+    top_malicious_tlds = sorted(
+        [{"tld": f".{t}", "count": int(m or 0), "malicious_pct": round((int(m or 0) / total * 100), 1) if total > 0 else 0}
+         for t, total, m in tld_counts_raw if m and m > 0],
+        key=lambda x: x["count"], reverse=True
+    )[:5]
 
     # --- 2. EMAIL INTELLIGENCE DATA ---
     # Total Email Scans
@@ -153,7 +157,9 @@ def get_analytics(
             try:
                 cats = json.loads(res[0])
                 av_counter.update(cats)
-            except: continue
+            except (json.JSONDecodeError, TypeError) as e:
+                logger.debug(f"Skipping malformed se_categories: {e}")
+                continue
             
     total_av = sum(av_counter.values())
     attack_vectors = [
@@ -174,11 +180,17 @@ def get_analytics(
     }
     
     for spf, dkim, dmarc in auth_results:
-        if spf in auth_posture["spf"]: auth_posture["spf"][spf] += 1
+        spf_norm = (spf or "none").lower().strip()
+        dkim_norm = (dkim or "none").lower().strip()
+        dmarc_norm = (dmarc or "none").lower().strip()
+        
+        if spf_norm in auth_posture["spf"]: auth_posture["spf"][spf_norm] += 1
         else: auth_posture["spf"]["none"] += 1
-        if dkim in auth_posture["dkim"]: auth_posture["dkim"][dkim] += 1
+        
+        if dkim_norm in auth_posture["dkim"]: auth_posture["dkim"][dkim_norm] += 1
         else: auth_posture["dkim"]["none"] += 1
-        if dmarc in auth_posture["dmarc"]: auth_posture["dmarc"][dmarc] += 1
+        
+        if dmarc_norm in auth_posture["dmarc"]: auth_posture["dmarc"][dmarc_norm] += 1
         else: auth_posture["dmarc"]["none"] += 1
 
     # Obfuscation Heatmap
@@ -192,7 +204,9 @@ def get_analytics(
             try:
                 techs = json.loads(res[0])
                 ob_counter.update(techs)
-            except: continue
+            except (json.JSONDecodeError, TypeError) as e:
+                logger.debug(f"Skipping malformed obfuscation_techniques: {e}")
+                continue
     obfuscation_heatmap = [
         {"technique": tech, "count": count}
         for tech, count in ob_counter.most_common(10)

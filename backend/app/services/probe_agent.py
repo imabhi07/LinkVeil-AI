@@ -248,7 +248,7 @@ def run_probe(url: str) -> ProbeResult:
             # Now wait for full load and additional time for dynamic assets/hydration
             try:
                 page.wait_for_load_state("load", timeout=10000)
-            except:
+            except Exception:
                 pass 
             
             result.page_title = page.title()
@@ -494,7 +494,7 @@ def run_probe(url: str) -> ProbeResult:
             result.screenshots.append(final_screenshot_path)
             result.screenshot_path = final_screenshot_path
             result.content_snippet = page.content()[:2000]
-        except:
+        except Exception:
             pass
 
         is_trusted = _is_trusted_domain(post_submit_url)
@@ -598,6 +598,13 @@ def run_probe(url: str) -> ProbeResult:
 # ── Dedicated multi-thread executor for Playwright ──
 # We use a small pool to allow parallel probing of multiple links.
 _probe_executor = ThreadPoolExecutor(max_workers=5, thread_name_prefix="pw-probe")
+
+def _shutdown_probe_pool():
+    _probe_executor.shutdown(wait=False)
+    logger.info("Probe thread pool shut down.")
+
+import atexit
+atexit.register(_shutdown_probe_pool)
 
 
 async def run_probe_async(url: str) -> ProbeResult:

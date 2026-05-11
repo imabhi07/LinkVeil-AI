@@ -496,8 +496,10 @@ async def evaluate_url(url: str, db: Session, auth_context: Optional[dict] = Non
     # Extract LLM score, ensuring we handle degradation without hardcoded fallbacks
     llm_score = llm_result.get("riskScore") if not llm_failed else None
     if isinstance(llm_score, str):
-        try: llm_score = float(llm_score)
-        except: llm_score = None
+        try:
+            llm_score = float(llm_score)
+        except (ValueError, TypeError):
+            llm_score = None
 
     # Fusion processing using the new FusionEngine class
     scores_dict = {"llm": llm_score, "xgb": raw_xgb_score, "bert": raw_bert_score}

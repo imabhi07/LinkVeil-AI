@@ -1,6 +1,9 @@
 import ipaddress
 import socket
+import logging
 from urllib.parse import urlparse, parse_qs, urlencode, unquote
+
+logger = logging.getLogger(__name__)
 
 # ── Tracking / analytics params to strip before caching & scanning ──
 _TRACKING_PARAMS = frozenset({
@@ -93,5 +96,6 @@ def _normalize_url(raw: str) -> str:
         if query:
             normalized += f"?{query}"
         return normalized
-    except:
+    except (ValueError, AttributeError) as e:
+        logger.debug(f"URL normalization fallback for: {url[:80]}: {e}")
         return url

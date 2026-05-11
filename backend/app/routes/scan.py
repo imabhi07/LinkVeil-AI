@@ -120,7 +120,7 @@ async def _execute_email_analysis(parsed_data: dict, input_type: str, db: Sessio
                 {
                     "url": r.url,
                     "points": r.risk_score,
-                    "reason": r.verdictTitle
+                    "reason": r.verdictTitle or r.risk_level or "Analysis incomplete"
                 } for r in link_results if r.risk_score > 10
             ]
         },

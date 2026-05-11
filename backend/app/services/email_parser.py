@@ -38,12 +38,14 @@ def unwrap_redirect(url: str) -> Optional[str]:
                     try:
                         decoded = base64.b64decode(val).decode('utf-8')
                         if decoded.startswith('http'): return decoded
-                    except: pass
+                    except (binascii.Error, UnicodeDecodeError):
+                        pass
                 # Standard unquote
                 candidate = unquote(val)
                 if candidate.startswith('http'): return candidate
         return None
-    except: return None
+    except (ValueError, KeyError):
+        return None
 
 async def extract_links_forensic(html_content: str, text_content: str) -> Dict[str, Any]:
     """
