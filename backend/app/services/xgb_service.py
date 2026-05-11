@@ -10,6 +10,7 @@ either model transparently.
 import os
 import pickle
 import logging
+from typing import Optional
 
 import numpy as np
 import xgboost as xgb
@@ -50,7 +51,7 @@ class XGBService:
         except Exception as e:
             logger.error(f"Failed to load XGBoost model: {e}")
 
-    def predict(self, url: str) -> float:
+    def predict(self, url: str) -> Optional[float]:
         """
         Returns phishing probability in [0.0, 1.0].
         0.0 = definitely safe, 1.0 = definitely phishing.
