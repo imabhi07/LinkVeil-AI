@@ -34,6 +34,8 @@ class RiskAnalysis(BaseModel):
     explanation: str = Field(default="No explanation provided.")
     brand_impersonation: bool = Field(default=False)
     brand_name: Optional[str] = Field(default=None)
+    functional_category: Optional[str] = Field(default="Web Resource")
+    functional_description: Optional[str] = Field(default="A standard web destination.")
     verdictTitle: Optional[str] = Field(default=None)
     technicalDetails: Optional[dict] = Field(default=None)
     forensicData: Optional[dict] = Field(default=None)
@@ -99,6 +101,9 @@ Return a valid JSON object.
     - "threatTactics": Analysis of the phishing kit or redirection chain.
     - "visualPrediction": Description of expected UI elements.
 - mitigationAdvice: List of 3-4 actionable steps for the end-user. Use PLAIN TEXT ONLY. Do not use markdown (no double asterisks).
+- brand_name: The brand identified (e.g., "Microsoft", "Unknown").
+- functional_category: A short (1-2 words) classification of the link purpose (e.g. "Login Page", "Documentation").
+- functional_description: A full, professional sentence describing exactly what this link is used for (e.g., "This link is an official support portal for corporate documentation access.").
 - verdictTitle: A short, professional summary (3-5 words) summarizing findings.
 
 JSON structure:
@@ -108,6 +113,8 @@ JSON structure:
   "explanation": "Expert summary...",
   "brand_impersonation": boolean,
   "brand_name": "Target Brand Name",
+  "functional_category": "Login Page",
+  "functional_description": "Descriptive sentence...",
   "verdictTitle": "Professional Title",
   "technicalDetails": {"urlDeepDive": "...", "domainForensics": "...", "socialEngineering": "..."},
   "forensicData": {"threatTactics": "...", "visualPrediction": "..."},
