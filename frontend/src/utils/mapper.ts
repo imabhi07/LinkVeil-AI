@@ -7,36 +7,27 @@ export function mapToAnalysisResult(raw: BackendScanResponse): AnalysisResult {
   let riskLevel: RiskLevel;
   let verdictTitle: string;
   
-  switch (raw.risk_level?.toLowerCase()) {
-    case 'high':
-    case 'malicious':
-      riskLevel = 'MALICIOUS';
-      verdictTitle = 'Malicious Site Detected';
-      break;
-    case 'medium':
-    case 'suspicious':
-      riskLevel = 'SUSPICIOUS';
-      verdictTitle = 'Suspicious Activity Found';
-      break;
-    case 'low':
-    case 'safe':
-      riskLevel = 'SAFE';
-      verdictTitle = 'Verified Safe';
-      break;
-    default:
-      riskLevel = 'UNKNOWN';
-      verdictTitle = 'Analysis Inconclusive';
+  // Honor the backend's "real verdict" level if available, fallback to score ONLY if missing
+  const score = Math.round(raw.risk_score ?? 0);
+  const rawLevel = (raw.risk_level || '').toUpperCase();
+  
+  if (rawLevel === 'MALICIOUS' || rawLevel === 'HIGH') {
+    riskLevel = 'MALICIOUS';
+  } else if (rawLevel === 'SUSPICIOUS' || rawLevel === 'MEDIUM') {
+    riskLevel = 'SUSPICIOUS';
+  } else if (rawLevel === 'SAFE' || rawLevel === 'LOW') {
+    riskLevel = 'SAFE';
+  } else {
+    // Fallback to score ONLY for unknown/missing levels
+    riskLevel = score >= 70 ? 'MALICIOUS' : score >= 30 ? 'SUSPICIOUS' : 'SAFE';
   }
   
-  if (raw.verdictTitle) {
-    if (riskLevel === 'MALICIOUS' && raw.verdictTitle.toUpperCase().includes('SUSPICIOUS')) {
-      verdictTitle = raw.verdictTitle.replace(/suspicious/i, 'MALICIOUS');
-    } else if (riskLevel === 'SUSPICIOUS' && raw.verdictTitle.toUpperCase().includes('MALICIOUS')) {
-      verdictTitle = raw.verdictTitle.replace(/malicious/i, 'SUSPICIOUS');
-    } else {
-      verdictTitle = raw.verdictTitle;
-    }
-  }
+  // Honor backend title, or use a descriptive default based on the level
+  verdictTitle = raw.verdictTitle || (
+    riskLevel === 'MALICIOUS' ? 'Malicious Threat Detected' :
+    riskLevel === 'SUSPICIOUS' ? 'Suspicious Activity Found' :
+    'Verified Safe Content'
+  );
 
   const reasoning = raw.explanation
     ? raw.explanation.split(/\n+/).filter((s: string) => s.trim().length > 0)
@@ -90,6 +81,8 @@ export function mapToAnalysisResult(raw: BackendScanResponse): AnalysisResult {
     riskScore: Math.round(raw.risk_score),
     riskLevel,
     verdictTitle,
+    functional_category: raw.functional_category,
+    functional_description: raw.functional_description,
     recommendation: raw.recommendation,
     reasoning,
     technicalDetails,

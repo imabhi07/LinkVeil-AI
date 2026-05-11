@@ -32,16 +32,16 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = memo(({ history, mo
     };
 
   return (
-    <div className="glass-panel w-full h-full max-h-[600px] rounded-3xl dark:border-white/10 flex flex-col overflow-hidden transition-colors">
-      <div className="p-5 border-b border-cyber-light-border dark:border-white/10 flex justify-between items-center bg-white/50 dark:bg-white/5 shrink-0">
-        <h3 className="text-cyber-light-heading dark:text-white font-bold text-sm uppercase tracking-wider flex items-center gap-2">
-          <Clock className="w-4 h-4 text-cyber-light-text" />
+    <div className="glass-panel w-full h-full min-h-[400px] md:max-h-[800px] rounded-3xl dark:border-white/10 flex flex-col overflow-hidden transition-colors">
+      <div className="p-4 sm:p-5 border-b border-cyber-light-border dark:border-white/10 flex justify-between items-center bg-white/50 dark:bg-white/5 shrink-0">
+        <h3 className="text-cyber-light-heading dark:text-white font-bold text-xs sm:text-sm uppercase tracking-wider flex items-center gap-2">
+          <Clock className="w-3.5 h-3.5 sm:w-4 h-4 text-cyber-light-text" />
           Recent Scans
         </h3>
         {history.length > 0 && (
           <button
             onClick={onClear}
-            className="text-xs uppercase font-bold text-cyber-light-text hover:text-rose-500 transition-colors flex items-center gap-1.5 px-2 py-1 rounded hover:bg-rose-500/10"
+            className="text-[10px] sm:text-xs uppercase font-bold text-cyber-light-text hover:text-rose-500 transition-colors flex items-center gap-1.5 px-2 py-1 rounded hover:bg-rose-500/10 active:scale-95"
           >
             <Trash2 className="w-3 h-3" />
             Clear Log
@@ -49,9 +49,9 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = memo(({ history, mo
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto p-2 sm:p-3 space-y-2 custom-scrollbar">
         {history.length === 0 ? (
-          <div className="text-center py-12 text-cyber-light-text/70 dark:text-zinc-600 text-sm font-mono border-2 border-dashed border-cyber-light-border dark:border-white/5 rounded-xl mx-2">
+          <div className="text-center py-12 text-cyber-light-text/70 dark:text-zinc-600 text-[10px] sm:text-sm font-mono border-2 border-dashed border-cyber-light-border dark:border-white/5 rounded-xl mx-2">
             NO {mode.toUpperCase()} DATA LOGGED
           </div>
         ) : (
@@ -61,8 +61,10 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = memo(({ history, mo
               ? (item.result?.verdict_label?.toUpperCase() || (item.result as any)?.email_risk_level?.toUpperCase() || 'UNKNOWN') 
               : item.riskLevel;
             const title = isEmail 
-              ? (item.result?.identity?.subject || (item.result as any)?.parsed_email?.subject || 'Untitled Email Analysis')
-              : item.verdictTitle;
+              ? (item.result?.identity?.subject && item.result.identity.subject.trim() !== "" 
+                  ? item.result.identity.subject 
+                  : (item.result as any)?.parsed_email?.subject || 'Forensic Email Session')
+              : (item.verdictTitle || 'URL Forensic Scan');
             const subtitle = isEmail
               ? (item.result?.identity?.from?.email || (item.result as any)?.parsed_email?.from_email || 'Unknown Sender')
               : item.url;
@@ -71,17 +73,17 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = memo(({ history, mo
               <div
                 key={item.id}
                 onClick={() => onSelect(item)}
-                className="p-5 rounded-2xl bg-white/80 dark:bg-zinc-900/40 border border-zinc-100 dark:border-white/10 hover:border-[#00C853]/50 dark:hover:border-ornex-green/50 hover:bg-white dark:hover:bg-black/60 cursor-pointer transition-all active:scale-[0.98] group shadow-sm hover:shadow-xl hover:-translate-y-1"
+                className="p-4 sm:p-5 rounded-2xl bg-white/80 dark:bg-zinc-900/40 border border-zinc-100 dark:border-white/10 hover:border-[#00C853]/50 dark:hover:border-ornex-green/50 hover:bg-white dark:hover:bg-black/60 cursor-pointer transition-all active:scale-[0.98] group shadow-sm hover:shadow-xl hover:-translate-y-0.5"
               >
-                <div className="flex justify-between items-center mb-2">
-                  <div className="flex items-center gap-2">
+                <div className="flex justify-between items-center mb-2 sm:mb-2.5">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
                     {isEmail ? <Mail className="w-3 h-3 text-zinc-400" /> : <Globe className="w-3 h-3 text-zinc-400" />}
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded border ${getLevelColor(riskLevel)}`}>
+                    <span className={`text-[9px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 rounded border ${getLevelColor(riskLevel)}`}>
                       {riskLevel}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-mono text-zinc-500 dark:text-zinc-600 font-medium">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <span className="text-[10px] sm:text-xs font-mono text-zinc-500 dark:text-zinc-600 font-medium">
                       {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                     <button
@@ -89,20 +91,20 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = memo(({ history, mo
                         e.stopPropagation();
                         onDelete(item.id);
                       }}
-                      className="p-1 rounded-md text-cyber-light-text hover:text-rose-500 hover:bg-rose-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                      className="p-1.5 rounded-md text-cyber-light-text hover:text-rose-500 hover:bg-rose-500/10 transition-colors opacity-100 sm:opacity-0 group-hover:opacity-100"
                       title="Delete Scan"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-mono text-zinc-500 dark:text-zinc-400 truncate w-3/4 opacity-80 mb-0.5" title={subtitle}>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[10px] sm:text-xs font-mono text-zinc-500 dark:text-zinc-400 truncate flex-1 opacity-80 mb-0.5" title={subtitle}>
                       {subtitle}
                   </p>
-                  <ArrowUpRight className="w-3 h-3 text-cyber-light-text/40 dark:text-zinc-700 group-hover:text-cyber-light-accent dark:group-hover:text-ornex-green transition-colors" />
+                  <ArrowUpRight className="w-3 h-3 text-cyber-light-text/40 dark:text-zinc-700 group-hover:text-cyber-light-accent dark:group-hover:text-ornex-green transition-colors shrink-0" />
                 </div>
-                <p className="text-sm font-bold text-cyber-light-heading dark:text-zinc-200 truncate">
+                <p className="text-xs sm:text-sm font-bold text-cyber-light-heading dark:text-zinc-200 truncate">
                   {title}
                 </p>
               </div>
