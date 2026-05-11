@@ -4,11 +4,13 @@ from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
 from sqlalchemy.orm import Session
 from backend.app.database import get_db
 from backend.app.models.schemas import URLRequest, ScanResponse, EmailScanRequest, EmailScanResponse
+from backend.app.models.db_models import ScanResult, EmailScanResult
 from backend.app.services.engine_service import evaluate_url
 from backend.app.utils.url_utils import _normalize_url
 from backend.app.services.email_service import ForensicsBrain
 from backend.app.services.email_parser import parse_email_from_string, parse_email_from_bytes
 from backend.app.utils.forensics import generate_scan_id, get_iso_timestamp, ForensicErrorEnvelope, Sanitizer
+import json
 
 SCAN_TIMEOUT = 60.0
 
@@ -20,13 +22,13 @@ async def scan_url(request: URLRequest, db: Session = Depends(get_db)):
     """Legacy URL scan endpoint."""
     url_str = _normalize_url(str(request.url))
     try:
-        verdict = await evaluate_url(url_str, db)
+        verdict = await evaluate_url(url_str, db, force_refresh=request.force_refresh)
         return ScanResponse(**verdict)
     except Exception as e:
         logger.error(f"Engine failure for {url_str}: {e}")
         raise HTTPException(status_code=500, detail=f"Internal engine failure: {str(e)}")
 
-async def _execute_email_analysis(parsed_data: dict, input_type: str, db: Session):
+async def _execute_email_analysis(parsed_data: dict, input_type: str, db: Session, force_refresh: bool = False):
     """
     Forensics++ Pipeline:
     1. Email Heuristics (Intent)
@@ -51,7 +53,7 @@ async def _execute_email_analysis(parsed_data: dict, input_type: str, db: Sessio
             async with semaphore:
                 try:
                     result = await asyncio.wait_for(
-                        evaluate_url(url, db, auth_context=parsed_data.get("auth")), 
+                        evaluate_url(url, db, auth_context=parsed_data.get("auth"), force_refresh=force_refresh), 
                         timeout=SCAN_TIMEOUT
                     )
                     return ScanResponse(**result)
@@ -89,13 +91,17 @@ async def _execute_email_analysis(parsed_data: dict, input_type: str, db: Sessio
     confidence = ForensicsBrain.judge_confidence(parsed_data, link_results)
     
     # 4. Evidence Building (PII Sanitized)
+    from_email = parsed_data.get('identity', {}).get('from', {}).get('email', 'unknown')
+    spf = parsed_data.get('auth', {}).get('spf', 'none')
+    dkim = parsed_data.get('auth', {}).get('dkim', 'none')
+    
     evidence = {
-        "email_header_summary": f"From: {parsed_data['identity']['from']['email']} | Auth: SPF={parsed_data['auth']['spf']}, DKIM={parsed_data['auth']['dkim']}",
-        "top_threat_reasons": email_forensics["reasons"][:3],
+        "email_header_summary": f"From: {from_email} | Auth: SPF={spf}, DKIM={dkim}",
+        "top_threat_reasons": email_forensics.get("reasons", [])[:3],
         "social_engineering_snippet": Sanitizer.scrub(parsed_data.get("clean_body", ""), 200)
     }
 
-    return EmailScanResponse(
+    response = EmailScanResponse(
         scan_id=scan_id,
         scanned_at=scanned_at,
         input_type=input_type,
@@ -120,17 +126,62 @@ async def _execute_email_analysis(parsed_data: dict, input_type: str, db: Sessio
         },
         forensic_errors=forensic_errors,
         triage_stats=parsed_data["triage_stats"],
-        identity=parsed_data["identity"],
-        auth=parsed_data["auth"],
-        html_findings=parsed_data["html_findings"],
-        social_engineering=email_forensics["social_engineering"],
+        identity=parsed_data.get("identity", {}),
+        auth=parsed_data.get("auth", {}),
+        html_findings=parsed_data.get("html_findings", {}),
+        social_engineering=email_forensics.get("social_engineering", {}),
+        functional_description=email_forensics.get("functional_description"),
         evidence=evidence,
         attachments=parsed_data.get("attachments", []),
         link_results=link_results,
         extracted_urls=urls_to_scan,
-        reasons=email_forensics["reasons"],
+        reasons=email_forensics.get("reasons", []),
         unwrap_events=parsed_data.get("unwrap_events", [])
     )
+
+    # 5. Persist to DB for Analytics
+    _save_email_to_db(response, parsed_data, db)
+    
+    return response
+
+def _save_email_to_db(response: EmailScanResponse, parsed_data: dict, db: Session):
+    """Persists email scan result for long-term analytics."""
+    try:
+        # Extract obfuscation techniques from html_findings
+        html_findings = parsed_data.get("html_findings", {})
+        techniques = []
+        if html_findings.get("zero_width_chars_found"): techniques.append("Unicode Obfuscation")
+        if html_findings.get("hidden_html"): techniques.append("Hidden HTML")
+        if html_findings.get("link_mismatches"): techniques.append("Deceptive Hyperlinks")
+        
+        # Check link results for more techniques
+        for r in response.link_results:
+            if r.brand_impersonation: techniques.append("Brand Impersonation")
+            if "shortener" in (r.explanation or "").lower(): techniques.append("Link Shorteners")
+
+        db_email = EmailScanResult(
+            scan_id=response.scan_id,
+            verdict_label=response.verdict_label,
+            final_risk_score=response.final_risk_score,
+            email_risk_score=response.email_risk_score,
+            link_risk_score=response.link_risk_score,
+            se_categories=json.dumps(list(set(m['category'] for m in response.social_engineering.get('matches', [])))),
+            se_score=response.score_linguistic,
+            spf_result=response.auth.get('spf'),
+            dkim_result=response.auth.get('dkim'),
+            dmarc_result=response.auth.get('dmarc'),
+            sender_domain=response.identity.get('from', {}).get('domain'),
+            obfuscation_techniques=json.dumps(list(set(techniques))),
+            analysis_quality=response.analysis_quality,
+            confidence_level=response.confidence.get('level'),
+            links_total=len(response.link_results),
+            links_malicious=len([r for r in response.link_results if r.risk_score >= 70]),
+        )
+        db.add(db_email)
+        db.commit()
+    except Exception as e:
+        logger.error(f"Failed to save email scan to database: {e}")
+        db.rollback()
 
 @router.post("/scan/email", response_model=EmailScanResponse)
 async def scan_email(request: EmailScanRequest, db: Session = Depends(get_db)):
@@ -139,30 +190,38 @@ async def scan_email(request: EmailScanRequest, db: Session = Depends(get_db)):
 
         input_type = "paste"
     else:
-        # Construct identity for manual mode
+        # ── Manual Mode ──
+        # We need to extract links from the body manually since it's not a full MIME message
+        from backend.app.services.email_parser import extract_links_forensic
+        
+        # In manual mode, we treat the body as both HTML and text for maximum extraction coverage
+        link_data = await extract_links_forensic(html_content=request.body or "", text_content=request.body or "")
+        
         parsed_data = {
             "identity": {
+                "subject": request.subject or "Manual Forensic Analysis",
                 "from": {"email": request.from_email, "name": request.from_name, "domain": request.from_email.split('@')[-1] if request.from_email else ""},
                 "reply_to": {"email": request.reply_to} if request.reply_to else None,
                 "mismatches": []
             },
             "auth": {"spf": "none", "dkim": "none", "dmarc": "none"},
-            "html_findings": {"hidden_html": [], "link_mismatches": []},
-            "links": [],
-            "triage_stats": {"total_found": 0, "analyzed": 0, "ignored": 0, "filtered": 0},
+            "html_findings": {"hidden_html": [], "link_mismatches": link_data.get("link_mismatches", [])},
+            "links": link_data.get("urls", []),
+            "triage_stats": link_data.get("triage_stats", {"total_found": 0, "analyzed": 0, "ignored": 0, "filtered": 0}),
             "clean_body": request.body or "",
-            "attachments": []
+            "attachments": [],
+            "unwrap_events": link_data.get("unwrap_events", [])
         }
         input_type = "manual"
         
-    return await _execute_email_analysis(parsed_data, input_type, db)
+    return await _execute_email_analysis(parsed_data, input_type, db, force_refresh=request.force_refresh)
 
 @router.post("/scan/eml", response_model=EmailScanResponse)
-async def scan_eml(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def scan_eml(file: UploadFile = File(...), force_refresh: bool = False, db: Session = Depends(get_db)):
     filename = file.filename or ""
     if not filename.lower().endswith('.eml'):
         raise HTTPException(status_code=400, detail="Only .eml files are supported")
         
     content = await file.read()
     parsed_data = await parse_email_from_bytes(content)
-    return await _execute_email_analysis(parsed_data, "eml", db)
+    return await _execute_email_analysis(parsed_data, "eml", db, force_refresh=force_refresh)
