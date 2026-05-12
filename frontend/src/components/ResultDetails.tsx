@@ -20,16 +20,31 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['agentLog']));
   const [activeScreenshotIndex, setActiveScreenshotIndex] = useState(0);
 
+  // Consolidate all possible screenshot sources into a single deduplicated list
+  const allScreenshots = React.useMemo(() => {
+    const activeProbing = result.agentReport?.activeProbing;
+    const sources = [
+      ...(activeProbing?.screenshots || []),
+      ...(activeProbing?.screenshotPath ? [activeProbing.screenshotPath] : []),
+      ...(result.visual_forensics?.screenshot_path ? [result.visual_forensics.screenshot_path] : [])
+    ].filter(Boolean) as string[];
+    
+    // Use Set to remove duplicates while preserving order
+    return Array.from(new Set(sources));
+  }, [result]);
+
+  // Reset screenshot index when viewing a new result
+  React.useEffect(() => {
+    setActiveScreenshotIndex(0);
+  }, [result.url]);
+
   // Handle keyboard navigation for modal
   React.useEffect(() => {
     if (!isImageModalOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      const activeProbing = result.agentReport?.activeProbing;
-      const screenshots = activeProbing?.screenshots || (activeProbing?.screenshotPath ? [activeProbing.screenshotPath] : []) || (result.visual_forensics?.screenshot_path ? [result.visual_forensics.screenshot_path] : []);
-      
       if (e.key === 'ArrowRight') {
-        setActiveScreenshotIndex(prev => (prev < screenshots.length - 1 ? prev + 1 : prev));
+        setActiveScreenshotIndex(prev => (prev < allScreenshots.length - 1 ? prev + 1 : prev));
       } else if (e.key === 'ArrowLeft') {
         setActiveScreenshotIndex(prev => (prev > 0 ? prev - 1 : prev));
       } else if (e.key === 'Escape') {
@@ -39,7 +54,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isImageModalOpen, result]);
+  }, [isImageModalOpen, allScreenshots]);
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => {
@@ -109,10 +124,10 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
           result.riskLevel === 'MALICIOUS' ? 'bg-rose-500/10 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20' :
           'bg-zinc-100 dark:bg-zinc-500/20 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-500/20'
         }`}>
-          {result.riskLevel === 'SAFE' ? <ShieldCheck className="w-6 h-6 sm:w-7 h-7" /> :
-           result.riskLevel === 'SUSPICIOUS' ? <AlertTriangle className="w-6 h-6 sm:w-7 h-7" /> :
-           result.riskLevel === 'MALICIOUS' ? <ShieldX className="w-6 h-6 sm:w-7 h-7" /> :
-           <Activity className="w-6 h-6 sm:w-7 h-7" />}
+          {result.riskLevel === 'SAFE' ? <ShieldCheck className="w-6 h-6 sm:w-7 sm:h-7" /> :
+           result.riskLevel === 'SUSPICIOUS' ? <AlertTriangle className="w-6 h-6 sm:w-7 sm:h-7" /> :
+           result.riskLevel === 'MALICIOUS' ? <ShieldX className="w-6 h-6 sm:w-7 sm:h-7" /> :
+           <Activity className="w-6 h-6 sm:w-7 sm:h-7" />}
         </div>
         
         <div className="flex-1 relative z-10 text-center sm:text-left">
@@ -126,13 +141,13 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
           </p>
           <h2 className="text-lg sm:text-xl md:text-2xl font-bold font-tektur tracking-tight text-zinc-900 dark:text-white/90 leading-tight mb-2 sm:mb-2.5">
             {result.riskLevel === 'SAFE' ? (
-               result.agentReport.activeProbing?.reachable === false 
+               result.agentReport?.activeProbing?.reachable === false 
                  ? 'SAFE TO IGNORE - TARGET OFFLINE' 
                  : 'PROCEED - VERIFIED SAFE'
              ) :
              result.riskLevel === 'SUSPICIOUS' ? 'PROCEED WITH CAUTION' :
              result.riskLevel === 'MALICIOUS' ? (
-               result.agentReport.activeProbing?.reachable === false 
+               result.agentReport?.activeProbing?.reachable === false 
                  ? 'DORMANT THREAT - DO NOT OPEN' 
                  : 'DANGEROUS - DO NOT OPEN'
              ) :
@@ -140,12 +155,12 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
           </h2>
           <p className="text-[12px] sm:text-[13.5px] font-semibold text-zinc-700 dark:text-white/60 leading-relaxed tracking-wide">
              {result.riskLevel === 'SAFE' ? 
-               (result.agentReport.activeProbing?.reachable === false 
+               (result.agentReport?.activeProbing?.reachable === false 
                  ? 'This domain is currently unreachable and poses no active threat to your systems.' 
                  : 'Our forensic engines have cleared this target. No malicious intent or brand impersonation was detected.') :
               result.riskLevel === 'SUSPICIOUS' ? 'Advanced heuristics detected structural anomalies. Verify the destination and sender before proceeding.' :
               result.riskLevel === 'MALICIOUS' ? 
-               (result.agentReport.activeProbing?.reachable === false 
+               (result.agentReport?.activeProbing?.reachable === false 
                  ? 'This is a confirmed malicious domain that is currently offline. Do not attempt to visit if it returns online.' 
                  : 'PhishGuard identifies this as an active phishing trap. Accessing this link will compromise your security.') :
               'Forensic signal fusion is incomplete due to engine timeouts. A manual review of technical details is recommended.'}
@@ -174,16 +189,16 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                   result.riskLevel === 'MALICIOUS' ? 'bg-rose-500' :
                   'bg-zinc-500'
                 }`} />
-                <div className={`w-16 h-16 sm:w-20 h-20 rounded-2xl sm:rounded-3xl flex items-center justify-center border-2 backdrop-blur-xl relative z-10 transition-transform duration-500 group-hover/icon:scale-110 group-hover/icon:rotate-3 shadow-2xl ${
+                <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl flex items-center justify-center border-2 backdrop-blur-xl relative z-10 transition-transform duration-500 group-hover/icon:scale-110 group-hover/icon:rotate-3 shadow-2xl ${
                   result.riskLevel === 'SAFE' ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-600 dark:text-emerald-500 shadow-emerald-500/20' :
                   result.riskLevel === 'SUSPICIOUS' ? 'bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-400 border-amber-500/20 shadow-amber-500/20' :
                   result.riskLevel === 'MALICIOUS' ? 'bg-rose-500/10 border-rose-500/40 text-rose-600 dark:text-rose-500 shadow-rose-500/20 active-hazard-glow' :
                   'bg-zinc-500/10 border-zinc-500/40 text-zinc-500'
                 }`}>
-                  {result.riskLevel === 'SAFE' ? <ShieldCheck className="w-8 h-8 sm:w-10 h-10" /> :
-                   result.riskLevel === 'SUSPICIOUS' ? <AlertTriangle className="w-8 h-8 sm:w-10 h-10" /> :
-                   result.riskLevel === 'MALICIOUS' ? <ShieldX className="w-8 h-8 sm:w-10 h-10" /> :
-                   <Activity className="w-8 h-8 sm:w-10 h-10" />}
+                  {result.riskLevel === 'SAFE' ? <ShieldCheck className="w-8 h-8 sm:w-10 sm:h-10" /> :
+                   result.riskLevel === 'SUSPICIOUS' ? <AlertTriangle className="w-8 h-8 sm:w-10 sm:h-10" /> :
+                   result.riskLevel === 'MALICIOUS' ? <ShieldX className="w-8 h-8 sm:w-10 sm:h-10" /> :
+                   <Activity className="w-8 h-8 sm:w-10 sm:h-10" />}
                 </div>
               </div>
               
@@ -223,7 +238,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                     {result.verdictTitle}
                   </h1>
                   <div className="flex items-center justify-center md:justify-start gap-2.5 opacity-60 group-hover:opacity-100 transition-all duration-300">
-                    <Globe className="w-3.5 h-3.5 sm:w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+                    <Globe className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-zinc-500 dark:text-zinc-400" />
                     <p className="text-[11px] sm:text-[12.5px] font-mono font-bold text-zinc-600 dark:text-zinc-300 truncate max-w-[280px] sm:max-w-xl tracking-tighter">
                       {result.url}
                     </p>
@@ -286,7 +301,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
               </h3>
               <div className="flex items-center gap-4">
                 <div className="flex gap-2">
-                  {result.agentReport.activeProbing?.reachable ? (
+                  {result.agentReport?.activeProbing?.reachable ? (
                      <span className="px-2 py-1 rounded-md bg-cyber-light-accent-bg dark:bg-emerald-500/10 text-cyber-light-accent-deep dark:text-ornex-green text-xs font-bold border border-cyber-light-accent/20">LIVE</span>
                   ) : (
                      <span className="px-2 py-1 rounded-md bg-zinc-500/10 text-zinc-500 text-xs font-bold border border-zinc-500/20">OFFLINE</span>
@@ -315,8 +330,8 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                       </div>
                       <div className="mt-2 pt-2 border-t border-cyber-light-border dark:border-white/10">
                          <p className="text-cyber-light-text dark:text-zinc-400 mb-1">Outcome:</p>
-                         <p className={`text-[11px] leading-relaxed font-bold break-words ${result.agentReport.activeProbing?.behaviorRisk === 'HIGH' ? 'text-rose-500' : 'text-cyber-light-heading dark:text-zinc-300'}`}>
-                            {result.agentReport.activeProbing?.outcome || 'Session Terminated'}
+                         <p className={`text-[11px] leading-relaxed font-bold break-words ${result.agentReport?.activeProbing?.behaviorRisk === 'HIGH' ? 'text-rose-500' : 'text-cyber-light-heading dark:text-zinc-300'}`}>
+                            {result.agentReport?.activeProbing?.outcome || 'Session Terminated'}
                          </p>
                       </div>
                    </div>
@@ -365,9 +380,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                   </InfoTip>
                    <div className="relative group/screenshot overflow-hidden rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-zinc-900/50 aspect-video">
                     {(() => {
-                      const activeProbing = result.agentReport?.activeProbing;
-                      const screenshots = activeProbing?.screenshots || (activeProbing?.screenshotPath ? [activeProbing.screenshotPath] : []) || (result.visual_forensics?.screenshot_path ? [result.visual_forensics.screenshot_path] : []);
-                      const screenshotPath = screenshots[activeScreenshotIndex];
+                      const screenshotPath = allScreenshots[activeScreenshotIndex];
                       
                       if (screenshotPath) {
                         return (
@@ -384,7 +397,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                               />
 
                               {/* Navigation Arrows */}
-                              {screenshots.length > 1 && (
+                              {allScreenshots.length > 1 && (
                                 <>
                                   <button 
                                     onClick={(e) => {
@@ -399,10 +412,10 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                                   <button 
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      if (activeScreenshotIndex < screenshots.length - 1) setActiveScreenshotIndex(prev => prev + 1);
+                                      if (activeScreenshotIndex < allScreenshots.length - 1) setActiveScreenshotIndex(prev => prev + 1);
                                     }}
-                                    disabled={activeScreenshotIndex === screenshots.length - 1}
-                                    className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/40 hover:bg-black/80 text-white opacity-0 group-hover/main-img:opacity-100 transition-all backdrop-blur-sm border border-white/10 ${activeScreenshotIndex === screenshots.length - 1 ? 'cursor-not-allowed opacity-0' : 'cursor-pointer'}`}
+                                    disabled={activeScreenshotIndex === allScreenshots.length - 1}
+                                    className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/40 hover:bg-black/80 text-white opacity-0 group-hover/main-img:opacity-100 transition-all backdrop-blur-sm border border-white/10 ${activeScreenshotIndex === allScreenshots.length - 1 ? 'cursor-not-allowed opacity-0' : 'cursor-pointer'}`}
                                   >
                                     <ChevronRight className="w-4 h-4" />
                                   </button>
@@ -412,15 +425,15 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                               {/* Stage Label */}
                               <div className="absolute top-3 left-3 px-3 py-1 rounded-lg bg-ornex-green/90 text-black text-[9px] font-black uppercase tracking-[0.1em] shadow-[0_0_15px_rgba(57,255,20,0.4)] pointer-events-none">
                                 {activeScreenshotIndex === 0 ? 'Initial Load' : 
-                                 activeScreenshotIndex === screenshots.length - 1 ? 'Final State' : 
+                                 activeScreenshotIndex === allScreenshots.length - 1 ? 'Final State' : 
                                  `Submission Step ${activeScreenshotIndex}`}
                               </div>
                             </div>
 
                             {/* Thumbnail Gallery (Stacked) */}
-                            {screenshots.length > 1 && (
+                            {allScreenshots.length > 1 && (
                               <div className="flex gap-2 mt-3 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-white/10">
-                                {screenshots.map((s, idx) => (
+                                {allScreenshots.map((s, idx) => (
                                   <button
                                     key={idx}
                                     onClick={() => setActiveScreenshotIndex(idx)}
@@ -436,7 +449,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                                       alt={`Stage ${idx}`}
                                     />
                                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                                      <span className="text-[8px] font-black text-white">{idx === 0 ? 'START' : idx === screenshots.length - 1 ? 'END' : idx}</span>
+                                      <span className="text-[8px] font-black text-white">{idx === 0 ? 'START' : idx === allScreenshots.length - 1 ? 'END' : idx}</span>
                                     </div>
                                   </button>
                                 ))}
@@ -549,7 +562,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                  {/* Key Findings */}
                  <div className="rounded-2xl p-5 sm:p-6 bg-white/50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-white/5 relative overflow-hidden">
                    <div className="absolute top-0 right-0 p-3 opacity-5 pointer-events-none">
-                       <Activity className="w-16 h-16 sm:w-24 h-24" />
+                       <Activity className="w-16 h-16 sm:w-24 sm:h-24" />
                    </div>
                    <h4 className="text-[10px] sm:text-xs font-bold text-cyber-light-heading dark:text-white flex items-center gap-2 mb-4 uppercase tracking-[0.05em] opacity-80">
                      Core Forensic Indicators
@@ -558,7 +571,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                      {result.reasoning && result.reasoning.length > 0 ? (
                        result.reasoning.map((reason, idx) => (
                          <li key={idx} className="flex items-start gap-3 sm:gap-4 text-cyber-light-text dark:text-zinc-300 group/finding">
-                           <ArrowRight className="w-3.5 h-3.5 sm:w-4 h-4 text-cyber-light-text/50 dark:text-zinc-600 mt-0.5 sm:mt-1 flex-shrink-0 group-hover/finding:text-cyber-light-accent dark:group-hover/finding:text-ornex-green transition-colors" />
+                           <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyber-light-text/50 dark:text-zinc-600 mt-0.5 sm:mt-1 flex-shrink-0 group-hover/finding:text-cyber-light-accent dark:group-hover/finding:text-ornex-green transition-colors" />
                            <span className="text-[12px] sm:text-sm leading-relaxed">{reason}</span>
                          </li>
                        ))
@@ -571,16 +584,16 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                  {/* Advice */}
                   <div className="rounded-2xl p-5 sm:p-6 border border-cyber-light-accent/30 bg-cyber-light-accent/5 dark:bg-zinc-900/40 shadow-[0_0_40px_rgba(0,200,83,0.05)] relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-                       <ShieldCheck className="w-16 h-16 sm:w-24 h-24 text-cyber-light-accent" />
+                       <ShieldCheck className="w-16 h-16 sm:w-24 sm:h-24 text-cyber-light-accent" />
                     </div>
                     <h4 className="text-[10px] sm:text-xs font-bold text-cyber-light-accent-deep dark:text-ornex-green flex items-center gap-2 mb-4 uppercase tracking-[0.05em] opacity-90">
-                      <ShieldCheck className="w-3.5 h-3.5 sm:w-4 h-4" />
+                      <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       Mitigation Advice
                     </h4>
                     <div className="grid grid-cols-1 gap-3 sm:gap-4">
                        {(result.mitigationAdvice && result.mitigationAdvice.length > 0) ? result.mitigationAdvice.map((advice, idx) => (
                          <div key={idx} className="flex items-start gap-3 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white/60 dark:bg-zinc-900/60 border border-cyber-light-accent/30 backdrop-blur-md shadow-sm">
-                            <div className="w-5 h-5 sm:w-6 h-6 rounded-full bg-cyber-light-accent/10 dark:bg-ornex-green/10 flex items-center justify-center flex-shrink-0 text-cyber-light-accent dark:text-ornex-green font-bold text-[10px] sm:text-xs">
+                            <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-cyber-light-accent/10 dark:bg-ornex-green/10 flex items-center justify-center flex-shrink-0 text-cyber-light-accent dark:text-ornex-green font-bold text-[10px] sm:text-xs">
                                {idx + 1}
                             </div>
                             <p className="text-[12px] sm:text-sm text-cyber-light-text dark:text-zinc-300 leading-snug">
@@ -620,14 +633,8 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
               onClick={(e) => e.stopPropagation()}
             >
               {(() => {
-                const activeProbing = result.agentReport?.activeProbing;
-                const screenshots = [
-                  ...(activeProbing?.screenshots || []),
-                  ...(activeProbing?.screenshotPath ? [activeProbing.screenshotPath] : []),
-                  ...(result.visual_forensics?.screenshot_path ? [result.visual_forensics.screenshot_path] : [])
-                ].filter(Boolean) as string[];
                 
-                const screenshotPath = screenshots[activeScreenshotIndex];
+                const screenshotPath = allScreenshots[activeScreenshotIndex];
                 
                 if (!screenshotPath) return null;
 
@@ -640,7 +647,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                     />
                     
                     {/* Modal Navigation Arrows */}
-                    {screenshots.length > 1 && (
+                    {allScreenshots.length > 1 && (
                       <>
                         <button 
                           onClick={(e) => {
@@ -651,25 +658,25 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                           className={`fixed left-2 sm:left-8 top-1/2 -translate-y-1/2 p-3 sm:p-5 rounded-full bg-white/5 hover:bg-white/20 text-white transition-all backdrop-blur-md border border-white/10 shadow-2xl group ${activeScreenshotIndex === 0 ? 'opacity-10 cursor-not-allowed' : 'opacity-100 cursor-pointer'}`}
                           title="Previous (Left Arrow)"
                         >
-                          <ChevronLeft className="w-6 h-6 sm:w-8 h-8 group-hover:-translate-x-1 transition-transform" />
+                          <ChevronLeft className="w-6 h-6 sm:w-8 sm:h-8 group-hover:-translate-x-1 transition-transform" />
                         </button>
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (activeScreenshotIndex < screenshots.length - 1) setActiveScreenshotIndex(prev => prev + 1);
+                            if (activeScreenshotIndex < allScreenshots.length - 1) setActiveScreenshotIndex(prev => prev + 1);
                           }}
-                          disabled={activeScreenshotIndex === screenshots.length - 1}
-                          className={`fixed right-2 sm:right-8 top-1/2 -translate-y-1/2 p-3 sm:p-5 rounded-full bg-white/5 hover:bg-white/20 text-white transition-all backdrop-blur-md border border-white/10 shadow-2xl group ${activeScreenshotIndex === screenshots.length - 1 ? 'opacity-10 cursor-not-allowed' : 'opacity-100 cursor-pointer'}`}
+                          disabled={activeScreenshotIndex === allScreenshots.length - 1}
+                          className={`fixed right-2 sm:right-8 top-1/2 -translate-y-1/2 p-3 sm:p-5 rounded-full bg-white/5 hover:bg-white/20 text-white transition-all backdrop-blur-md border border-white/10 shadow-2xl group ${activeScreenshotIndex === allScreenshots.length - 1 ? 'opacity-10 cursor-not-allowed' : 'opacity-100 cursor-pointer'}`}
                           title="Next (Right Arrow)"
                         >
-                          <ChevronRight className="w-6 h-6 sm:w-8 h-8 group-hover:translate-x-1 transition-transform" />
+                          <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8 group-hover:translate-x-1 transition-transform" />
                         </button>
 
                         {/* Modal Pagination Info */}
                         <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-[10px] sm:text-xs font-bold text-white/90 tracking-widest flex items-center gap-3">
                            <span className="text-ornex-green">{activeScreenshotIndex + 1}</span>
                            <span className="opacity-30">/</span>
-                           <span>{screenshots.length}</span>
+                           <span>{allScreenshots.length}</span>
                         </div>
                       </>
                     )}
@@ -677,7 +684,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                     {/* Modal Stage Label */}
                     <div className="absolute top-6 left-6 px-4 py-1.5 rounded-xl bg-ornex-green text-black text-[11px] font-black uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(57,255,20,0.4)] pointer-events-none">
                       {activeScreenshotIndex === 0 ? 'Initial Load' : 
-                       activeScreenshotIndex === screenshots.length - 1 ? 'Final State' : 
+                       activeScreenshotIndex === allScreenshots.length - 1 ? 'Final State' : 
                        `Submission Step ${activeScreenshotIndex}`}
                     </div>
                   </div>
