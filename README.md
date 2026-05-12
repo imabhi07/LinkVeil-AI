@@ -33,7 +33,7 @@ LinkVeil-AI is an advanced, multi-layered security platform that provides real-t
 
 ## 🏗️ Architecture at a Glance
 
-![LinkVeil-AI Architecture](docs/assets/architecture-LinkVeilAI-v1.png)
+![LinkVeil-AI Architecture](docs/assets/linkveil-ai-architecture.svg)
 
 *A multi-layered defense strategy combining behavioral, lexical, and semantic intelligence.*
 

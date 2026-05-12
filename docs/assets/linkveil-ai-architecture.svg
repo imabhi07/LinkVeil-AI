@@ -1,0 +1,241 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1180" width="1000" height="1180" font-family="ui-sans-serif, system-ui, sans-serif">
+  <defs>
+    <linearGradient id="a" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#050a07"/>
+      <stop offset="50%" stop-color="#071b10"/>
+      <stop offset="100%" stop-color="#06110b"/>
+    </linearGradient>
+    <linearGradient id="c" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#22c55e" stop-opacity=".15"/>
+      <stop offset="50%" stop-color="#a78bfa" stop-opacity=".12"/>
+      <stop offset="100%" stop-color="#22d3ee" stop-opacity=".12"/>
+    </linearGradient>
+    <marker id="b" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="m2 1 6 4-6 4" fill="none" stroke="rgba(34,197,94,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <path fill="url(#a)" d="M0 0h1000v1180H0z"/>
+  <path stroke="rgba(34,197,94,0.04)" d="M0 200h1000M0 620h1000"/>
+  <path stroke="rgba(34,197,94,0.03)" d="M500 0v1180"/>
+  <text x="500" y="38" text-anchor="middle" font-size="11" font-weight="700" fill="#22c55e" letter-spacing="3" font-family="ui-monospace, monospace">⬡ LINKVEIL-AI · SYSTEM ARCHITECTURE</text>
+  <text x="500" y="56" text-anchor="middle" font-size="9" fill="#4b5563" letter-spacing="1">Defense-in-depth phishing forensics · Quad-model ensemble · URL + Email pipelines · Explainable fusion verdict</text>
+  <rect x="42" y="65" width="90" height="16" rx="8" fill="rgba(34,197,94,0.08)" stroke="rgba(34,197,94,0.25)" stroke-width=".8"/>
+  <text x="87" y="76" text-anchor="middle" font-size="8" fill="#22c55e" font-family="ui-monospace,monospace">React 19 / Vite</text>
+  <rect x="138" y="65" width="108" height="16" rx="8" fill="rgba(34,197,94,0.08)" stroke="rgba(34,197,94,0.25)" stroke-width=".8"/>
+  <text x="192" y="76" text-anchor="middle" font-size="8" fill="#22c55e" font-family="ui-monospace,monospace">FastAPI Orchestrator</text>
+  <rect x="252" y="65" width="120" height="16" rx="8" fill="rgba(34,197,94,0.08)" stroke="rgba(34,197,94,0.25)" stroke-width=".8"/>
+  <text x="312" y="76" text-anchor="middle" font-size="8" fill="#22c55e" font-family="ui-monospace,monospace">XGBoost + DistilBERT</text>
+  <rect x="378" y="65" width="100" height="16" rx="8" fill="rgba(34,197,94,0.08)" stroke="rgba(34,197,94,0.25)" stroke-width=".8"/>
+  <text x="428" y="76" text-anchor="middle" font-size="8" fill="#22c55e" font-family="ui-monospace,monospace">Playwright Probe</text>
+  <rect x="484" y="65" width="130" height="16" rx="8" fill="rgba(34,197,94,0.08)" stroke="rgba(34,197,94,0.25)" stroke-width=".8"/>
+  <text x="549" y="76" text-anchor="middle" font-size="8" fill="#22c55e" font-family="ui-monospace,monospace">Gemini LLM + Vision</text>
+  <rect x="620" y="65" width="108" height="16" rx="8" fill="rgba(34,197,94,0.08)" stroke="rgba(34,197,94,0.25)" stroke-width=".8"/>
+  <text x="674" y="76" text-anchor="middle" font-size="8" fill="#22c55e" font-family="ui-monospace,monospace">Email Forensics</text>
+  <rect x="734" y="65" width="100" height="16" rx="8" fill="rgba(34,197,94,0.08)" stroke="rgba(34,197,94,0.25)" stroke-width=".8"/>
+  <text x="784" y="76" text-anchor="middle" font-size="8" fill="#22c55e" font-family="ui-monospace,monospace">SSRF Hardening</text>
+  <rect x="40" y="96" width="420" height="68" rx="10" fill="rgba(10,18,13,0.8)" stroke="rgba(34,197,94,0.35)"/>
+  <text x="56" y="112" font-size="8" font-weight="700" fill="#22c55e" letter-spacing="2" font-family="ui-monospace,monospace">INPUT · ACTOR</text>
+  <text x="56" y="128" font-size="12" font-weight="700" fill="#e5e7eb">User / Analyst</text>
+  <text x="56" y="143" font-size="9" fill="#6b7280">Submits URL or email evidence (.eml / raw text / manual fields)</text>
+  <text x="56" y="157" font-size="9" fill="#6b7280">and reviews explainable forensic output</text>
+  <rect x="468" y="96" width="492" height="68" rx="10" fill="rgba(10,18,13,0.8)" stroke="rgba(167,139,250,0.35)"/>
+  <text x="484" y="112" font-size="8" font-weight="700" fill="#a78bfa" letter-spacing="2" font-family="ui-monospace,monospace">FRONTEND · React 19 + Vite + TypeScript + TailwindCSS v4</text>
+  <text x="484" y="128" font-size="12" font-weight="700" fill="#e5e7eb">Forensic Dashboard</text>
+  <text x="484" y="143" font-size="9" fill="#6b7280">URL scan · Email scan (manual/paste/.eml) · Real-time progress + risk gauge</text>
+  <text x="484" y="157" font-size="9" fill="#6b7280">Analytics overlay · History sidebar · InfoTip explainability (ARIA-friendly)</text>
+  <path stroke="rgba(34,197,94,0.4)" stroke-width="1.5" d="M250 164v26"/>
+  <path stroke="rgba(167,139,250,0.4)" stroke-width="1.5" d="M714 164v26"/>
+  <path stroke="rgba(34,197,94,0.25)" stroke-dasharray="4 3" d="M250 190h250"/>
+  <path stroke="rgba(167,139,250,0.25)" stroke-dasharray="4 3" d="M714 190H500"/>
+  <path stroke="rgba(34,197,94,0.4)" stroke-width="1.5" marker-end="url(#b)" d="M500 190v10"/>
+  <rect x="40" y="200" width="920" height="78" rx="10" fill="rgba(10,18,13,0.85)" stroke="rgba(34,211,238,0.4)"/>
+  <text x="56" y="216" font-size="8" font-weight="700" fill="#22d3ee" letter-spacing="2" font-family="ui-monospace,monospace">ORCHESTRATOR · Python 3.11+ · asyncio · Pydantic</text>
+  <text x="56" y="232" font-size="13" font-weight="700" fill="#e5e7eb">FastAPI Orchestrator</text>
+  <text x="56" y="247" font-size="9" fill="#6b7280">Async parallel fan-out to engines · timeout guards · graceful degradation · score fusion · fusion_trace exposure</text>
+  <rect x="56" y="254" width="110" height="14" rx="4" fill="rgba(34,211,238,0.06)" stroke="rgba(255,255,255,0.08)" stroke-width=".6"/>
+  <text x="111" y="264" text-anchor="middle" font-size="8" fill="#22d3ee" font-family="ui-monospace,monospace">POST /api/scan</text>
+  <rect x="172" y="254" width="136" height="14" rx="4" fill="rgba(34,211,238,0.06)" stroke="rgba(255,255,255,0.08)" stroke-width=".6"/>
+  <text x="240" y="264" text-anchor="middle" font-size="8" fill="#22d3ee" font-family="ui-monospace,monospace">POST /api/scan/email</text>
+  <rect x="314" y="254" width="126" height="14" rx="4" fill="rgba(34,211,238,0.06)" stroke="rgba(255,255,255,0.08)" stroke-width=".6"/>
+  <text x="377" y="264" text-anchor="middle" font-size="8" fill="#22d3ee" font-family="ui-monospace,monospace">POST /api/scan/eml</text>
+  <rect x="446" y="254" width="122" height="14" rx="4" fill="rgba(34,211,238,0.06)" stroke="rgba(255,255,255,0.08)" stroke-width=".6"/>
+  <text x="507" y="264" text-anchor="middle" font-size="8" fill="#22d3ee" font-family="ui-monospace,monospace">GET /api/analytics/</text>
+  <rect x="574" y="254" width="148" height="14" rx="4" fill="rgba(34,211,238,0.06)" stroke="rgba(255,255,255,0.08)" stroke-width=".6"/>
+  <text x="648" y="264" text-anchor="middle" font-size="8" fill="#22d3ee" font-family="ui-monospace,monospace">GET /api/analytics/scans</text>
+  <path stroke="rgba(34,197,94,0.3)" stroke-width="1.2" d="M500 278v10"/>
+  <path stroke="rgba(34,197,94,0.2)" d="M220 288h560"/>
+  <path stroke="rgba(34,197,94,0.4)" stroke-width="1.5" marker-end="url(#b)" d="M220 288v34"/>
+  <path stroke="rgba(251,146,60,0.4)" stroke-width="1.5" marker-end="url(#b)" d="M780 288v34"/>
+  <text x="500" y="308" text-anchor="middle" font-size="7.5" fill="#374151" letter-spacing="2" font-family="ui-monospace,monospace">PARALLEL ASYNC FAN-OUT</text>
+  <rect x="40" y="322" width="440" height="138" rx="10" fill="rgba(10,18,13,0.8)" stroke="rgba(34,197,94,0.35)"/>
+  <circle cx="58" cy="340" r="5" fill="#22c55e" opacity=".8"/>
+  <text x="70" y="344" font-size="9" font-weight="700" fill="#22c55e" letter-spacing="2" font-family="ui-monospace,monospace">URL FORENSIC PIPELINE</text>
+  <text x="56" y="360" font-size="8" fill="#4b5563" font-family="ui-monospace,monospace">Trigger: POST /api/scan</text>
+  <text x="56" y="378" font-size="9" fill="#a1a1aa">① URL feature extraction </text>
+  <text x="56" y="398" font-size="9" fill="#a1a1aa">② Parallel engine fan-out </text>
+  <text x="56" y="418" font-size="9" fill="#a1a1aa">③ Evidence aggregation → score fusion → explainable verdict</text>
+  <rect x="56" y="434" width="88" height="13" rx="4" fill="rgba(251,146,60,0.07)" stroke="rgba(251,146,60,0.2)" stroke-width=".6"/>
+  <text x="100" y="443" text-anchor="middle" font-size="7.5" fill="#fb923c" font-family="ui-monospace,monospace">NFKC normalization</text>
+  <rect x="150" y="434" width="80" height="13" rx="4" fill="rgba(251,146,60,0.07)" stroke="rgba(251,146,60,0.2)" stroke-width=".6"/>
+  <text x="190" y="443" text-anchor="middle" font-size="7.5" fill="#fb923c" font-family="ui-monospace,monospace">Base64 fallback</text>
+  <rect x="236" y="434" width="62" height="13" rx="4" fill="rgba(251,146,60,0.07)" stroke="rgba(251,146,60,0.2)" stroke-width=".6"/>
+  <text x="267" y="443" text-anchor="middle" font-size="7.5" fill="#fb923c" font-family="ui-monospace,monospace">SSRF gate</text>
+  <rect x="520" y="322" width="440" height="143" rx="10" fill="rgba(10,18,13,0.8)" stroke="rgba(251,146,60,0.35)"/>
+  <circle cx="538" cy="340" r="5" fill="#fb923c" opacity=".8"/>
+  <text x="550" y="344" font-size="9" font-weight="700" fill="#fb923c" letter-spacing="2" font-family="ui-monospace,monospace">EMAIL FORENSIC PIPELINE</text>
+  <text x="536" y="360" font-size="8" fill="#4b5563" font-family="ui-monospace,monospace">Trigger: POST /api/scan/email · /api/scan/eml</text>
+  <text x="536" y="378" font-size="9" fill="#a1a1aa">① Parse headers + body — SPF/DKIM checks, spoofing</text>
+  <text x="536" y="391" font-size="9" fill="#6b7280">   heuristics, urgency signals, Reply-To mismatch</text>
+  <text x="536" y="406" font-size="9" fill="#a1a1aa">② Link triage — classify, unwrap redirect wrappers</text>
+  <text x="536" y="419" font-size="9" fill="#a1a1aa">③ Privacy guard — PII scrub, SSRF hardening on all links</text>
+  <text x="536" y="434" font-size="9" fill="#a1a1aa">④ Selected links → URL pipeline → aggregate to email verdict</text>
+  <rect x="536" y="444" width="70" height="13" rx="4" fill="rgba(251,146,60,0.07)" stroke="rgba(251,146,60,0.2)" stroke-width=".6"/>
+  <text x="571" y="453" text-anchor="middle" font-size="7.5" fill="#fb923c" font-family="ui-monospace,monospace">PII scrubbing</text>
+  <rect x="612" y="444" width="120" height="13" rx="4" fill="rgba(251,146,60,0.07)" stroke="rgba(251,146,60,0.2)" stroke-width=".6"/>
+  <text x="672" y="453" text-anchor="middle" font-size="7.5" fill="#fb923c" font-family="ui-monospace,monospace">Shared-hosting aware</text>
+  <rect x="738" y="444" width="80" height="13" rx="4" fill="rgba(251,146,60,0.07)" stroke="rgba(251,146,60,0.2)" stroke-width=".6"/>
+  <text x="778" y="453" text-anchor="middle" font-size="7.5" fill="#fb923c" font-family="ui-monospace,monospace">Newsletter damp.</text>
+  <path stroke="rgba(34,197,94,0.4)" stroke-width="1.5" d="M260 460v16"/>
+  <path stroke="rgba(251,146,60,0.4)" stroke-width="1.5" d="M740 460v16"/>
+  <path stroke="rgba(34,197,94,0.25)" stroke-dasharray="4 3" d="M260 476h240"/>
+  <path stroke="rgba(251,146,60,0.25)" stroke-dasharray="4 3" d="M740 476H500"/>
+  <path stroke="rgba(34,197,94,0.4)" stroke-width="1.5" marker-end="url(#b)" d="M500 476v10"/>
+  <text x="500" y="498" text-anchor="middle" font-size="7.5" fill="#374151" letter-spacing="2" font-family="ui-monospace,monospace">PARALLEL ASYNC ENGINES</text>
+  <rect x="40" y="503" width="920" height="18" rx="4" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.06)" stroke-width=".5"/>
+  <text x="500" y="515" text-anchor="middle" dominant-baseline="central" font-size="8" font-weight="700" fill="#4b5563" letter-spacing="3" font-family="ui-monospace,monospace">PARALLEL ENGINES · 7 MODELS · ALL ASYNC WITH TIMEOUT GUARDS</text>
+  <rect x="40" y="526" width="218" height="118" rx="9" fill="rgba(10,18,13,0.85)" stroke="rgba(34,197,94,0.32)"/>
+  <text x="56" y="542" font-size="7.5" font-weight="700" fill="#22c55e" letter-spacing="2" font-family="ui-monospace,monospace">ML · XGBoost</text>
+  <text x="56" y="557" font-size="11" font-weight="700" fill="#e5e7eb">Lexical Engine</text>
+  <text x="56" y="573" font-size="8.5" fill="#a1a1aa">in:  URL string features</text>
+  <text x="56" y="586" font-size="8.5" fill="#a1a1aa">out: xgb_prob (0–1) · lexical flags</text>
+  <path stroke="rgba(255,255,255,0.06)" stroke-width=".5" d="M56 593h186"/>
+  <text x="56" y="605" font-size="8" fill="#6b7280">entropy · char freq · TLD risk</text>
+  <text x="56" y="617" font-size="8" fill="#6b7280">suspicious keyword flags</text>
+  <text x="56" y="629" font-size="8" fill="#6b7280">Unicode NFKC normalization</text>
+  <rect x="264" y="526" width="218" height="118" rx="9" fill="rgba(10,18,13,0.85)" stroke="rgba(34,211,238,0.32)"/>
+  <text x="280" y="542" font-size="7.5" font-weight="700" fill="#22d3ee" letter-spacing="2" font-family="ui-monospace,monospace">DEEP LEARNING · DistilBERT</text>
+  <text x="280" y="557" font-size="11" font-weight="700" fill="#e5e7eb">Semantic Engine</text>
+  <text x="280" y="573" font-size="8.5" fill="#a1a1aa">in:  URL text tokens</text>
+  <text x="280" y="586" font-size="8.5" fill="#a1a1aa">out: bert_prob (0–1) · intent signal</text>
+  <path stroke="rgba(255,255,255,0.06)" stroke-width=".5" d="M280 593h186"/>
+  <text x="280" y="605" font-size="8" fill="#6b7280">semantic intent detection</text>
+  <text x="280" y="617" font-size="8" fill="#6b7280">brand-like phrasing signals</text>
+  <text x="280" y="629" font-size="8" fill="#6b7280">weights: ml/models/distilbert-phish/</text>
+  <rect x="488" y="526" width="218" height="118" rx="9" fill="rgba(10,18,13,0.85)" stroke="rgba(251,146,60,0.32)"/>
+  <text x="504" y="542" font-size="7.5" font-weight="700" fill="#fb923c" letter-spacing="2" font-family="ui-monospace,monospace">BEHAVIORAL · Playwright</text>
+  <text x="504" y="557" font-size="11" font-weight="700" fill="#e5e7eb">Deep Probe Agent</text>
+  <text x="504" y="573" font-size="8.5" fill="#a1a1aa">in:  URL → headless Chromium</text>
+  <text x="504" y="586" font-size="8.5" fill="#a1a1aa">out: redirect chain · final URL</text>
+  <path stroke="rgba(255,255,255,0.06)" stroke-width=".5" d="M504 593h186"/>
+  <text x="504" y="605" font-size="8" fill="#6b7280">redirect chain traversal</text>
+  <text x="504" y="617" font-size="8" fill="#6b7280">login form detection (DOM)</text>
+  <text x="504" y="629" font-size="8" fill="#6b7280">screenshot capture + content snippet</text>
+  <rect x="712" y="526" width="248" height="118" rx="9" fill="rgba(10,18,13,0.85)" stroke="rgba(167,139,250,0.32)"/>
+  <text x="728" y="542" font-size="7.5" font-weight="700" fill="#a78bfa" letter-spacing="2" font-family="ui-monospace,monospace">LLM · Gemini</text>
+  <text x="728" y="557" font-size="11" font-weight="700" fill="#e5e7eb">Cognitive Analyst</text>
+  <text x="728" y="573" font-size="8.5" fill="#a1a1aa">in:  scores + evidence + probe results</text>
+  <text x="728" y="586" font-size="8.5" fill="#a1a1aa">out: llm_score (0–100) · explanation</text>
+  <path stroke="rgba(255,255,255,0.06)" stroke-width=".5" d="M728 593h216"/>
+  <text x="728" y="605" font-size="8" fill="#6b7280">synthesizes all engine evidence</text>
+  <text x="728" y="617" font-size="8" fill="#6b7280">produces human-readable narrative</text>
+  <text x="728" y="629" font-size="8" fill="#6b7280">risk_level · explanation · confidence</text>
+  <rect x="40" y="652" width="293" height="110" rx="9" fill="rgba(10,18,13,0.85)" stroke="rgba(251,113,133,0.32)"/>
+  <text x="56" y="668" font-size="7.5" font-weight="700" fill="#fb7185" letter-spacing="2" font-family="ui-monospace,monospace">MULTIMODAL · Gemini Vision</text>
+  <text x="56" y="683" font-size="11" font-weight="700" fill="#e5e7eb">Visual Forensics</text>
+  <text x="56" y="699" font-size="8.5" fill="#a1a1aa">in:  screenshot / page rendering</text>
+  <text x="56" y="712" font-size="8.5" fill="#a1a1aa">out: brand match · impersonation confidence</text>
+  <path stroke="rgba(255,255,255,0.06)" stroke-width=".5" d="M56 719h261"/>
+  <text x="56" y="731" font-size="8" fill="#6b7280">UI-level brand impersonation detection</text>
+  <text x="56" y="744" font-size="8" fill="#6b7280">visual explanation · confidence score</text>
+  <rect x="339" y="652" width="293" height="110" rx="9" fill="rgba(10,18,13,0.85)" stroke="rgba(234,179,8,0.32)"/>
+  <text x="355" y="668" font-size="7.5" font-weight="700" fill="#eab308" letter-spacing="2" font-family="ui-monospace,monospace">INTEL · WHOIS + Threat Intel</text>
+  <text x="355" y="683" font-size="11" font-weight="700" fill="#e5e7eb">Domain Intelligence</text>
+  <text x="355" y="699" font-size="8.5" fill="#a1a1aa">in:  domain extracted from URL</text>
+  <text x="355" y="712" font-size="8.5" fill="#a1a1aa">out: domain age · registrar signals</text>
+  <path stroke="rgba(255,255,255,0.06)" stroke-width=".5" d="M355 719h261"/>
+  <text x="355" y="731" font-size="8" fill="#6b7280">WHOIS registration age check</text>
+  <text x="355" y="744" font-size="8" fill="#6b7280">suspicious registrar signals</text>
+  <rect x="638" y="652" width="322" height="110" rx="9" fill="rgba(10,18,13,0.85)" stroke="rgba(148,163,184,0.28)"/>
+  <text x="654" y="668" font-size="7.5" font-weight="700" fill="#94a3b8" letter-spacing="2" font-family="ui-monospace,monospace">RULES · Heuristic</text>
+  <text x="654" y="683" font-size="11" font-weight="700" fill="#e5e7eb">Brand Mismatch Detector</text>
+  <text x="654" y="699" font-size="8.5" fill="#a1a1aa">in:  URL tokens + domain + known brands set</text>
+  <text x="654" y="712" font-size="8.5" fill="#a1a1aa">out: brand_mismatch flag · matched candidates</text>
+  <path stroke="rgba(255,255,255,0.06)" stroke-width=".5" d="M654 719h290"/>
+  <text x="654" y="731" font-size="8" fill="#6b7280">local token matching · 20+ brand profiles</text>
+  <text x="654" y="744" font-size="8" fill="#6b7280">zero-API-cost detection</text>
+  <path stroke="rgba(34,197,94,0.25)" stroke-width=".8" d="M149 644v8m0 110v8"/>
+  <path stroke="rgba(34,211,238,0.25)" stroke-width=".8" d="M373 644v8m0 110v8"/>
+  <path stroke="rgba(251,146,60,0.25)" stroke-width=".8" d="M597 644v8m0 110v8"/>
+  <path stroke="rgba(167,139,250,0.25)" stroke-width=".8" d="M836 644v8m0 110v8"/>
+  <path stroke="rgba(251,113,133,0.25)" stroke-width=".8" d="M186 762v8"/>
+  <path stroke="rgba(234,179,8,0.25)" stroke-width=".8" d="M485 762v8"/>
+  <path stroke="rgba(148,163,184,0.25)" stroke-width=".8" d="M799 762v8"/>
+  <path stroke="rgba(34,197,94,0.2)" d="M149 770h687"/>
+  <path stroke="rgba(34,197,94,0.4)" stroke-width="1.5" marker-end="url(#b)" d="M500 770v12"/>
+  <text x="500" y="779" text-anchor="middle" font-size="7.5" fill="#374151" letter-spacing="2" font-family="ui-monospace,monospace">SCORE AGGREGATION</text>
+  <rect x="40" y="784" width="920" height="108" rx="10" fill="url(#c)" stroke="rgba(34,197,94,0.3)"/>
+  <text x="56" y="802" font-size="9" font-weight="700" fill="#22c55e" letter-spacing="3" font-family="ui-monospace,monospace">⊕ SCORE ORCHESTRATION + FUSION TRACE</text>
+  <text x="56" y="818" font-size="9" fill="#a1a1aa" font-family="ui-monospace,monospace">Base: </text>
+  <text x="88" y="818" font-size="9" font-weight="700" fill="#22c55e" font-family="ui-monospace,monospace">LLM 60%</text>
+  <text x="142" y="818" font-size="9" fill="#a1a1aa" font-family="ui-monospace,monospace"> + XGBoost </text>
+  <text x="208" y="818" font-size="9" font-weight="700" fill="#22c55e" font-family="ui-monospace,monospace">20%</text>
+  <text x="234" y="818" font-size="9" fill="#a1a1aa" font-family="ui-monospace,monospace"> + DistilBERT </text>
+  <text x="314" y="818" font-size="9" font-weight="700" fill="#22c55e" font-family="ui-monospace,monospace">20%</text>
+  <text x="340" y="818" font-size="9" fill="#a1a1aa" font-family="ui-monospace,monospace"> → weighted blend → final risk score (0–100)</text>
+  <rect x="56" y="827" width="110" height="14" rx="4" fill="rgba(34,197,94,0.07)" stroke="rgba(34,197,94,0.25)" stroke-width=".6"/>
+  <text x="111" y="837" text-anchor="middle" font-size="7.5" fill="#22c55e" font-family="ui-monospace,monospace">↑ WHOIS domain age</text>
+  <rect x="172" y="827" width="100" height="14" rx="4" fill="rgba(167,139,250,0.07)" stroke="rgba(167,139,250,0.25)" stroke-width=".6"/>
+  <text x="222" y="837" text-anchor="middle" font-size="7.5" fill="#a78bfa" font-family="ui-monospace,monospace">↑ brand mismatch</text>
+  <rect x="278" y="827" width="100" height="14" rx="4" fill="rgba(234,179,8,0.07)" stroke="rgba(234,179,8,0.25)" stroke-width=".6"/>
+  <text x="328" y="837" text-anchor="middle" font-size="7.5" fill="#eab308" font-family="ui-monospace,monospace">↑ suspicious TLD</text>
+  <rect x="384" y="827" width="108" height="14" rx="4" fill="rgba(251,113,133,0.07)" stroke="rgba(251,113,133,0.25)" stroke-width=".6"/>
+  <text x="438" y="837" text-anchor="middle" font-size="7.5" fill="#fb7185" font-family="ui-monospace,monospace">↑ vision confidence</text>
+  <rect x="498" y="827" width="158" height="14" rx="4" fill="rgba(251,146,60,0.07)" stroke="rgba(251,146,60,0.25)" stroke-width=".6"/>
+  <text x="577" y="837" text-anchor="middle" font-size="7.5" fill="#fb923c" font-family="ui-monospace,monospace">↑ credential harvesting (probe)</text>
+  <rect x="662" y="827" width="148" height="14" rx="4" fill="rgba(34,197,94,0.07)" stroke="rgba(34,197,94,0.2)" stroke-width=".6"/>
+  <text x="736" y="837" text-anchor="middle" font-size="7.5" fill="#22c55e" font-family="ui-monospace,monospace">↓ no login form detected</text>
+  <rect x="816" y="827" width="140" height="14" rx="4" fill="rgba(100,100,100,0.07)" stroke="rgba(100,100,100,0.15)" stroke-width=".6"/>
+  <text x="886" y="837" text-anchor="middle" font-size="7.5" fill="#6b7280" font-family="ui-monospace,monospace">timeout → reduce confidence</text>
+  <text x="56" y="858" font-size="9" fill="#a1a1aa">fusion_trace exposes per-engine scores + flags + boosts to the frontend InfoTip explainability layer (ARIA-accessible)</text>
+  <text x="56" y="873" font-size="9" fill="#6b7280">Probe adjustment: credential harvesting boosts score · no login form detected dampens · timeout reduces confidence interval</text>
+  <path stroke="rgba(34,197,94,0.4)" stroke-width="1.5" marker-end="url(#b)" d="M500 892v16"/>
+  <rect x="40" y="910" width="290" height="72" rx="9" fill="rgba(34,197,94,0.06)" stroke="rgba(34,197,94,0.3)"/>
+  <text x="56" y="928" font-size="9" font-weight="700" fill="#22c55e" letter-spacing="3" font-family="ui-monospace,monospace">SAFE · Score 0–30</text>
+  <text x="56" y="944" font-size="8.5" fill="#6b7280">Low risk indicators · clean browser probe</text>
+  <text x="56" y="958" font-size="8.5" fill="#6b7280">no brand mismatch · legitimate domain age</text>
+  <text x="56" y="974" font-size="8.5" fill="#6b7280">+ LLM explanation + fusion_trace</text>
+  <rect x="356" y="910" width="288" height="72" rx="9" fill="rgba(234,179,8,0.06)" stroke="rgba(234,179,8,0.3)"/>
+  <text x="372" y="928" font-size="9" font-weight="700" fill="#eab308" letter-spacing="3" font-family="ui-monospace,monospace">SUSPICIOUS · Score 31–69</text>
+  <text x="372" y="944" font-size="8.5" fill="#6b7280">Mixed signals · advisory review recommended</text>
+  <text x="372" y="958" font-size="8.5" fill="#6b7280">some evasion indicators present</text>
+  <text x="372" y="974" font-size="8.5" fill="#6b7280">+ LLM explanation + fusion_trace</text>
+  <rect x="670" y="910" width="290" height="72" rx="9" fill="rgba(251,113,133,0.06)" stroke="rgba(251,113,133,0.3)"/>
+  <text x="686" y="928" font-size="9" font-weight="700" fill="#fb7185" letter-spacing="3" font-family="ui-monospace,monospace">MALICIOUS · Score 70–100</text>
+  <text x="686" y="944" font-size="8.5" fill="#6b7280">Credential harvester · brand spoof detected</text>
+  <text x="686" y="958" font-size="8.5" fill="#6b7280">threat intel hit · high visual impersonation</text>
+  <text x="686" y="974" font-size="8.5" fill="#6b7280">+ LLM explanation + fusion_trace</text>
+  <path stroke="rgba(34,197,94,0.4)" stroke-width="1.5" marker-end="url(#b)" d="M500 982v16"/>
+  <rect x="40" y="1000" width="278" height="90" rx="9" fill="rgba(10,18,13,0.8)" stroke="rgba(255,255,255,0.1)"/>
+  <text x="56" y="1016" font-size="7.5" font-weight="700" fill="#a1a1aa" letter-spacing="2" font-family="ui-monospace,monospace">PERSISTENCE</text>
+  <text x="56" y="1031" font-size="11" font-weight="700" fill="#e5e7eb">SQLite / Postgres</text>
+  <text x="56" y="1046" font-size="8.5" fill="#6b7280">Scan history · forensic indicators</text>
+  <text x="56" y="1059" font-size="8.5" fill="#6b7280">analytics data · paginated scan log</text>
+  <text x="56" y="1072" font-size="8.5" fill="#6b7280">Pydantic models for type safety</text>
+  <rect x="330" y="1000" width="278" height="90" rx="9" fill="rgba(10,18,13,0.8)" stroke="rgba(255,255,255,0.1)"/>
+  <text x="346" y="1016" font-size="7.5" font-weight="700" fill="#a1a1aa" letter-spacing="2" font-family="ui-monospace,monospace">CACHE + EVIDENCE</text>
+  <text x="346" y="1031" font-size="11" font-weight="700" fill="#e5e7eb">In-process Cache + data/</text>
+  <text x="346" y="1046" font-size="8.5" fill="#6b7280">5-min TTL for repeat scans</text>
+  <text x="346" y="1059" font-size="8.5" fill="#6b7280">Screenshots + artifacts in data/</text>
+  <text x="346" y="1072" font-size="8.5" fill="#6b7280">Bounded retention policy</text>
+  <rect x="620" y="1000" width="340" height="90" rx="9" fill="rgba(5,10,7,0.6)" stroke="rgba(34,197,94,0.15)" stroke-dasharray="6 4"/>
+  <text x="636" y="1016" font-size="7.5" font-weight="700" fill="#374151" letter-spacing="2" font-family="ui-monospace,monospace">ROADMAP</text>
+  <text x="636" y="1034" font-size="11" font-weight="700" fill="#6b7280">Browser Extension</text>
+  <rect x="746" y="1023" width="70" height="14" rx="5" fill="rgba(251,146,60,0.1)" stroke="rgba(251,146,60,0.25)" stroke-width=".6"/>
+  <text x="781" y="1033" text-anchor="middle" font-size="7.5" fill="#fb923c" font-family="ui-monospace,monospace">IN PROGRESS</text>
+  <text x="636" y="1049" font-size="8.5" fill="#4b5563">Real-time browsing protection</text>
+  <text x="636" y="1064" font-size="8.5" fill="#4b5563">Collaborative Forensic Sharing</text>
+  <text x="636" y="1079" font-size="8.5" fill="#4b5563">Sanitized shareable reports + community intel</text>
+  <path stroke="rgba(34,197,94,0.1)" stroke-width=".5" d="M40 1108h920"/>
+  <text x="500" y="1124" text-anchor="middle" font-size="8" fill="#374151" letter-spacing="1" font-family="ui-monospace,monospace">Repo: imabhi07/LinkVeil-AI · FastAPI + React/Vite + Playwright + XGBoost + DistilBERT + Gemini LLM + Vision · Updated 2026-05</text>
+  <text x="500" y="1140" text-anchor="middle" font-size="7.5" fill="#1f2937" letter-spacing="1" font-family="ui-monospace,monospace">DistilBERT live integration · Privacy-first email forensics · SSRF + Anti-Evasion hardening</text>
+</svg>
