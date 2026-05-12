@@ -364,8 +364,9 @@ async def evaluate_url(url: str, db: Session, auth_context: Optional[dict] = Non
         logger.info(f"Forcing REFRESH for {url} (Cache bypassed)")
 
     # ── 2. Email Auth Trust ──
+    # Only short-circuit if NOT forcing a refresh
     url_root = _root_domain(url)
-    if auth_context:
+    if auth_context and not force_refresh:
         dmarc = auth_context.get("dmarc", "none").lower()
         spf = auth_context.get("spf", "none").lower()
         sender_domain = auth_context.get("sender_domain", "").lower()
@@ -507,8 +508,8 @@ async def evaluate_url(url: str, db: Session, auth_context: Optional[dict] = Non
     
     # Apply forensic penalty AFTER risk_score is initialized
     if is_storage_path and is_html_extension:
-        risk_score += 35
-        logger.info("Storage Forensic Penalty: +35 (HTML on cloud storage is high-risk)")
+        risk_score += 40
+        logger.info("Storage Forensic Penalty: +40 (HTML on cloud storage is high-risk)")
 
     # ── 4.5 Late Vision Analysis (with Early Exit) ──
     if probe_result and hasattr(probe_result, "screenshot_path") and probe_result.screenshot_path:
@@ -555,9 +556,10 @@ async def evaluate_url(url: str, db: Session, auth_context: Optional[dict] = Non
     # Brand Mismatch Boost
     brand_boost = 0
     if brand_result.get("is_mismatch"):
-        # Suppress mismatch penalty if domain is established
+        # Suppress mismatch penalty if domain is established AND not a shared host
         domain_age_val = (whois_result.get("domain_age_days") or whois_result.get("age_days") or 0)
-        is_established = domain_age_val > 365
+        current_root = _root_domain(url)
+        is_established = domain_age_val > 365 and current_root not in SHARED_HOSTING_DOMAINS
         
         if not is_established:
             brand_boost = 25
@@ -580,10 +582,10 @@ async def evaluate_url(url: str, db: Session, auth_context: Optional[dict] = Non
             logger.info(f"Vision Trust HIT: Official {brand_match} domain detected. Applying safety dampener (-40).")
         else:
             # ── Vision Reputation Check: Is this domain established? ──
-            # If the domain is old (>1yr), we are MUCH more lenient about unverified branding
-            # to avoid false positives on legitimate SaaS that aren't in our hardcoded whitelist.
+            # If the domain is old (>1yr) AND not a shared host, we are MUCH more lenient
             domain_age_val = (whois_result.get("domain_age_days") or whois_result.get("age_days") or 0)
-            is_established = domain_age_val > 365
+            current_root = _root_domain(url)
+            is_established = domain_age_val > 365 and current_root not in SHARED_HOSTING_DOMAINS
             
             # ── Vision Boost: If brand is matched on an UNTRUSTED domain, it's a strong threat signal ──
             has_brand_mismatch = brand_result.get("is_mismatch", False)
@@ -702,7 +704,9 @@ async def evaluate_url(url: str, db: Session, auth_context: Optional[dict] = Non
         
     # For Timeouts/Partial loads, we proceed with the ML score
     if is_unreachable and not is_hard_offline:
-        logger.info(f"Probe Timed Out for {url}: Maintaining ML Risk Score {risk_score}")
+        # Penalize inconclusive results slightly to favor caution
+        risk_score += 20
+        logger.info(f"Probe Timed Out for {url}: Adding +20 Inconclusive penalty. Final Score: {risk_score}")
             
     # Construct Verdict via FusionEngine
     verdict = fusion_engine.create_verdict(

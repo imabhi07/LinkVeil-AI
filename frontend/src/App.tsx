@@ -201,7 +201,24 @@ function App() {
 
   useEffect(() => {
     const id = requestIdleCallback(() => {
-      localStorage.setItem('linkveil_email_history', JSON.stringify(emailHistory));
+      // Privacy: Strip raw email payload and reduce PII in persisted history.
+      // NOTE: result.identity.subject and result.identity.from.email are
+      // intentionally retained — the HistorySidebar requires them to render
+      // meaningful card titles and subtitles. This reduces but does NOT
+      // eliminate PII from localStorage. Rescanning requires the current session.
+      const stripped = emailHistory.map(({ inputData, ...rest }) => ({
+        ...rest,
+        result: rest.result ? {
+          ...rest.result,
+          identity: {
+            ...rest.result.identity,
+            from: { ...rest.result.identity.from, name: '' },
+            reply_to: null,
+            return_path: null,
+          },
+        } : rest.result,
+      }));
+      localStorage.setItem('linkveil_email_history', JSON.stringify(stripped));
     });
     return () => cancelIdleCallback(id);
   }, [emailHistory]);

@@ -29,10 +29,12 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initia
     if (initialResult) {
       setResult(initialResult);
       setError(null);
+      // Clear selected file when loading a result to avoid UI confusion
+      setSelectedFile(null);
     }
-    if (initialInputData) {
-      setRawEmail(initialInputData);
-    }
+    
+    // Always sync rawEmail with initialInputData, even if it's undefined (clears stale data)
+    setRawEmail(initialInputData || '');
   }, [initialResult, initialInputData]);
   
   const [expandedUrls, setExpandedUrls] = useState<Record<string, boolean>>({});
@@ -62,12 +64,25 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initia
   const handleSubmit = async (e?: React.FormEvent, force: boolean = false) => {
     if (e) e.preventDefault();
     
+    // Track the actual input data for history persistence to avoid React state closure/batching issues
+    let inputDataForHistory = rawEmail;
+    
+    // Effective mode handling:
+    // 1. If rescanning (force=true) and we have stored raw email data, always use paste mode
+    // 2. Otherwise, if we're in upload mode but have no file object (common when opening history) 
+    //    but have raw content, fall back to paste/raw analysis.
+    const effectiveMode = (force && rawEmail.trim()) 
+      ? 'paste' 
+      : (scanMode === 'upload' && !selectedFile && rawEmail.trim()) 
+        ? 'paste' 
+        : scanMode;
+
     // Validation
-    if (scanMode === 'paste' && !rawEmail.trim()) {
+    if (effectiveMode === 'paste' && !rawEmail.trim()) {
       setError("Please paste the raw email content.");
       return;
     }
-    if (scanMode === 'upload' && !selectedFile) {
+    if (effectiveMode === 'upload' && !selectedFile) {
       setError("Please select a .eml file to upload.");
       return;
     }
@@ -80,12 +95,18 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initia
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
       let response;
 
-      if (scanMode === 'upload' && selectedFile) {
+      if (effectiveMode === 'upload' && selectedFile) {
+        // Capture EML text for future rescan from history
+        const emlText = await selectedFile.text();
+        setRawEmail(emlText);
+        inputDataForHistory = emlText;
+
         const uploadData = new FormData();
         uploadData.append('file', selectedFile);
-        // eml endpoint doesn't support force_refresh yet in the backend signature, 
-        // but we'll send it if needed or just rely on the fact that file uploads are usually not cached the same way
-        response = await fetch(`${API_BASE_URL}/api/v1/scan/eml`, {
+        
+        // EML endpoint supports force_refresh via query param
+        const emlUrl = `${API_BASE_URL}/api/v1/scan/eml${force ? '?force_refresh=true' : ''}`;
+        response = await fetch(emlUrl, {
           method: 'POST',
           body: uploadData,
         });
@@ -94,8 +115,8 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initia
           raw_email: rawEmail,
           force_refresh: force 
         };
-          
-        response = await fetch(`${API_BASE_URL}/api/v1/scan/email`, {
+        const url = `${API_BASE_URL}/api/v1/scan/email${force ? '?force_refresh=true' : ''}`;
+        response = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -109,7 +130,8 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initia
 
       const data: EmailScanResponse = await response.json();
       setResult(data);
-      onResult?.(data, scanMode === 'paste' ? rawEmail : undefined);
+      // Pass the correct captured data to history, not the potentially stale state
+      onResult?.(data, inputDataForHistory);
 
       // Auto-expand the link with the highest risk score
     } catch (err: any) {

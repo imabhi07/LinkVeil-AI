@@ -4,6 +4,7 @@ import unicodedata
 from typing import List, Dict, Any, Optional
 
 from backend.app.utils.forensics import Sanitizer, ForensicErrorEnvelope
+from backend.app.services.engine_service import KNOWN_SAFE_DOMAINS
 
 # Keyword lists based on requirements
 URGENCY_PHRASES = [
@@ -11,7 +12,7 @@ URGENCY_PHRASES = [
     "final notice", "urgent security", "asap", "deadline approaching", "urgent", "immediately",
     "expires soon", "within 48 hours", "immediate attention", "restricted access",
     "last chance", "forfeited", "removed from your account", "will be removed", "48 hours",
-    "limited time offer", "unlimited access", "one click away"
+    "limited time offer", "unlimited access", "one click away", "has been locked", "account locked"
 ]
 
 CREDENTIAL_PHRASES = [
@@ -29,7 +30,7 @@ BILLING_PHRASES = [
     "wire transfer", "unpaid invoice", "remittance", "payment confirmation",
     "payout verification", "$7000.00", "free spins", "millionaire’s life", "unclaimed rewards",
     "casino limitless", "chips will be forfeited", "iptv", "sports, movies & tv",
-    "premium entertainment", "subscription renewal", "entertainment service"
+    "premium entertainment", "subscription renewal", "entertainment service", "photos and videos"
 ]
 
 IMPERSONATION_PHRASES = [
@@ -138,15 +139,45 @@ class ForensicsBrain:
             score_identity += 10
             reasons.append(f"Missing SPF record: Domain '{from_email.split('@')[-1]}' identity unverified.")
             
-        if auth.get("dkim") == "fail":
-            signals.append({"signal": "DKIM Failure", "points": 25, "reason": "DKIM signature invalid or tampered."})
-            score_identity += 25
-            reasons.append("DKIM cryptographic signature invalid.")
+        # SPF Misalignment Detection
+        spf_val = auth.get("spf", "none").lower()
+        if spf_val == "pass" and "return_path_mismatch" in mismatches:
+            signals.append({
+                "signal": "SPF Misalignment", 
+                "points": 20, 
+                "reason": "SPF passes for the envelope sender but the From domain is different. This SPF result does not authenticate the visible sender."
+            })
+            score_identity += 20
+            reasons.append("SPF misalignment: Envelope and header sender domains differ.")
             
-        if auth.get("dmarc") == "fail":
+        dkim_val = auth.get("dkim", "none").lower()
+        if dkim_val in ("fail", "permerror"):
+            points = 25 if dkim_val == "fail" else 20
+            signals.append({
+                "signal": "DKIM Failure", 
+                "points": points, 
+                "reason": f"DKIM signature {dkim_val}: {'invalid or tampered' if dkim_val == 'fail' else 'signing key does not exist (forged signature)'}."
+            })
+            score_identity += points
+            reasons.append(f"DKIM cryptographic signature {dkim_val}.")
+        elif dkim_val == "temperror":
+            signals.append({"signal": "DKIM Temporary Error", "points": 10, "reason": "DKIM lookup temporarily failed."})
+            score_identity += 10
+            reasons.append("DKIM lookup temporarily unavailable.")
+            
+        dmarc_val = auth.get("dmarc", "none").lower()
+        if dmarc_val == "fail":
             signals.append({"signal": "DMARC Failure", "points": 35, "reason": "DMARC policy failed."})
             score_identity += 35
             reasons.append(f"DMARC policy failure: high risk of spoofing for {from_email.split('@')[-1]}.")
+        elif dmarc_val == "none" and from_domain not in KNOWN_SAFE_DOMAINS:
+            signals.append({
+                "signal": "Missing DMARC", 
+                "points": 15, 
+                "reason": "Sender domain has no DMARC policy — no spoofing protection."
+            })
+            score_identity += 15
+            reasons.append(f"Missing DMARC: Domain '{from_domain}' has no anti-spoofing policy.")
             
         # 3. HTML & Link Analysis
         shorteners = ["t.co", "bit.ly", "tinyurl.com", "cutt.ly", "shorturl.at", "ow.ly", "goo.gl", "is.gd"]
@@ -173,8 +204,9 @@ class ForensicsBrain:
             score_identity += 45
             reasons.append(f"Deceptive links: {mismatch_count} instances where link text hides a different destination.")
             
-        # 4. Social Engineering
-        se_results = analyze_social_engineering(parsed_data.get("clean_body", ""))
+        # 4. Social Engineering (Scan Subject + Body)
+        combined_content = f"{parsed_data.get('subject', '')}\n\n{parsed_data.get('clean_body', '')}"
+        se_results = analyze_social_engineering(combined_content)
         score_linguistic = se_results["overall_threat"]
         
         # ── 5. Safe Harbor Logic (Anti-False-Positive) ──
@@ -185,7 +217,6 @@ class ForensicsBrain:
         dkim = auth.get("dkim", "none").lower()
         
         # Check if from_domain is in a list of trusted high-authority domains
-        from backend.app.services.engine_service import KNOWN_SAFE_DOMAINS
         is_trusted_brand = from_domain in KNOWN_SAFE_DOMAINS
         
         # Determine dampening factor
@@ -273,6 +304,11 @@ class ForensicsBrain:
             source = "link"
         elif email_score >= 80:
             # Extremely high forensic intent found
+            final_score = email_score
+            source = "email"
+        elif link_score == 0:
+            # No links extracted — email signals are the ONLY evidence
+            # Don't dilute them with a zero link score
             final_score = email_score
             source = "email"
         else:

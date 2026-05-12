@@ -184,7 +184,10 @@ def _save_email_to_db(response: EmailScanResponse, parsed_data: dict, db: Sessio
         db.rollback()
 
 @router.post("/scan/email", response_model=EmailScanResponse)
-async def scan_email(request: EmailScanRequest, db: Session = Depends(get_db)):
+async def scan_email(request: EmailScanRequest, force_refresh: bool = False, db: Session = Depends(get_db)):
+    # Prioritize query param force_refresh, then fall back to body field
+    effective_force = force_refresh or request.force_refresh
+    
     if request.raw_email:
         parsed_data = await parse_email_from_string(request.raw_email)
 
@@ -214,7 +217,7 @@ async def scan_email(request: EmailScanRequest, db: Session = Depends(get_db)):
         }
         input_type = "manual"
         
-    return await _execute_email_analysis(parsed_data, input_type, db, force_refresh=request.force_refresh)
+    return await _execute_email_analysis(parsed_data, input_type, db, force_refresh=effective_force)
 
 @router.post("/scan/eml", response_model=EmailScanResponse)
 async def scan_eml(file: UploadFile = File(...), force_refresh: bool = False, db: Session = Depends(get_db)):

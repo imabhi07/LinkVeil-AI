@@ -1,4 +1,5 @@
 import email
+import base64
 from email import policy
 from email.utils import parseaddr
 import re
@@ -301,6 +302,32 @@ def extract_auth_results(msg: email.message.Message) -> Dict[str, Any]:
             
     return results
 
+def _decode_payload_smart(part) -> str:
+    """Decode MIME part payload with base64 fallback for mislabeled encodings."""
+    raw = part.get_payload(decode=True)
+    if raw is None:
+        return ""
+    text = raw.decode(part.get_content_charset() or 'utf-8', errors='ignore')
+    
+    # Heuristic: If decoded text has no HTML tags and looks like base64, try decoding
+    stripped = text.strip()
+    if stripped and '<' not in stripped[:200]:
+        # Looks like raw base64 (no HTML tags in first 200 chars)
+        try:
+            # Check if it's likely base64 before trying to decode
+            if re.match(r'^[A-Za-z0-9+/=\s]+$', stripped):
+                decoded_bytes = base64.b64decode(stripped)
+                decoded_text = decoded_bytes.decode('utf-8', errors='ignore')
+                # Verify it actually produced HTML or text
+                if '<' in decoded_text[:500] or len(decoded_text) > 10:
+                    logger.info("Base64 fallback: Successfully decoded mislabeled part body")
+                    return decoded_text
+        except Exception:
+            pass  # Not base64, return original
+    
+    return text
+
+
 async def parse_email_message(msg: email.message.Message) -> dict:
     """Enhanced parser for Forensics++."""
     from_header = msg.get("From", "")
@@ -317,9 +344,9 @@ async def parse_email_message(msg: email.message.Message) -> dict:
     text_part = ""
     for part in msg.walk():
         if part.get_content_type() == "text/html":
-            html_part = part.get_payload(decode=True).decode(part.get_content_charset() or 'utf-8', errors='ignore')
+            html_part = _decode_payload_smart(part)
         elif part.get_content_type() == "text/plain":
-            text_part = part.get_payload(decode=True).decode(part.get_content_charset() or 'utf-8', errors='ignore')
+            text_part = _decode_payload_smart(part)
             
     # NFKC Normalization to defeat Unicode Obfuscation
     norm_subject = unicodedata.normalize('NFKC', msg.get("Subject", ""))
