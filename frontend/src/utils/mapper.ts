@@ -7,33 +7,27 @@ export function mapToAnalysisResult(raw: BackendScanResponse): AnalysisResult {
   let riskLevel: RiskLevel;
   let verdictTitle: string;
   
-  switch (raw.risk_level?.toLowerCase()) {
-    case 'high':
-      riskLevel = 'MALICIOUS';
-      verdictTitle = 'Malicious Site Detected';
-      break;
-    case 'medium':
-      riskLevel = 'SUSPICIOUS';
-      verdictTitle = 'Suspicious Activity Found';
-      break;
-    case 'low':
-      riskLevel = 'SAFE';
-      verdictTitle = 'Verified Safe';
-      break;
-    default:
-      riskLevel = 'UNKNOWN';
-      verdictTitle = 'Analysis Inconclusive';
+  // Honor the backend's "real verdict" level if available, fallback to score ONLY if missing
+  const score = Math.round(raw.risk_score ?? 0);
+  const rawLevel = (raw.risk_level || '').toUpperCase();
+  
+  if (rawLevel === 'MALICIOUS' || rawLevel === 'HIGH') {
+    riskLevel = 'MALICIOUS';
+  } else if (rawLevel === 'SUSPICIOUS' || rawLevel === 'MEDIUM') {
+    riskLevel = 'SUSPICIOUS';
+  } else if (rawLevel === 'SAFE' || rawLevel === 'LOW') {
+    riskLevel = 'SAFE';
+  } else {
+    // Fallback to score ONLY for unknown/missing levels
+    riskLevel = score >= 70 ? 'MALICIOUS' : score >= 30 ? 'SUSPICIOUS' : 'SAFE';
   }
   
-  if (raw.verdictTitle) {
-    if (riskLevel === 'MALICIOUS' && raw.verdictTitle.toUpperCase().includes('SUSPICIOUS')) {
-      verdictTitle = raw.verdictTitle.replace(/suspicious/i, 'MALICIOUS');
-    } else if (riskLevel === 'SUSPICIOUS' && raw.verdictTitle.toUpperCase().includes('MALICIOUS')) {
-      verdictTitle = raw.verdictTitle.replace(/malicious/i, 'SUSPICIOUS');
-    } else {
-      verdictTitle = raw.verdictTitle;
-    }
-  }
+  // Honor backend title, or use a descriptive default based on the level
+  verdictTitle = raw.verdictTitle || (
+    riskLevel === 'MALICIOUS' ? 'Malicious Threat Detected' :
+    riskLevel === 'SUSPICIOUS' ? 'Suspicious Activity Found' :
+    'Verified Safe Content'
+  );
 
   const reasoning = raw.explanation
     ? raw.explanation.split(/\n+/).filter((s: string) => s.trim().length > 0)
@@ -60,14 +54,23 @@ export function mapToAnalysisResult(raw: BackendScanResponse): AnalysisResult {
     urlStructure = `Protocol: ${u.protocol} | Host: ${u.hostname} | Path: ${u.pathname}`;
   } catch { /* use raw url */ }
 
+  const techSource = raw.technicalDetails || {};
+  
   const technicalDetails = {
-    urlStructure,
-    domainReputation: raw.whois_info?.domain_age_days != null
-      ? `Domain age: ${raw.whois_info.domain_age_days} days. Registrar: ${raw.whois_info.registrar || 'Unknown'}.${raw.whois_info.is_new_domain ? ' ⚠️ Recently registered.' : ''}${raw.whois_info.has_privacy ? ' ⚠️ Uses privacy protection.' : ''}`
-      : (riskLevel === 'SAFE' ? 'Domain registration appears legitimate.' : 'Domain reputation check inconclusive.'),
-    socialEngineeringTricks: raw.brand_impersonation
+    urlStructure: techSource.urlDeepDive || urlStructure,
+    domainReputation: (() => {
+      const whoisText = raw.whois_info?.domain_age_days != null
+        ? `\n\nWHOIS EVIDENCE:\n• Age: ${raw.whois_info.domain_age_days} days\n• Registrar: ${raw.whois_info.registrar || 'Unknown'}${raw.whois_info.is_new_domain ? '\n• ⚠️ WARNING: RECENTLY REGISTERED' : ''}${raw.whois_info.has_privacy ? '\n• Privacy Protection: ENABLED' : ''}`
+        : "";
+      
+      if (techSource.domainForensics) {
+        return techSource.domainForensics + whoisText;
+      }
+      return whoisText.trim() || (riskLevel === 'SAFE' ? 'Domain registration appears legitimate.' : 'Domain reputation check inconclusive.');
+    })(),
+    socialEngineeringTricks: techSource.socialEngineering || (raw.brand_impersonation
       ? `Impersonates ${raw.brand_name} branding to trick users into submitting credentials.`
-      : reasoning[0] || 'No social engineering patterns detected.',
+      : 'No social engineering patterns detected.'),
     visualPrediction: raw.visual_forensics?.brand_match 
       ? `Visual logo match detected for ${raw.visual_forensics.brand_match} (score: ${raw.visual_forensics.score})`
       : 'No visual logo matches detected.'
@@ -78,6 +81,8 @@ export function mapToAnalysisResult(raw: BackendScanResponse): AnalysisResult {
     riskScore: Math.round(raw.risk_score),
     riskLevel,
     verdictTitle,
+    functional_category: raw.functional_category,
+    functional_description: raw.functional_description,
     recommendation: raw.recommendation,
     reasoning,
     technicalDetails,
@@ -88,6 +93,8 @@ export function mapToAnalysisResult(raw: BackendScanResponse): AnalysisResult {
     visual_forensics: raw.visual_forensics,
     fusion_trace: raw.fusion_trace,
     mitigationAdvice: raw.mitigationAdvice,
-    probe_artifacts: raw.probe_artifacts
+    probe_artifacts: raw.probe_artifacts,
+    forensic_errors: raw.forensic_errors || [],
+    degraded_engines: raw.degraded_engines || []
   };
 }

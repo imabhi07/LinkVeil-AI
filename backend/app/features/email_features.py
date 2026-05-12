@@ -8,7 +8,8 @@ def extract_urls(text: str) -> list[str]:
     Excludes non-clickable metadata like W3C DTDs.
     """
     # 1. Try to find href matches first (standard for HTML emails)
-    href_pattern = r'href=["\'](https?://[^"\']+)["\']'
+    # Handle mixed case (hREf) and optional spaces
+    href_pattern = r'[a-z]+=["\'](https?://[^"\']+)["\']'
     href_matches = re.findall(href_pattern, text, re.IGNORECASE)
     
     # 2. Fallback to generic URL extraction for plain text parts

@@ -76,7 +76,7 @@ class DLService:
 
         except Exception as e:
             logger.error(f"DLService.predict error for '{url}': {e}")
-            return 0.5
+            return None
 
 # Singleton instance
 dl_service = DLService()
