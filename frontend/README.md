@@ -44,6 +44,7 @@ src/
 ├── index.css            # Global styles, Tailwind imports, glass-panel utilities
 ├── components/
 │   ├── ResultDetails.tsx     # Full forensic report panel
+│   ├── EmailScan.tsx         # Email parsing and submission interface
 │   ├── HistorySidebar.tsx    # Scan history list
 │   ├── AnalyticsPanel.tsx    # Intelligence dashboard overlay
 │   ├── RiskGauge.tsx         # Animated SVG risk score gauge

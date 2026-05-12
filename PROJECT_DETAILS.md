@@ -78,15 +78,18 @@ When an email is submitted, LinkVeil-AI executes a multi-stage forensic extracti
    - **Classification**: Categorizes links as `static_asset`, `tracking_wrapper`, `unsubscribe`, `content`, or `known_safe`.
    - **Forensic Transparency**: Automatically filters non-malicious noise as `Skipped` and protects user PII by labeling sensitive parameters as `Privacy Protected`.
    - **Unwrapping**: Detects and unwraps common email tracking/redirect services to find the final destination.
-4. **SSRF Hardening**: All network-bound tasks in the triage layer use a threaded executor with strict timeouts and private IP rejection to protect the internal infrastructure.
+4. **Anti-Evasion Hardening**: 
+   - **Unicode Normalization (NFKC)**: Normalizes obfuscated text to standard characters before heuristic analysis.
+   - **Base64 Fallback**: Identifies and decodes mislabeled payloads hiding behind non-standard transfer encodings.
+5. **SSRF Hardening**: All network-bound tasks in the triage layer use a threaded executor with strict timeouts and private IP rejection to protect the internal infrastructure.
 
 ---
 
 ## 7. Score Orchestration Logic
 Scores are aggregated into a **Final Risk Score (0-100)** using a weighted fusion system:
 1. **Base Blend**: LLM score (60%) + XGBoost score (20%) + DistilBERT score (20%) form the base risk value.
-2. **Signal Boosts**: WHOIS age, brand mismatch (Engine 7), suspicious TLD, and visual forensics (Engine 4) add incremental risk.
-3. **Probe Adjustment**: If the Playwright agent confirms credential harvesting, the score is boosted. If no login elements are found, the score is dampened.
+2. **Signal Boosts**: WHOIS age, brand mismatch (Engine 7), suspicious TLD, and visual forensics (Engine 4) add incremental risk. Shared hosting platforms (Vercel, Firebase) bypass the "Safe Domain" age bonus to ensure malicious redirectors are accurately penalized.
+3. **Probe Adjustment**: If the Playwright agent confirms credential harvesting, the score is boosted. If no login elements are found, the score is dampened. Inconclusive or timed-out probes apply a slight penalty to ensure a "Caution First" approach.
 4. **Threat Intel Short-Circuit**: Instant "High" risk if the URL appears in live phishing feeds.
 
 ---
