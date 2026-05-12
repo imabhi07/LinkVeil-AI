@@ -5,11 +5,23 @@ import { ResultDetails } from './components/ResultDetails';
 import { HistorySidebar } from './components/HistorySidebar';
 import { AnalyticsPanel } from './components/AnalyticsPanel';
 import { EmailScan } from './components/EmailScan';
+import { PrivacyModal } from './components/PrivacyModal';
 import { BackgroundPaths } from './components/ui/background-paths';
 import { mapToAnalysisResult } from './utils/mapper';
 import './App.css';
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
+
+const GithubIcon = ({ className }: { className?: string }) => (
+  <svg 
+    viewBox="0 0 24 24" 
+    fill="currentColor" 
+    className={className}
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.341-3.369-1.341-.454-1.152-1.11-1.459-1.11-1.459-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z" />
+  </svg>
+);
 
 // ── Error Boundary ──
 class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError: boolean }> {
@@ -144,6 +156,7 @@ function App() {
   });
   const [currentTip, setCurrentTip] = useState("");
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
   const [scanMode, setScanMode] = useState<'url' | 'email'>('url');
 
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -152,6 +165,8 @@ function App() {
     }
     return 'dark';
   });
+
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
   // ── AbortController ref to cancel stale requests ──
   const abortRef = useRef<AbortController | null>(null);
@@ -166,6 +181,28 @@ function App() {
     }
     localStorage.setItem('theme', theme);
   }, [theme]);
+
+  // Mouse tracking for active glow with rAF throttling
+  useEffect(() => {
+    let rafId: number;
+    let lastEvent: MouseEvent;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      lastEvent = e;
+      if (!rafId) {
+        rafId = requestAnimationFrame(() => {
+          setMousePos({ x: lastEvent.clientX, y: lastEvent.clientY });
+          rafId = 0;
+        });
+      }
+    };
+    
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, []);
 
   // Set random tip on mount and cycle every 10 seconds
   useEffect(() => {
@@ -412,6 +449,14 @@ function App() {
       {/* 4K Grain Texture Overlay */}
       <div className="fixed inset-0 pointer-events-none z-[100] opacity-[0.03] mix-blend-overlay bg-[url('/noise.svg')]"></div>
 
+      {/* Interactive Mouse Glow */}
+      <div 
+        className="fixed inset-0 pointer-events-none z-0 opacity-40 dark:opacity-20"
+        style={{
+          background: `radial-gradient(800px at ${mousePos.x}px ${mousePos.y}px, ${theme === 'dark' ? 'rgba(57, 255, 20, 0.08)' : 'rgba(0, 200, 83, 0.05)'}, transparent 80%)`
+        }}
+      />
+
       {/* Background Glows - Absolute to scroll with content */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden h-[1200px]">
         {/* Main Hero Glow */}
@@ -432,13 +477,21 @@ function App() {
       {/* Navbar */}
       <nav className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
         <div className="w-full max-w-7xl frosted-nav dark:bg-ornex-panel dark:border-white/10 rounded-full px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between shadow-2xl shadow-black/5 dark:shadow-black/20 pointer-events-auto">
-          <div className="flex items-center gap-3">
-             <div className="w-8 h-8 rounded bg-cyber-light-accent dark:bg-ornex-green flex items-center justify-center text-white dark:text-ornex-black shadow-[0_0_15px_rgba(0,200,83,0.4)] dark:shadow-[0_0_15px_rgba(57,255,20,0.5)]">
-               <Shield className="w-5 h-5 fill-current" />
+          <div className="flex items-center gap-3 group/logo cursor-pointer">
+             <div className="relative">
+               <div className="absolute inset-0 bg-cyber-light-accent dark:bg-ornex-green blur-md opacity-20 group-hover/logo:opacity-50 transition-opacity animate-pulse" />
+               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-cyber-light-accent dark:bg-ornex-green flex items-center justify-center text-white dark:text-ornex-black shadow-[0_0_20px_rgba(0,200,83,0.3)] dark:shadow-[0_0_20px_rgba(57,255,20,0.4)] relative z-10 transition-transform group-hover/logo:scale-110">
+                 <Shield className="w-5 h-5 sm:w-6 h-6 fill-current" />
+               </div>
              </div>
-            <span className="text-lg sm:text-xl font-bold tracking-tight text-cyber-light-heading dark:text-white truncate max-w-[120px] sm:max-w-none">
-              LinkVeil AI
-            </span>
+            <div className="flex flex-col">
+              <span className="text-xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-zinc-900 via-zinc-500 to-zinc-900 dark:from-white dark:via-zinc-400 dark:to-white font-tektur uppercase">
+                LinkVeil AI
+              </span>
+              <span className="text-[9px] font-mono font-bold text-cyber-light-accent dark:text-ornex-green uppercase tracking-[0.2em] mt-0.5">
+                Forensic Intelligence
+              </span>
+            </div>
           </div>
 
           <div className="flex items-center gap-4">
@@ -593,6 +646,7 @@ function App() {
                       onResult={handleEmailResult}
                       initialResult={currentEmailResult}
                       initialInputData={currentEmailInput}
+                      onShowPrivacy={() => setShowPrivacy(true)}
                     />
                   </div>
                 )}
@@ -645,7 +699,7 @@ function App() {
                         <div className="h-px flex-1 bg-gradient-to-r from-transparent via-zinc-400/20 dark:via-white/10 to-transparent"></div>
                     </div>
                     
-                    {/* Marquee Container */}
+                {/* Marquee Container */}
                     <div className="relative marquee-mask">
                       <div className="animate-marquee gap-8 py-6">
                         {[1, 2].map((set) => (
@@ -707,13 +761,63 @@ function App() {
       </main>
 
 
-      {/* Analytics Overlay */}
+      {/* Footer */}
+      <footer className="mt-20 py-16 border-t border-zinc-200 dark:border-white/5 relative z-10 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyber-light-accent/[0.03] dark:via-ornex-green/[0.03] to-transparent pointer-events-none" />
+        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-10 relative z-10">
+          <div className="flex items-center gap-4 group/foot-logo cursor-pointer opacity-70 hover:opacity-100 transition-all duration-500">
+            <div className="w-8 h-8 rounded-lg bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-400 group-hover/foot-logo:bg-cyber-light-accent dark:group-hover/foot-logo:bg-ornex-green group-hover/foot-logo:text-white dark:group-hover/foot-logo:text-ornex-black transition-all">
+              <Shield className="w-4 h-4 fill-current" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-black tracking-widest text-zinc-600 dark:text-zinc-300 font-tektur uppercase">
+                LinkVeil AI
+              </span>
+              <span className="text-[9px] font-mono font-bold text-zinc-400 dark:text-zinc-600 uppercase tracking-tighter">
+                Forensic Intelligence
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-4 text-[10px] sm:text-xs font-mono font-bold uppercase tracking-[0.25em]">
+            <button 
+              onClick={() => setShowPrivacy(true)}
+              className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 hover:text-cyber-light-accent dark:hover:text-ornex-green transition-all relative group/link"
+            >
+              <Shield className="w-3.5 h-3.5 group-hover/link:scale-110 transition-transform" />
+              Privacy Protocol
+              <span className="absolute -bottom-1 left-0 w-0 h-[1px] bg-current transition-all group-hover/link:w-full" />
+            </button>
+            <a 
+              href="https://github.com/imabhi07/LinkVeil-AI" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 hover:text-cyber-light-accent dark:hover:text-ornex-green transition-all relative group/link"
+            >
+              <GithubIcon className="w-3.5 h-3.5 group-hover/link:scale-110 transition-transform" />
+              Repository
+              <span className="absolute -bottom-1 left-0 w-0 h-[1px] bg-current transition-all group-hover/link:w-full" />
+            </a>
+            <span className="flex items-center gap-2 text-zinc-400 dark:text-zinc-700 cursor-default select-none">
+              <Terminal className="w-3 h-3" />
+              © 2026 // ABHIJEET P.
+            </span>
+          </div>
+        </div>
+      </footer>
+
+      {/* Modals & Overlays */}
       {showAnalytics && (
         <AnalyticsPanel 
           onClose={() => setShowAnalytics(false)} 
           onReview={handleReview}
         />
       )}
+
+      <PrivacyModal 
+        isOpen={showPrivacy} 
+        onClose={() => setShowPrivacy(false)} 
+      />
     </div>
   );
 }

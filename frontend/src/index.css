@@ -277,3 +277,32 @@ body {
   word-break: break-word;
 }
 
+
+/* ── Active Animations ── */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite linear;
+}
+
+@keyframes digital-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+.animate-digital-pulse {
+  animation: digital-pulse 2s infinite ease-in-out;
+}
+
+.active-hazard-glow {
+  box-shadow: 0 0 20px rgba(244, 63, 94, 0.2);
+  animation: hazard-pulse 2s infinite;
+}
+
+@keyframes hazard-pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(244, 63, 94, 0.2); }
+  50% { box-shadow: 0 0 40px rgba(244, 63, 94, 0.4); }
+}

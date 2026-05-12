@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Mail, Shield, AlertCircle, ChevronDown, AlertTriangle, FileUp, Clipboard, Layout, ArrowRight, Info, CheckCircle2, Zap, Copy, ExternalLink, ShieldAlert, ShieldCheck, ShieldX, Fingerprint, MessageSquare, Link2, RefreshCcw } from 'lucide-react';
+import { Mail, Shield, AlertCircle, ChevronDown, AlertTriangle, FileUp, Clipboard, Layout, ArrowRight, Info, CheckCircle2, Zap, Copy, ExternalLink, ShieldAlert, ShieldCheck, ShieldX, Fingerprint, MessageSquare, Link2, RefreshCcw, X } from 'lucide-react';
 import type { EmailScanRequest, EmailScanResponse, AnalysisResult } from '../types';
 import { ResultDetails } from './ResultDetails';
 import { InfoTip } from './InfoTip';
@@ -11,11 +11,12 @@ interface EmailScanProps {
   mapToAnalysisResult: (raw: any) => AnalysisResult;
   initialResult?: EmailScanResponse | null;
   initialInputData?: string;
+  onShowPrivacy?: () => void;
 }
 
 type ScanMode = 'paste' | 'upload';
 
-export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initialInputData }: EmailScanProps) {
+export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initialInputData, onShowPrivacy }: EmailScanProps) {
   const [scanMode, setScanMode] = useState<ScanMode>('paste');
   const [rawEmail, setRawEmail] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -231,6 +232,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initia
                   <button
                     type="button"
                     onClick={() => setScanMode(tab.id as any)}
+                    aria-label={`Switch to ${tab.fullLabel} mode`}
                     className={`w-full flex items-center justify-center gap-2 px-3 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-widest transition-all ${scanMode === tab.id ? 'bg-white dark:bg-white/10 shadow-sm text-cyber-light-accent dark:text-ornex-green' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
                   >
                     <tab.icon className="w-3.5 h-3.5" />
@@ -244,7 +246,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initia
         </div>
 
         {showGuide && (
-          <div className="mb-8 space-y-6 animate-slide-down">
+          <div className="mb-8 space-y-6 animate-slide-down" role="dialog" aria-labelledby="privacy-modal-title" aria-modal="true" onKeyDown={(e) => { if (e.key === 'Escape') setShowGuide(false); }}>
             <div className="p-5 md:p-8 rounded-2xl md:rounded-[2rem] bg-zinc-50 dark:bg-zinc-900/40 border border-[#00C853]/20 dark:border-ornex-green/20 shadow-2xl relative overflow-hidden group">
               {/* Background Decoration */}
               <div className="absolute top-0 right-0 w-64 h-64 bg-cyber-light-accent/5 dark:bg-ornex-green/5 blur-[100px] -mr-32 -mt-32 pointer-events-none" />
@@ -256,13 +258,20 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initia
                       <Zap className="w-5 h-5 text-[#00C853] dark:text-ornex-green" />
                     </div>
                     <div>
-                      <h4 className="text-base md:text-lg font-black uppercase tracking-tighter text-cyber-light-heading dark:text-white">
+                      <h4 id="privacy-modal-title" className="text-base md:text-lg font-black uppercase tracking-tighter text-cyber-light-heading dark:text-white">
                         {scanMode === 'paste' ? 'Raw Source Analysis Guide' : 'EML File Upload Protocol'}
                       </h4>
                       <p className="text-[10px] md:text-[11px] font-mono uppercase tracking-widest text-zinc-500">Forensic Instructions • Level 1 Intelligence</p>
                     </div>
                   </div>
                   <div className="flex items-center self-start md:self-center gap-2 px-3 py-1 bg-zinc-100 dark:bg-white/5 rounded-full border border-zinc-200 dark:border-white/10">
+                    <button
+                      onClick={() => setShowGuide(false)}
+                      aria-label="Close Privacy Modal"
+                      className="p-1 hover:bg-zinc-200 dark:hover:bg-white/10 rounded-full transition-colors text-zinc-500"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                     <div className="w-1.5 h-1.5 rounded-full bg-cyber-light-accent dark:bg-ornex-green animate-pulse" />
                     <span className="text-[10px] md:text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">Active Assistant</span>
                   </div>
@@ -619,13 +628,18 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initia
                     </div>
                   </InfoTip>
                 )}
-                {(result.triage_stats?.pii_scrubbed ?? 0) > 0 && (
+                 {(result.triage_stats?.pii_scrubbed ?? 0) > 0 && (
                   <InfoTip title="Identity Protection" content="Personal data (such as your email address) was securely removed from these links prior to analysis to ensure your privacy.">
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/5 rounded-xl border border-blue-500/10 text-blue-400">
-                      <ShieldAlert size={12} />
+                    <button 
+                      onClick={onShowPrivacy}
+                      aria-label={`Show privacy details: ${result.triage_stats?.pii_scrubbed} PII items scrubbed`}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/5 rounded-xl border border-blue-500/10 text-blue-400 hover:bg-blue-500/10 transition-all hover:scale-105 active:scale-95 group relative overflow-hidden"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-400/10 to-transparent -translate-x-full group-hover:animate-shimmer" />
+                      <ShieldAlert size={12} className="group-hover:animate-digital-pulse" />
                       <span className="text-[9px] font-bold font-tektur uppercase tracking-[0.3em]">Privacy Protected:</span>
                       <span className="text-xs font-bold">{result.triage_stats?.pii_scrubbed}</span>
-                    </div>
+                    </button>
                   </InfoTip>
                 )}
                   <InfoTip title="Skipped Assets" content="Redundant or known-safe links (like WhatsApp/socials) skipped to save quota.">
