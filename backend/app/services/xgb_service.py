@@ -10,6 +10,7 @@ either model transparently.
 import os
 import pickle
 import logging
+from typing import Optional
 
 import numpy as np
 import xgboost as xgb
@@ -50,14 +51,14 @@ class XGBService:
         except Exception as e:
             logger.error(f"Failed to load XGBoost model: {e}")
 
-    def predict(self, url: str) -> float:
+    def predict(self, url: str) -> Optional[float]:
         """
         Returns phishing probability in [0.0, 1.0].
         0.0 = definitely safe, 1.0 = definitely phishing.
         """
         if self.booster is None:
-            logger.warning("XGBService.predict called but model not loaded — returning 0.5")
-            return 0.5
+            logger.warning("XGBService.predict called but model not loaded — returning None")
+            return None
 
         try:
             features = np.array([extract_features(url)], dtype=np.float32)
@@ -73,7 +74,7 @@ class XGBService:
 
         except Exception as e:
             logger.error(f"XGBService.predict error for '{url}': {e}")
-            return 0.5
+            return None
 
 
 # Singleton

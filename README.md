@@ -23,7 +23,8 @@ LinkVeil-AI is an advanced, multi-layered security platform that provides real-t
 *   **📧 Email Forensic Scanner**: Deep analysis of `.eml` files and raw email text with header authentication (SPF/DKIM) and heuristic scoring.
 *   **🕵️ Active Probing**: Real-time browser agent (Playwright) analyzes live page behavior and redirects.
 *   **👁️ Visual Forensics**: Integrated Gemini Vision for visual brand recognition and impersonation detection.
-*   **🔒 Privacy-First Forensics**: Automated PII scrubbing ("Privacy Protected") and intelligent log filtering ("Skipped") to protect sensitive forensic data.
+*   **🔒 Privacy-First Forensics**: Automated PII scrubbing ("Privacy Protected"), local storage redaction (stripping technical PII while preserving history UI), and intelligent log filtering ("Skipped") to protect sensitive forensic data.
+*   **🛡️ Anti-Evasion Hardening**: NFKC Unicode normalization, Base64 fallback parsing, and shared hosting (Vercel, Firebase) awareness to prevent bypasses.
 *   **🛡️ Brand Mismatch Engine**: Local, zero-API-cost token matching for 20+ global brands.
 *   **📡 Intelligence Dashboard**: Real-time aggregation of forensic indicators, categories, and historical trends.
 *   **🎨 Premium UI**: A high-contrast "Cyber-Botanical" dashboard with enhanced light mode accessibility and professional glassmorphism.
@@ -42,25 +43,35 @@ LinkVeil-AI is an advanced, multi-layered security platform that provides real-t
 
 ```bash
 .
-├── backend/                # FastAPI High-Performance Backend
+├── backend/                        # FastAPI High-Performance Backend
 │   ├── app/
-│   │   ├── features/       # Feature extraction: URL, Email, Link Triage
-│   │   ├── models/         # Pydantic Schemas & DB Models
-│   │   ├── routes/         # API Endpoints (Scanning, Analytics)
-│   │   ├── services/       # AI Engines: XGBoost, Vision, Email, Brand, Probe
-│   │   └── main.py         # Entry Point
-│   └── requirements.txt    # Python Dependencies
-├── frontend/               # React + Vite Forensic Dashboard
+│   │   ├── features/               # Feature extraction: URL, Email, Link Triage
+│   │   ├── models/                 # Pydantic Schemas & DB Models
+│   │   ├── routes/                 # API Endpoints
+│   │   │   ├── scan.py             # URL and Email scanning routes
+│   │   │   └── analytics.py        # Historical trends and stats
+│   │   ├── services/               # Core Forensic Engines
+│   │   │   ├── engine_service.py   # Fusion logic (XGBoost, LLM, Rules)
+│   │   │   ├── email_service.py    # Header parsing and email heuristics
+│   │   │   ├── vision_service.py   # Visual impersonation detection
+│   │   │   └── probe_agent.py      # Playwright active browser probe
+│   │   └── main.py                 # Entry Point
+│   └── requirements.txt            # Python Dependencies
+├── frontend/                       # React + Vite Forensic Dashboard
 │   ├── src/
-│   │   ├── components/     # Forensic UI: Analytics, EmailScan, RiskGauge
-│   │   ├── types.ts        # Global Forensic Types
-│   │   └── App.tsx         # Dashboard Orchestrator
-│   └── tailwind.config.js  # Premium Design Tokens
-├── ml/                     # Machine Learning Lab
-├── extension/              # Browser Extension (In Progress)
-├── data/                   # Persistent Storage (SQLite + screenshots)
-├── tests/                  # 11+ Pytest test modules
-└── docs/                   # Technical Assets & Diagrams
+│   │   ├── components/             # Forensic UI Components
+│   │   │   ├── EmailScan.tsx       # Email payload entry and analysis
+│   │   │   ├── HistorySidebar.tsx  # Persistent scan history
+│   │   │   ├── AnalyticsPanel.tsx  # Intelligence dashboard overlay
+│   │   │   └── RiskGauge.tsx       # Animated risk visualization
+│   │   ├── types.ts                # Global Forensic Types
+│   │   └── App.tsx                 # Dashboard Orchestrator
+│   └── tailwind.config.js          # Premium Design Tokens
+├── ml/                             # Machine Learning Lab (XGBoost, DistilBERT)
+├── extension/                      # Browser Extension (In Progress)
+├── data/                           # Persistent Storage (SQLite + screenshots)
+├── tests/                          # Pytest test modules for all services
+└── docs/                           # Technical Assets & Diagrams
 ```
 
 ---

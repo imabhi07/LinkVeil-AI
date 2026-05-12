@@ -18,7 +18,7 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError:
     this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(_: Error) {
+  static getDerivedStateFromError() {
     return { hasError: true };
   }
 
@@ -79,13 +79,11 @@ const AGENT_STEPS = [
   "Finalizing Verdict..."
 ];
 
-
-
 // ---------------------------------------------------------------------------
 // Memoized FeatureCard - prevents re-renders when parent state changes
 // ---------------------------------------------------------------------------
 const FeatureCard = memo(({ icon, title, desc }: { icon: React.ReactNode, title: string, desc: string }) => (
-  <div className="p-6 rounded-2xl glass-panel frosted-card-light dark:bg-black/40 card-gradient-border group h-full transition-all duration-500 hover:shadow-xl hover:-translate-y-1">
+  <div className="p-6 rounded-2xl glass-panel frosted-card-light dark:bg-zinc-900/40 card-gradient-border group h-full transition-all duration-500 hover:shadow-xl hover:-translate-y-1">
     <div className="flex items-start gap-4 mb-4">
       <div className="p-2.5 bg-white/80 dark:bg-ornex-black rounded-xl border border-zinc-100 dark:border-white/10 group-hover:border-[#00C853]/50 dark:group-hover:border-ornex-green/50 transition-all shadow-sm">
         {icon}
@@ -111,6 +109,7 @@ function App() {
   const [currentResult, setCurrentResult] = useState<AnalysisResult | null>(null);
   const [selectedResultId, setSelectedResultId] = useState<string | null>(null);
   const [currentEmailResult, setCurrentEmailResult] = useState<EmailScanResponse | null>(null);
+  const [currentEmailInput, setCurrentEmailInput] = useState<string | undefined>(undefined);
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
   const [history, setHistory] = useState<ScanHistoryItem[]>(() => {
     if (typeof window !== 'undefined') {
@@ -202,16 +201,32 @@ function App() {
 
   useEffect(() => {
     const id = requestIdleCallback(() => {
-      localStorage.setItem('linkveil_email_history', JSON.stringify(emailHistory));
+      // Privacy: Strip raw email payload and reduce PII in persisted history.
+      // NOTE: result.identity.subject and result.identity.from.email are
+      // intentionally retained — the HistorySidebar requires them to render
+      // meaningful card titles and subtitles. This reduces but does NOT
+      // eliminate PII from localStorage. Rescanning requires the current session.
+      const stripped = emailHistory.map(({ inputData, ...rest }) => ({
+        ...rest,
+        result: rest.result ? {
+          ...rest.result,
+          identity: {
+            ...rest.result.identity,
+            from: { ...rest.result.identity.from, name: '' },
+            reply_to: null,
+            return_path: null,
+          },
+        } : rest.result,
+      }));
+      localStorage.setItem('linkveil_email_history', JSON.stringify(stripped));
     });
     return () => cancelIdleCallback(id);
   }, [emailHistory]);
 
-  const handleAnalyze = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!url.trim()) return;
+  const performAnalyze = useCallback(async (targetUrl: string, forceRefresh: boolean = false) => {
+    if (!targetUrl.trim()) return;
 
-    if (!url.includes('.') || url.length < 4) {
+    if (!targetUrl.includes('.') || targetUrl.length < 4) {
       setError("Please enter a valid URL.");
       return;
     }
@@ -232,13 +247,28 @@ function App() {
       const response = await fetch(`${API_BASE_URL}/api/v1/scan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: url.includes('://') ? url : `https://${url}` }),
+        body: JSON.stringify({ 
+          url: targetUrl.includes('://') ? targetUrl : `https://${targetUrl}`,
+          force_refresh: forceRefresh
+        }),
         signal: controller.signal,
       });
 
       if (!response.ok) {
         const errBody = await response.json().catch(() => ({}));
-        throw new Error(errBody.detail || `Server error (${response.status})`);
+        let message = `Server error (${response.status})`;
+        
+        if (errBody.detail) {
+          if (typeof errBody.detail === 'string') {
+            message = errBody.detail;
+          } else if (Array.isArray(errBody.detail)) {
+            // FastAPI validation error format
+            message = errBody.detail.map((e: any) => e.msg).join(', ');
+          } else {
+            message = JSON.stringify(errBody.detail);
+          }
+        }
+        throw new Error(message);
       }
 
       const raw: BackendScanResponse = await response.json();
@@ -263,7 +293,12 @@ function App() {
     } finally {
       setLoading(false);
     }
-  }, [url]);
+  }, []);
+
+  const handleAnalyze = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    performAnalyze(url);
+  }, [url, performAnalyze]);
 
   const clearHistory = useCallback(() => {
     if (window.confirm("Are you sure you want to clear your scan history?")) {
@@ -306,6 +341,7 @@ function App() {
     if (item.type === 'email') {
       setScanMode('email');
       setCurrentEmailResult(item.result);
+      setCurrentEmailInput(item.inputData);
       setSelectedEmailId(item.id);
       setCurrentResult(null);
       setSelectedResultId(null);
@@ -325,19 +361,25 @@ function App() {
     }, 100);
   }, []);
 
-  const handleEmailResult = useCallback((res: EmailScanResponse) => {
+  const handleEmailResult = useCallback((res: EmailScanResponse, inputData?: string) => {
     const historyItem: EmailScanHistoryItem = {
       id: generateId(),
       type: 'email',
       timestamp: Date.now(),
-      result: res
+      result: res,
+      inputData: inputData
     };
     
     setEmailHistory(prev => {
       // Deduplicate emails by subject + sender (like URL dedupe)
       const filtered = prev.filter(item => {
-        const sameSubject = item.result.parsed_email?.subject === res.parsed_email?.subject;
-        const sameSender = item.result.parsed_email?.from_email === res.parsed_email?.from_email;
+        const itemSub = (item.result as any)?.identity?.subject || (item.result as any)?.parsed_email?.subject;
+        const resSub = res.identity?.subject || (res as any).parsed_email?.subject;
+        const itemFrom = (item.result as any)?.identity?.from?.email || (item.result as any)?.parsed_email?.from_email;
+        const resFrom = res.identity?.from?.email || (res as any).parsed_email?.from_email;
+        
+        const sameSubject = itemSub === resSub;
+        const sameSender = itemFrom === resFrom;
         return !(sameSubject && sameSender);
       });
       return [historyItem, ...filtered].slice(0, 50);
@@ -345,6 +387,7 @@ function App() {
 
     // Automatically focus on the new forensic result
     setCurrentEmailResult(res);
+    setCurrentEmailInput(inputData);
     setSelectedEmailId(historyItem.id);
     setTimeout(() => {
       const element = document.getElementById('email-results');
@@ -352,11 +395,22 @@ function App() {
     }, 100);
   }, []);
 
+  const handleReview = useCallback((scan: { url: string }) => {
+    const existing = history.find(h => h.url === scan.url);
+    if (existing) {
+      setCurrentResult(existing);
+      setShowAnalytics(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      alert(`Forensic details for ${scan.url} are currently restricted to global threat intelligence and not cached in your local session.`);
+    }
+  }, [history]);
+
   return (
     <div className={`min-h-screen ${theme === 'light' ? 'light-hero-gradient' : 'bg-black'} transition-colors duration-500 overflow-x-hidden relative text-cyber-light-heading dark:text-zinc-100 font-sans pb-20`}>
 
       {/* 4K Grain Texture Overlay */}
-      <div className="fixed inset-0 pointer-events-none z-[100] opacity-[0.03] mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
+      <div className="fixed inset-0 pointer-events-none z-[100] opacity-[0.03] mix-blend-overlay bg-[url('/noise.svg')]"></div>
 
       {/* Background Glows - Absolute to scroll with content */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden h-[1200px]">
@@ -377,32 +431,32 @@ function App() {
 
       {/* Navbar */}
       <nav className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
-        <div className="w-full max-w-7xl frosted-nav dark:bg-ornex-panel dark:border-white/10 rounded-full px-6 h-16 flex items-center justify-between shadow-2xl shadow-black/5 dark:shadow-black/20 pointer-events-auto">
+        <div className="w-full max-w-7xl frosted-nav dark:bg-ornex-panel dark:border-white/10 rounded-full px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between shadow-2xl shadow-black/5 dark:shadow-black/20 pointer-events-auto">
           <div className="flex items-center gap-3">
              <div className="w-8 h-8 rounded bg-cyber-light-accent dark:bg-ornex-green flex items-center justify-center text-white dark:text-ornex-black shadow-[0_0_15px_rgba(0,200,83,0.4)] dark:shadow-[0_0_15px_rgba(57,255,20,0.5)]">
                <Shield className="w-5 h-5 fill-current" />
              </div>
-            <span className="text-xl font-bold tracking-tight text-cyber-light-heading dark:text-white">
+            <span className="text-lg sm:text-xl font-bold tracking-tight text-cyber-light-heading dark:text-white truncate max-w-[120px] sm:max-w-none">
               LinkVeil AI
             </span>
           </div>
 
           <div className="flex items-center gap-4">
-            <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-mono text-cyber-light-accent dark:text-zinc-500 uppercase tracking-wider">
+            <span className="hidden md:inline-flex items-center gap-1.5 text-xs font-mono text-cyber-light-accent dark:text-zinc-500 uppercase tracking-wider">
               <span className="w-2 h-2 bg-cyber-light-accent dark:bg-ornex-green rounded-full animate-pulse shadow-[0_0_8px_rgba(0,200,83,0.5)] dark:shadow-[0_0_8px_#39FF14]"></span>
               System Active
             </span>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <button 
                 onClick={() => setShowAnalytics(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-cyber-light-accent/10 hover:bg-cyber-light-accent/20 text-cyber-light-accent dark:text-ornex-green border border-cyber-light-accent/20 rounded-full transition-all text-sm font-medium"
+                className="h-10 flex-shrink-0 flex items-center justify-center gap-2 px-3 sm:px-4 bg-cyber-light-accent/10 hover:bg-cyber-light-accent/20 text-cyber-light-accent dark:text-ornex-green border border-cyber-light-accent/20 rounded-full transition-all text-sm font-medium whitespace-nowrap"
               >
                 <BarChart3 className="w-4 h-4" />
-                <span>Analytics</span>
+                <span className="hidden xs:inline">Analytics</span>
               </button>
               <button
                 onClick={toggleTheme}
-                className="p-2 rounded-full bg-cyber-light-bg dark:bg-white/5 text-cyber-light-text dark:text-zinc-400 hover:bg-white dark:hover:bg-white/10 transition-colors border border-transparent dark:border-white/5"
+                className="w-10 h-10 flex items-center justify-center rounded-full bg-cyber-light-bg dark:bg-white/5 text-cyber-light-text dark:text-zinc-400 hover:bg-white dark:hover:bg-white/10 transition-colors border border-transparent dark:border-white/5 flex-shrink-0"
                 aria-label="Toggle theme"
               >
                 {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -420,7 +474,7 @@ function App() {
             <div className="w-full space-y-8">
 
               {/* Hero Section */}
-              <div className="text-center space-y-8 flex flex-col items-center relative z-10 border-b border-[#00C853]/5 pb-12">
+              <div className="text-center space-y-6 sm:space-y-8 flex flex-col items-center relative z-10 border-b border-[#00C853]/5 pb-8 sm:pb-12">
                 {/* Decorative Side Label - Right Side */}
                 <div className="hidden xl:block absolute right-[-5%] top-[75%] select-none">
                   <div className="flex flex-col gap-3 text-zinc-500 dark:text-zinc-200/50 text-[12px] font-light uppercase tracking-[1.2em] text-left" style={{ fontFamily: "'Outfit', sans-serif" }}>
@@ -429,21 +483,21 @@ function App() {
                   </div>
                 </div>
 
-                <div className="inline-flex items-center gap-3 px-5 py-2 rounded-full border border-cyber-light-accent/30 bg-cyber-light-accent/10 text-cyber-light-accent dark:border-ornex-green/30 dark:bg-ornex-green/10 dark:text-ornex-green text-xs font-mono tracking-widest uppercase transition-colors">
-                  <span className="relative flex h-2.5 w-2.5">
+                <div className="inline-flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-1.5 sm:py-2 rounded-full border border-cyber-light-accent/30 bg-cyber-light-accent/10 text-cyber-light-accent dark:border-ornex-green/30 dark:bg-ornex-green/10 dark:text-ornex-green text-[9px] sm:text-xs font-mono tracking-widest uppercase transition-colors text-center">
+                  <span className="relative flex h-2 w-2 sm:h-2.5 sm:w-2.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyber-light-accent dark:bg-ornex-green opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyber-light-accent dark:bg-ornex-green"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-cyber-light-accent dark:bg-ornex-green"></span>
                   </span>
                   Defend Yourself From Phishing
                 </div>
 
-                <h1 className="text-4xl md:text-6xl font-black text-cyber-light-heading dark:text-white leading-[1.2] uppercase tracking-[0.05em] mb-4" style={{ fontFamily: "'Orbitron', sans-serif" }}>
-                  Threats Move Fast <br />
-                  <span className="text-[#8A9E8A] dark:text-zinc-500">We Move Faster</span> <br />
+                <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-cyber-light-heading dark:text-white leading-[1.2] uppercase tracking-[0.05em] mb-2 sm:mb-4 px-2" style={{ fontFamily: "'Orbitron', sans-serif" }}>
+                  Threats Move Fast <br className="hidden xs:block" />
+                  <span className="text-[#8A9E8A] dark:text-zinc-500">We Move Faster</span> <br className="hidden xs:block" />
                   <span className="text-[#00A846] dark:text-ornex-green drop-shadow-[0_0_20px_rgba(0,168,70,0.15)] dark:drop-shadow-[0_0_20px_rgba(57,255,20,0.3)]">Always.</span>
                 </h1>
 
-                <p className="text-cyber-light-text dark:text-zinc-400 max-w-xl text-base md:text-lg leading-relaxed font-medium">
+                <p className="text-cyber-light-text dark:text-zinc-400 max-w-[280px] sm:max-w-lg md:max-w-xl text-xs sm:text-base md:text-lg leading-relaxed font-medium px-2">
                   AI-driven protection that learns, adapts, and grows stronger every single day - so you stay one step ahead of every digital threat.
                 </p>
               </div>
@@ -451,50 +505,50 @@ function App() {
               {/* Scan Container */}
               <div className="flex flex-col items-center w-full space-y-12 relative z-20">
                 {/* Mode Toggle Tabs */}
-                <div className="flex p-1.5 bg-zinc-200/50 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-zinc-200 dark:border-white/10 relative z-20">
+                <div className="flex p-1 bg-zinc-200/50 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-zinc-200 dark:border-white/10 relative z-20">
                   <button
                     onClick={() => {
                       setScanMode('url');
-                      setCurrentEmailResult(null); // Clear other mode's result
+                      setCurrentEmailResult(null);
                     }}
-                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold uppercase tracking-widest transition-all
+                    className={`flex items-center justify-center gap-2 px-4 sm:px-8 py-2.5 sm:py-3 rounded-xl text-[10px] sm:text-xs md:text-sm font-bold uppercase tracking-widest transition-all flex-1 sm:flex-initial
                       ${scanMode === 'url' 
-                        ? 'bg-white dark:bg-ornex-green text-cyber-light-accent dark:text-ornex-black shadow-lg shadow-black/5 dark:shadow-ornex-green/20' 
+                        ? 'bg-white dark:bg-ornex-green text-cyber-light-accent dark:text-ornex-black shadow-lg shadow-black/5 dark:shadow-ornex-green/20 scale-[1.02]' 
                         : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
                       }`}
                   >
-                    <Search className="w-4 h-4" />
+                    <Globe className="w-3.5 h-3.5 sm:w-4 h-4" />
                     URL Scan
                   </button>
                   <button
                     onClick={() => {
                       setScanMode('email');
-                      setCurrentResult(null); // Clear other mode's result
+                      setCurrentResult(null);
                     }}
-                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold uppercase tracking-widest transition-all
+                    className={`flex items-center justify-center gap-2 px-4 sm:px-8 py-2.5 sm:py-3 rounded-xl text-[10px] sm:text-xs md:text-sm font-bold uppercase tracking-widest transition-all flex-1 sm:flex-initial
                       ${scanMode === 'email' 
-                        ? 'bg-white dark:bg-ornex-green text-cyber-light-accent dark:text-ornex-black shadow-lg shadow-black/5 dark:shadow-ornex-green/20' 
+                        ? 'bg-white dark:bg-ornex-green text-cyber-light-accent dark:text-ornex-black shadow-lg shadow-black/5 dark:shadow-ornex-green/20 scale-[1.02]' 
                         : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
                       }`}
                   >
-                    <Mail className="w-4 h-4" />
+                    <Mail className="w-3.5 h-3.5 sm:w-4 h-4" />
                     Email Scan
                   </button>
                 </div>
 
                 {scanMode === 'url' ? (
                   <>
-                    <form onSubmit={handleAnalyze} className="max-w-2xl w-full relative group">
-                      <div className="relative flex items-center p-2 glass-panel dark:bg-black/40 rounded-full dark:border-white/15 transition-all duration-300 hover:border-cyber-light-accent/50 dark:hover:border-ornex-green/50 hover:shadow-[0_0_30px_rgba(0,200,83,0.15)] dark:hover:shadow-[0_0_30px_rgba(57,255,20,0.1)]">
-                        <div className="pl-6 text-cyber-light-text dark:text-zinc-500">
-                          <Search className="w-5 h-5" />
+                    <form onSubmit={handleAnalyze} className="w-full max-w-sm sm:max-w-lg md:max-w-2xl relative group">
+                      <div className="relative flex items-center p-1.5 sm:p-2 glass-panel dark:bg-black/40 rounded-full dark:border-white/15 transition-all duration-300 hover:border-cyber-light-accent/50 dark:hover:border-ornex-green/50 hover:shadow-[0_0_30px_rgba(0,200,83,0.15)] dark:hover:shadow-[0_0_30px_rgba(57,255,20,0.1)]">
+                        <div className="pl-4 sm:pl-6 text-cyber-light-text dark:text-zinc-500">
+                          <Search className="w-4 h-4 sm:w-5 h-5" />
                         </div>
                         <input
                           type="text"
                           value={url}
                           onChange={(e) => setUrl(e.target.value)}
                           placeholder="ENTER TARGET URL..."
-                          className="flex-1 w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 ring-0 shadow-none appearance-none py-3 px-4 text-cyber-light-heading dark:text-white placeholder-cyber-light-text/60 dark:placeholder-zinc-600 text-base font-mono tracking-wide"
+                          className="flex-1 w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 ring-0 shadow-none appearance-none py-2.5 sm:py-3 px-3 sm:px-4 text-cyber-light-heading dark:text-white placeholder-cyber-light-text/60 dark:placeholder-zinc-600 text-xs sm:text-base font-mono tracking-wide"
                           autoComplete="off"
                           id="url-input"
                         />
@@ -503,7 +557,7 @@ function App() {
                           type="submit"
                           disabled={loading || !url}
                           id="scan-button"
-                          className={`px-8 py-3 font-black rounded-full transition-all flex items-center gap-2 uppercase tracking-widest text-xs
+                          className={`px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 font-black rounded-full transition-all flex items-center gap-2 uppercase tracking-widest text-[10px] sm:text-xs
                             ${loading
                               ? 'bg-[#00C853] dark:bg-ornex-green text-white dark:text-ornex-black cursor-wait shadow-[0_4px_20px_rgba(0,180,80,0.35)]'
                               : !url
@@ -512,10 +566,10 @@ function App() {
                             }`}
                         >
                           {loading ? (
-                            <div className="w-5 h-5 border-[3px] border-white/30 dark:border-black/30 border-t-white dark:border-t-black rounded-full animate-spin" />
+                            <div className="w-4 h-4 sm:w-5 h-5 border-[3px] border-white/30 dark:border-black/30 border-t-white dark:border-t-black rounded-full animate-spin" />
                           ) : (
                             <>
-                              SCAN <ArrowRight className="w-4 h-4" />
+                              SCAN <ArrowRight className="w-3.5 h-3.5 sm:w-4 h-4" />
                             </>
                           )}
                         </button>
@@ -538,6 +592,7 @@ function App() {
                       mapToAnalysisResult={mapToAnalysisResult} 
                       onResult={handleEmailResult}
                       initialResult={currentEmailResult}
+                      initialInputData={currentEmailInput}
                     />
                   </div>
                 )}
@@ -563,9 +618,12 @@ function App() {
 
               {/* Results Display */}
               <div id="url-results" className="scroll-mt-32">
-                {currentResult && !loading && (
+                 {currentResult && !loading && (
                   <div className="animate-fade-in">
-                     <ResultDetails result={currentResult} />
+                     <ResultDetails 
+                       result={currentResult} 
+                       onRetry={() => performAnalyze(currentResult.url, true)}
+                     />
                   </div>
                 )}
               </div>
@@ -600,7 +658,7 @@ function App() {
                               { icon: <BarChart3 className="w-4 h-4" />, title: "Hybrid Fusion", desc: "Correlation of XGBoost pattern scoring with threat intelligence feeds." },
                               { icon: <Globe className="w-4 h-4" />, title: "Global Intel", desc: "Active reputation lookups across global databases for known malicious domains." }
                             ].map((feature, idx) => (
-                              <div key={idx} className="w-[320px] flex-shrink-0">
+                              <div key={idx} className="w-[260px] sm:w-[300px] md:w-[320px] flex-shrink-0">
                                 <FeatureCard
                                   icon={feature.icon}
                                   title={feature.title}
@@ -650,7 +708,12 @@ function App() {
 
 
       {/* Analytics Overlay */}
-      {showAnalytics && <AnalyticsPanel onClose={() => setShowAnalytics(false)} />}
+      {showAnalytics && (
+        <AnalyticsPanel 
+          onClose={() => setShowAnalytics(false)} 
+          onReview={handleReview}
+        />
+      )}
     </div>
   );
 }

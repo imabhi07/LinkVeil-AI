@@ -1,26 +1,22 @@
 import { useState, useRef, useEffect } from 'react';
-import { Mail, Shield, AlertCircle, ChevronDown, AlertTriangle, FileUp, Clipboard, Layout, ArrowRight, Info, CheckCircle2, Zap, Copy, ExternalLink, ShieldAlert } from 'lucide-react';
+import { Mail, Shield, AlertCircle, ChevronDown, AlertTriangle, FileUp, Clipboard, Layout, ArrowRight, Info, CheckCircle2, Zap, Copy, ExternalLink, ShieldAlert, ShieldCheck, ShieldX, Fingerprint, MessageSquare, Link2, RefreshCcw } from 'lucide-react';
 import type { EmailScanRequest, EmailScanResponse, AnalysisResult } from '../types';
 import { ResultDetails } from './ResultDetails';
 import { InfoTip } from './InfoTip';
+import { RiskGauge } from './RiskGauge';
+import { EmailForensicInsight } from './EmailForensicInsight';
 
 interface EmailScanProps {
-  onResult?: (result: EmailScanResponse) => void;
+  onResult?: (result: EmailScanResponse, inputData?: string) => void;
   mapToAnalysisResult: (raw: any) => AnalysisResult;
   initialResult?: EmailScanResponse | null;
+  initialInputData?: string;
 }
 
-type ScanMode = 'manual' | 'paste' | 'upload';
+type ScanMode = 'paste' | 'upload';
 
-export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: EmailScanProps) {
-  const [scanMode, setScanMode] = useState<ScanMode>('manual');
-  const [formData, setFormData] = useState<EmailScanRequest>({
-    from_name: '',
-    from_email: '',
-    reply_to: '',
-    subject: '',
-    body: ''
-  });
+export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initialInputData }: EmailScanProps) {
+  const [scanMode, setScanMode] = useState<ScanMode>('paste');
   const [rawEmail, setRawEmail] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   
@@ -33,20 +29,31 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
     if (initialResult) {
       setResult(initialResult);
       setError(null);
-      
-      // Auto-expand the deep dive target if provided
-      if (initialResult.deep_dive_target) {
-        setExpandedUrls({ [initialResult.deep_dive_target]: true });
-      } else if (initialResult.link_results && initialResult.link_results.length > 0) {
-        // Fallback to highest risk link
-        const topLink = [...initialResult.link_results].sort((a, b) => b.risk_score - a.risk_score)[0];
-        setExpandedUrls({ [topLink.url]: true });
-      }
+      // Clear selected file when loading a result to avoid UI confusion
+      setSelectedFile(null);
     }
-  }, [initialResult]);
+    
+    // Always sync rawEmail with initialInputData, even if it's undefined (clears stale data)
+    setRawEmail(initialInputData || '');
+  }, [initialResult, initialInputData]);
   
   const [expandedUrls, setExpandedUrls] = useState<Record<string, boolean>>({});
+  const [linkSort, setLinkSort] = useState<'risk-desc' | 'risk-asc'>('risk-desc');
+  const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target as Node)) {
+        setSortDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -54,44 +61,28 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
     }
   };
 
-  const handleBodyPaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-    const html = e.clipboardData.getData('text/html');
-    const plain = e.clipboardData.getData('text/plain');
-
-    // If we have HTML, we want to extract the links forensically
-    if (html && html.includes('<a')) {
-      e.preventDefault();
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
-      
-      // Find all links and append their href to their text content
-      const links = doc.querySelectorAll('a');
-      links.forEach(link => {
-        const href = link.getAttribute('href');
-        const text = link.textContent?.trim();
-        if (href && href !== text && !href.startsWith('mailto:') && !href.startsWith('tel:')) {
-          link.textContent = `${text} (${href})`;
-        }
-      });
-
-      const forensicText = doc.body.innerText || doc.body.textContent || plain;
-      setFormData(prev => ({ ...prev, body: prev.body + forensicText }));
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent, force: boolean = false) => {
+    if (e) e.preventDefault();
     
+    // Track the actual input data for history persistence to avoid React state closure/batching issues
+    let inputDataForHistory = rawEmail;
+    
+    // Effective mode handling:
+    // 1. If rescanning (force=true) and we have stored raw email data, always use paste mode
+    // 2. Otherwise, if we're in upload mode but have no file object (common when opening history) 
+    //    but have raw content, fall back to paste/raw analysis.
+    const effectiveMode = (force && rawEmail.trim()) 
+      ? 'paste' 
+      : (scanMode === 'upload' && !selectedFile && rawEmail.trim()) 
+        ? 'paste' 
+        : scanMode;
+
     // Validation
-    if (scanMode === 'manual' && !formData.body?.trim()) {
-      setError("Email body is required for manual analysis.");
-      return;
-    }
-    if (scanMode === 'paste' && !rawEmail.trim()) {
+    if (effectiveMode === 'paste' && !rawEmail.trim()) {
       setError("Please paste the raw email content.");
       return;
     }
-    if (scanMode === 'upload' && !selectedFile) {
+    if (effectiveMode === 'upload' && !selectedFile) {
       setError("Please select a .eml file to upload.");
       return;
     }
@@ -104,19 +95,28 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
       let response;
 
-      if (scanMode === 'upload' && selectedFile) {
+      if (effectiveMode === 'upload' && selectedFile) {
+        // Capture EML text for future rescan from history
+        const emlText = await selectedFile.text();
+        setRawEmail(emlText);
+        inputDataForHistory = emlText;
+
         const uploadData = new FormData();
         uploadData.append('file', selectedFile);
-        response = await fetch(`${API_BASE_URL}/api/v1/scan/eml`, {
+        
+        // EML endpoint supports force_refresh via query param
+        const emlUrl = `${API_BASE_URL}/api/v1/scan/eml${force ? '?force_refresh=true' : ''}`;
+        response = await fetch(emlUrl, {
           method: 'POST',
           body: uploadData,
         });
       } else {
-        const payload: EmailScanRequest = scanMode === 'paste' 
-          ? { raw_email: rawEmail }
-          : formData;
-          
-        response = await fetch(`${API_BASE_URL}/api/v1/scan/email`, {
+        const payload: EmailScanRequest = { 
+          raw_email: rawEmail,
+          force_refresh: force 
+        };
+        const url = `${API_BASE_URL}/api/v1/scan/email${force ? '?force_refresh=true' : ''}`;
+        response = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -130,13 +130,10 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
 
       const data: EmailScanResponse = await response.json();
       setResult(data);
-      onResult?.(data);
+      // Pass the correct captured data to history, not the potentially stale state
+      onResult?.(data, inputDataForHistory);
 
       // Auto-expand the link with the highest risk score
-      if (data.link_results && data.link_results.length > 0) {
-        const topLink = [...data.link_results].sort((a, b) => b.risk_score - a.risk_score)[0];
-        setExpandedUrls({ [topLink.url]: true });
-      }
     } catch (err: any) {
       setError(err.message || "An error occurred during email analysis.");
     } finally {
@@ -145,11 +142,19 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
   };
 
   const getRiskColor = (level: string) => {
-    switch (level?.toLowerCase()) {
-      case 'high': return 'text-rose-700 dark:text-rose-500 bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/20';
-      case 'medium': return 'text-amber-900 dark:text-amber-500 bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20';
-      case 'low': return 'text-emerald-900 dark:text-ornex-green bg-emerald-50 dark:bg-ornex-green/10 border-emerald-200 dark:border-ornex-green/20';
-      case 'inconclusive': return 'text-zinc-700 dark:text-zinc-500 bg-zinc-50 dark:bg-zinc-500/10 border-zinc-200 dark:border-zinc-500/20';
+    const normalized = level?.toLowerCase();
+    switch (normalized) {
+      case 'high':
+      case 'malicious': 
+        return 'text-rose-700 dark:text-rose-500 bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/20';
+      case 'medium':
+      case 'suspicious':
+        return 'text-amber-900 dark:text-amber-500 bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20';
+      case 'low':
+      case 'safe':
+        return 'text-emerald-900 dark:text-ornex-green bg-emerald-50 dark:bg-ornex-green/10 border-emerald-200 dark:border-ornex-green/20';
+      case 'inconclusive': 
+        return 'text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20';
       default: return 'text-zinc-700 dark:text-zinc-500 bg-zinc-50 dark:bg-zinc-500/10 border-zinc-200 dark:border-zinc-500/20';
     }
   };
@@ -174,34 +179,34 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
       const parsed = new URL(url);
       const path = parsed.pathname === '/' ? '' : (parsed.pathname.length > 20 ? parsed.pathname.substring(0, 20) + '...' : parsed.pathname);
       return (
-        <span className="flex items-center gap-1">
-          <span className="text-cyber-light-heading dark:text-white font-bold">{parsed.hostname}</span>
-          <span className="text-zinc-500 font-normal">{path}</span>
+        <span className="flex items-center min-w-0">
+          <span className="text-cyber-light-heading dark:text-white font-bold truncate">{parsed.hostname}</span>
+          <span className="text-zinc-500 font-normal shrink-0">{path}</span>
         </span>
       );
     } catch {
-      return url.length > 40 ? url.substring(0, 25) + '...' + url.substring(url.length - 10) : url;
+      return <span className="truncate min-w-0">{url}</span>;
     }
   };
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <div className="glass-panel p-8 rounded-3xl dark:bg-black/40 border-zinc-200 dark:border-white/10 shadow-xl shadow-black/5">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-10">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-cyber-light-accent/10 dark:bg-ornex-green/10 rounded-2xl border border-cyber-light-accent/20 dark:border-ornex-green/20">
-              <Mail className="w-6 h-6 text-cyber-light-accent dark:text-ornex-green" />
+      <div className="glass-panel p-4 sm:p-6 md:p-8 rounded-2xl md:rounded-3xl dark:bg-zinc-900/40 border-zinc-200 dark:border-white/10 shadow-xl shadow-black/5">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8 md:mb-10">
+          <div className="flex items-center gap-3 md:gap-4">
+            <div className="p-2.5 md:p-3 bg-cyber-light-accent/10 dark:bg-ornex-green/10 rounded-xl md:rounded-2xl border border-cyber-light-accent/20 dark:border-ornex-green/20 shrink-0">
+              <Mail className="w-5 h-5 md:w-6 md:h-6 text-cyber-light-accent dark:text-ornex-green" />
             </div>
-            <div className="space-y-1">
-              <h2 className="text-2xl font-bold text-cyber-light-heading dark:text-white uppercase tracking-tight leading-none">Email Forensic Scan</h2>
-              <p className="text-[11px] text-cyber-light-text dark:text-zinc-400 font-mono opacity-70">Detect phishing artifacts and malicious links</p>
+            <div className="space-y-0.5 md:space-y-1">
+              <h2 className="text-xl md:text-2xl font-bold text-cyber-light-heading dark:text-white uppercase tracking-tight leading-none">Email Forensic Scan</h2>
+              <p className="text-[10px] md:text-[11px] text-cyber-light-text dark:text-zinc-400 font-mono opacity-70">Detect phishing artifacts and malicious links</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
             <button
               onClick={() => setShowGuide(!showGuide)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border
+              className={`flex items-center justify-center gap-2 px-4 py-2.5 md:py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border
                 ${showGuide 
                   ? 'bg-cyber-light-accent/10 border-cyber-light-accent/30 text-cyber-light-accent dark:bg-ornex-green/10 dark:border-ornex-green/30 dark:text-ornex-green' 
                   : 'bg-zinc-100 dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
@@ -210,89 +215,61 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
               <Info className="w-3.5 h-3.5" />
               {showGuide ? 'Hide Guide' : 'How to Scan'}
             </button>
-          </div>
 
-          <div className="flex p-1 bg-zinc-100 dark:bg-white/5 rounded-xl border border-zinc-200 dark:border-white/10 w-full md:w-auto relative">
-            { [
-              { id: 'manual', icon: Layout, label: 'Manual', tip: 'Best for quick analysis of plain text subject/body.' },
-              { id: 'paste', icon: Clipboard, label: 'Paste', tip: 'Highest accuracy; parses full email headers + body.' },
-              { id: 'upload', icon: FileUp, label: 'Upload', tip: 'Most secure; upload an authentic .eml file directly.' }
-            ].map((tab) => (
-              <InfoTip 
-                key={tab.id} 
-                title={tab.label + " Mode"} 
-                content={tab.tip}
-                placement="bottom"
-                className={`flex-1 md:flex-none flex items-center relative`}
-              >
-                <button
-                  type="button"
-                  onClick={() => setScanMode(tab.id as any)}
-                  className={`w-full flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${scanMode === tab.id ? 'bg-white dark:bg-white/10 shadow-sm text-cyber-light-accent dark:text-ornex-green' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+            <div className="flex p-1 bg-zinc-100 dark:bg-white/5 rounded-xl border border-zinc-200 dark:border-white/10 relative">
+              { [
+                { id: 'paste', icon: Clipboard, label: 'Paste', fullLabel: 'Paste Raw Source', tip: 'Highest accuracy; parses full email headers + body.' },
+                { id: 'upload', icon: FileUp, label: 'Upload', fullLabel: 'Upload .EML', tip: 'Most secure; upload an authentic .eml file directly.' }
+              ].map((tab) => (
+                <InfoTip 
+                  key={tab.id} 
+                  title={tab.fullLabel + " Mode"} 
+                  content={tab.tip}
+                  placement="bottom"
+                  className={`flex-1 sm:flex-none flex items-center relative`}
                 >
-                  <tab.icon className="w-3.5 h-3.5" />
-                  {tab.label}
-                </button>
-              </InfoTip>
-            ))}
+                  <button
+                    type="button"
+                    onClick={() => setScanMode(tab.id as any)}
+                    className={`w-full flex items-center justify-center gap-2 px-3 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-widest transition-all ${scanMode === tab.id ? 'bg-white dark:bg-white/10 shadow-sm text-cyber-light-accent dark:text-ornex-green' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                  >
+                    <tab.icon className="w-3.5 h-3.5" />
+                    <span className="hidden xs:inline">{tab.fullLabel}</span>
+                    <span className="inline xs:hidden">{tab.label}</span>
+                  </button>
+                </InfoTip>
+              ))}
+            </div>
           </div>
         </div>
 
         {showGuide && (
           <div className="mb-8 space-y-6 animate-slide-down">
-            <div className="p-8 rounded-[2rem] bg-zinc-50 dark:bg-black/40 border border-[#00C853]/20 dark:border-ornex-green/20 backdrop-blur-xl shadow-2xl relative overflow-hidden group">
+            <div className="p-5 md:p-8 rounded-2xl md:rounded-[2rem] bg-zinc-50 dark:bg-zinc-900/40 border border-[#00C853]/20 dark:border-ornex-green/20 shadow-2xl relative overflow-hidden group">
               {/* Background Decoration */}
               <div className="absolute top-0 right-0 w-64 h-64 bg-cyber-light-accent/5 dark:bg-ornex-green/5 blur-[100px] -mr-32 -mt-32 pointer-events-none" />
               
-              <div className="relative space-y-8">
+              <div className="relative space-y-6 md:space-y-8">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-200 dark:border-white/5 pb-6">
                   <div className="flex items-center gap-4">
-                    <div className="p-3 bg-[#00C853]/10 dark:bg-ornex-green/20 rounded-2xl">
+                    <div className="p-3 bg-[#00C853]/10 dark:bg-ornex-green/20 rounded-2xl shrink-0">
                       <Zap className="w-5 h-5 text-[#00C853] dark:text-ornex-green" />
                     </div>
                     <div>
-                      <h4 className="text-lg font-black uppercase tracking-tighter text-cyber-light-heading dark:text-white">
-                        {scanMode === 'manual' ? 'Manual Entry Protocol' : scanMode === 'paste' ? 'Raw Source Analysis Guide' : 'EML File Upload Protocol'}
+                      <h4 className="text-base md:text-lg font-black uppercase tracking-tighter text-cyber-light-heading dark:text-white">
+                        {scanMode === 'paste' ? 'Raw Source Analysis Guide' : 'EML File Upload Protocol'}
                       </h4>
-                      <p className="text-[11px] font-mono uppercase tracking-widest text-zinc-500">Forensic Instructions • Level 1 Intelligence</p>
+                      <p className="text-[10px] md:text-[11px] font-mono uppercase tracking-widest text-zinc-500">Forensic Instructions • Level 1 Intelligence</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 px-3 py-1 bg-zinc-100 dark:bg-white/5 rounded-full border border-zinc-200 dark:border-white/10">
+                  <div className="flex items-center self-start md:self-center gap-2 px-3 py-1 bg-zinc-100 dark:bg-white/5 rounded-full border border-zinc-200 dark:border-white/10">
                     <div className="w-1.5 h-1.5 rounded-full bg-cyber-light-accent dark:bg-ornex-green animate-pulse" />
-                    <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">Active Assistant</span>
+                    <span className="text-[10px] md:text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">Active Assistant</span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                  {scanMode === 'manual' ? (
-                    <>
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-cyber-light-accent dark:text-ornex-green">
-                          <Layout className="w-4 h-4" />
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Context</span>
-                        </div>
-                        <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
-                          Use this when you only have the visible message content. Our AI uses <span className="text-cyber-light-heading dark:text-white font-bold">NLP (Natural Language Processing)</span> to detect urgency, threat patterns, and deceptive tone.
-                        </p>
-                      </div>
-                      <div className="lg:col-span-2 space-y-4">
-                        <div className="flex items-center gap-2 text-cyber-light-accent dark:text-ornex-green">
-                          <CheckCircle2 className="w-4 h-4" />
-                          <span className="text-[11px] font-black uppercase tracking-[0.2em]">Best Practice</span>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="p-4 rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/5 hover:border-cyber-light-accent/30 dark:hover:border-white/10 transition-colors">
-                            <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-500 uppercase block mb-1">Body Intelligence</span>
-                            <p className="text-[11px] text-zinc-600 dark:text-zinc-300">Paste the <span className="font-bold text-cyber-light-heading dark:text-white">full body</span>. Don't remove links - we need them to scan the final destination for malware.</p>
-                          </div>
-                          <div className="p-4 rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/5 hover:border-cyber-light-accent/30 dark:hover:border-white/10 transition-colors">
-                            <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-500 uppercase block mb-1">Impersonation Check</span>
-                            <p className="text-[11px] text-zinc-600 dark:text-zinc-300">Providing the <span className="font-bold text-cyber-light-heading dark:text-white">From Email</span> allows us to cross-reference known official brand domains.</p>
-                          </div>
-                        </div>
-                      </div>
-                    </>
-                  ) : scanMode === 'paste' ? (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                  {scanMode === 'paste' ? (
                     <>
                       <div className="space-y-6">
                         <div className="space-y-4">
@@ -317,7 +294,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                           <Clipboard className="w-4 h-4" />
                           <span className="text-[11px] font-black uppercase tracking-[0.2em]">Quick Extraction (Select Your Client)</span>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
                           {[
                             { name: 'Gmail', steps: ['Open Email', 'Click ⋮ (More)', 'Show original'] },
                             { name: 'Outlook', steps: ['Open Email', 'Click ... (More)', 'View message source'] },
@@ -354,7 +331,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                           <ArrowRight className="w-4 h-4" />
                           <span className="text-[10px] font-black uppercase tracking-[0.2em]">How to export</span>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
                           <div className="p-4 rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/5 flex flex-col gap-3">
                             <div className="flex items-center gap-3">
                               <div className="p-2 bg-zinc-200 dark:bg-white/5 rounded-lg text-cyber-light-accent dark:text-ornex-green">
@@ -393,73 +370,15 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {scanMode === 'manual' && (
-            <div className="animate-fade-in space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-mono uppercase tracking-widest text-zinc-500 ml-1">From Name</label>
-                  <input
-                    type="text"
-                    value={formData.from_name}
-                    onChange={e => setFormData({ ...formData, from_name: e.target.value })}
-                    placeholder="e.g. PayPal Support"
-                    className="w-full bg-cyber-light-bg dark:bg-white/5 border border-zinc-300 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:border-cyber-light-accent/50 dark:focus:border-ornex-green/50 outline-none transition-all font-mono shadow-sm"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-mono uppercase tracking-widest text-zinc-500 ml-1">From Email</label>
-                  <input
-                    type="text"
-                    value={formData.from_email}
-                    onChange={e => setFormData({ ...formData, from_email: e.target.value })}
-                    placeholder="e.g. security@paypal.com"
-                    className="w-full bg-cyber-light-bg dark:bg-white/5 border border-zinc-300 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:border-cyber-light-accent/50 dark:focus:border-ornex-green/50 outline-none transition-all font-mono shadow-sm"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-mono uppercase tracking-widest text-zinc-500 ml-1">Reply-To Address</label>
-                  <input
-                    type="text"
-                    value={formData.reply_to}
-                    onChange={e => setFormData({ ...formData, reply_to: e.target.value })}
-                    placeholder="Check for mismatches..."
-                    className="w-full bg-cyber-light-bg dark:bg-white/5 border border-zinc-300 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:border-cyber-light-accent/50 dark:focus:border-ornex-green/50 outline-none transition-all font-mono shadow-sm"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-mono uppercase tracking-widest text-zinc-500 ml-1">Subject</label>
-                  <input
-                    type="text"
-                    value={formData.subject}
-                    onChange={e => setFormData({ ...formData, subject: e.target.value })}
-                    placeholder="Action Required: Account Verification"
-                    className="w-full bg-cyber-light-bg dark:bg-white/5 border border-zinc-300 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:border-cyber-light-accent/50 dark:focus:border-ornex-green/50 outline-none transition-all font-mono shadow-sm"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-mono uppercase tracking-widest text-zinc-500 ml-1">Email Body</label>
-                <textarea
-                  value={formData.body}
-                  onChange={e => setFormData({ ...formData, body: e.target.value })}
-                  onPaste={handleBodyPaste}
-                  placeholder="Paste the message content here..."
-                  rows={6}
-                  className="w-full bg-cyber-light-bg dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl px-4 py-4 text-sm focus:border-cyber-light-accent/50 dark:focus:border-ornex-green/50 outline-none transition-all font-mono resize-none"
-                />
-              </div>
-            </div>
-          )}
-
           {scanMode === 'paste' && (
             <div className="animate-fade-in space-y-2">
-              <label className="text-xs font-mono uppercase tracking-widest text-zinc-500 ml-1">Raw Email (Headers + Body)</label>
+              <label className="text-[10px] font-mono uppercase tracking-widest text-zinc-500 ml-1">Raw Email (Headers + Body)</label>
               <textarea
                 value={rawEmail}
                 onChange={e => setRawEmail(e.target.value)}
                 placeholder="Paste the full source content (including headers) from your email client..."
-                rows={12}
-                className="w-full bg-cyber-light-bg dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl px-4 py-4 text-sm font-mono focus:border-cyber-light-accent/50 dark:focus:border-ornex-green/50 outline-none transition-all resize-none"
+                rows={8}
+                className="w-full bg-cyber-light-bg dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl px-4 py-4 text-xs md:text-sm font-mono focus:border-cyber-light-accent/50 dark:focus:border-ornex-green/50 outline-none transition-all resize-none md:rows-[12]"
               />
             </div>
           )}
@@ -467,7 +386,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
           {scanMode === 'upload' && (
             <div 
               onClick={() => fileInputRef.current?.click()}
-              className="animate-fade-in group cursor-pointer p-12 border-2 border-dashed border-zinc-200 dark:border-white/10 rounded-3xl bg-zinc-50 dark:bg-white/5 hover:border-cyber-light-accent/40 dark:hover:border-ornex-green/40 transition-all flex flex-col items-center justify-center gap-4"
+              className="animate-fade-in group cursor-pointer p-8 md:p-12 border-2 border-dashed border-zinc-200 dark:border-white/10 rounded-2xl md:rounded-3xl bg-zinc-50 dark:bg-white/5 hover:border-cyber-light-accent/40 dark:hover:border-ornex-green/40 transition-all flex flex-col items-center justify-center gap-4"
             >
               <input 
                 type="file" 
@@ -476,14 +395,14 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                 accept=".eml" 
                 className="hidden" 
               />
-              <div className="p-5 rounded-2xl bg-cyber-light-accent/5 dark:bg-ornex-green/5 border border-cyber-light-accent/10 dark:border-ornex-green/10 group-hover:scale-110 transition-transform">
-                <FileUp className="w-8 h-8 text-cyber-light-accent dark:text-ornex-green" />
+              <div className="p-4 md:p-5 rounded-2xl bg-cyber-light-accent/5 dark:bg-ornex-green/5 border border-cyber-light-accent/10 dark:border-ornex-green/10 group-hover:scale-110 transition-transform">
+                <FileUp className="w-6 h-6 md:w-8 md:h-8 text-cyber-light-accent dark:text-ornex-green" />
               </div>
               <div className="text-center">
-                <p className="text-sm font-bold text-cyber-light-heading dark:text-white uppercase tracking-widest mb-1">
+                <p className="text-xs md:text-sm font-bold text-cyber-light-heading dark:text-white uppercase tracking-widest mb-1">
                   {selectedFile ? selectedFile.name : 'Select .eml File'}
                 </p>
-                <p className="text-xs text-zinc-500 font-mono">
+                <p className="text-[10px] md:text-xs text-zinc-500 font-mono">
                   {selectedFile ? `${(selectedFile.size / 1024).toFixed(1)} KB` : 'Drag and drop or click to browse'}
                 </p>
               </div>
@@ -493,7 +412,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
           <button
             type="submit"
             disabled={loading}
-            className={`w-full py-4 rounded-full font-bold uppercase tracking-widest transition-all shadow-lg flex items-center justify-center gap-3
+            className={`w-full py-3.5 md:py-4 rounded-xl md:rounded-full font-bold uppercase tracking-widest transition-all shadow-lg flex items-center justify-center gap-3
               ${loading 
                 ? 'bg-zinc-200 dark:bg-white/10 text-zinc-400 cursor-wait' 
                 : 'bg-cyber-light-accent dark:bg-gradient-to-r dark:from-[#00C853] dark:to-ornex-green text-white dark:text-ornex-black hover:shadow-[0_0_25px_rgba(0,200,83,0.4)] dark:hover:shadow-[0_0_25px_rgba(57,255,20,0.4)] hover:scale-[1.01] active:scale-[0.99]'
@@ -502,15 +421,15 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
             <div className="relative flex items-center justify-center gap-3">
               {loading ? (
                 <>
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>Analyzing Forensic Payload...</span>
+                  <div className="w-4 h-4 md:w-5 md:h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span className="text-xs md:text-sm">Analyzing Forensic Payload...</span>
                 </>
               ) : (
                 <>
-                  <Shield className="w-5 h-5" />
+                  <Shield className="w-4 h-4 md:w-5 md:h-5" />
                   <div className="flex items-center gap-2">
                     <InfoTip title="Forensic Payload" content="We extract email headers, body text, and embedded links to scan for malicious indicators.">
-                      <span>Analyze Forensic Payload</span>
+                      <span className="text-xs md:text-sm">Analyze Forensic Payload</span>
                     </InfoTip>
                   </div>
                 </>
@@ -529,166 +448,236 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
 
       {result && (
         <div id="email-results" className="animate-fade-in space-y-8 pb-12 scroll-mt-32">
-          {/* Main Risk Banner */}
-          {((result.email_risk_score >= 65 || result.link_score >= 65) || (result.email_risk_level.toLowerCase() !== 'low')) && (
-            <div className={`p-4 rounded-2xl border-2 flex items-center gap-4 shadow-lg backdrop-blur-md animate-pulse-subtle ${
-              (result.email_risk_score >= 75 || result.link_score >= 75) 
-                ? 'bg-rose-500/10 border-rose-500/20 text-rose-500' 
-                : 'bg-[#FFFBEB] dark:bg-amber-500/10 border-[#FEF3C7] dark:border-amber-500/20 text-[#92400E] dark:text-amber-500'
+          {/* Unified Forensic Command Center - Compact Overall Email Verdict */}
+          {/* Unified Forensic Command Center - Compact Overall Email Verdict */}
+          <div className={`p-5 sm:p-8 lg:p-10 rounded-2xl sm:rounded-[2rem] md:rounded-[2.5rem] border-2 shadow-2xl flex flex-col lg:flex-row items-center lg:items-stretch justify-between gap-8 animate-in zoom-in-95 duration-500 transition-all ${
+            result.verdict_label === 'safe' ? 'bg-emerald-50/50 dark:bg-emerald-500/5 border-emerald-500/20 shadow-emerald-500/5' :
+            result.verdict_label === 'suspicious' ? 'bg-amber-50/50 dark:bg-amber-500/5 border-amber-500/20 shadow-amber-500/5' :
+            'bg-rose-50/50 dark:bg-rose-500/5 border-rose-500/20 shadow-rose-500/10'
+          }`}>
+          <div className="flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-8 flex-1 w-full md:w-auto">
+            <div className={`p-5 md:p-8 rounded-2xl md:rounded-[2rem] shadow-2xl border-4 shrink-0 transition-colors duration-500 ${
+              result.verdict_label === 'safe' ? 'bg-emerald-500/10 dark:bg-emerald-500/10 border-emerald-500/20 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-500' :
+              result.verdict_label === 'suspicious' ? 'bg-amber-500/10 dark:bg-amber-500/10 border-amber-500/20 dark:border-amber-500/30 text-amber-600 dark:text-amber-500' :
+              'bg-rose-500/10 dark:bg-rose-500/10 border-rose-500/20 dark:border-rose-500/30 text-rose-600 dark:text-rose-500'
             }`}>
-              <AlertTriangle className="w-6 h-6 flex-shrink-0" />
-              <div className="flex flex-col">
-                <p className="text-xs font-black uppercase tracking-widest">
-                  {result.email_risk_score >= 75 ? 'Critical Threat Detected' : 'Suspicious - Proceed with Caution'}
-                </p>
-                <p className="text-[11px] font-semibold opacity-90">
-                  {result.email_risk_score >= 75 
-                    ? 'This content matches high-confidence phishing patterns. Immediate isolation recommended.' 
-                    : result.link_score >= 65 
-                      ? 'Link analysis indicates potential deception or tracking markers. Handle with care.'
-                      : 'Heuristic analysis detected unusual patterns in the email structure.'}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Subtle Caution Banner */}
-          {result.email_risk_level.toLowerCase() === 'low' && result.link_score >= 30 && result.link_score < 65 && (
-            <div className="p-4 rounded-2xl border-2 bg-[#FFFBEB] dark:bg-amber-500/5 border-[#FEF3C7] dark:border-amber-500/10 text-[#92400E] dark:text-amber-500/80 flex items-center gap-4">
-              <Info className="w-5 h-5 flex-shrink-0" />
-              <p className="text-[11px] font-bold uppercase tracking-widest">
-                Caution: One link looks slightly unusual (tracking/long URL markers)
-              </p>
-            </div>
-          )}
-
-          {/* Summary Header */}
-          <div className={`relative p-8 rounded-3xl border-2 backdrop-blur-md ${getRiskColor(result.email_risk_level)} shadow-xl group`}>
-            {/* Glow Container - Handles masking */}
-            <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-current opacity-10 blur-3xl -mr-16 -mt-16 transition-opacity group-hover:opacity-20" />
+              {result.verdict_label === 'safe' ? <ShieldCheck className="w-8 h-8 md:w-10 md:h-10" /> :
+               result.verdict_label === 'suspicious' ? <AlertTriangle className="w-8 h-8 md:w-10 md:h-10" /> :
+               <ShieldX className="w-8 h-8 md:w-10 md:h-10" />}
             </div>
             
-            <div className="relative flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
-              <div className="flex items-center gap-6">
-                <div className="flex flex-col items-center justify-center w-20 h-20 rounded-2xl bg-white/20 dark:bg-white/10 border border-current/30 shadow-inner backdrop-blur-sm relative">
-                  <span className="text-3xl font-black leading-none tracking-tighter drop-shadow-sm">{Math.round(result.email_risk_score)}</span>
-                  <span className="text-[11px] font-mono opacity-70 uppercase tracking-tighter mt-1">Forensic</span>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-3xl font-black uppercase tracking-tighter drop-shadow-sm">{result.email_risk_level} RISK</h3>
-                    <div className="h-4 w-px bg-current opacity-30" />
-                    <span className="text-xs font-mono uppercase tracking-widest opacity-80 font-bold">Verdict</span>
+            <div className="space-y-4 text-center md:text-left flex-1 min-w-0 w-full">
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
+                {/* Primary Action Pill */}
+                {result.verdict_label === 'malicious' ? (
+                  <div className="px-3 md:px-5 py-1.5 md:py-2 bg-rose-600 text-white rounded-full font-bold font-tektur text-[9px] md:text-[11px] uppercase tracking-[0.2em] shadow-lg shadow-rose-600/20 flex items-center gap-2 border border-rose-500 transition-all hover:scale-105 active:scale-95">
+                    <ShieldX className="w-3 md:w-4 h-3 md:h-4" /> BLOCK EMAIL
                   </div>
-                  <div className="flex flex-wrap items-center gap-4 text-xs font-mono opacity-90 pt-1 font-medium">
-                    <InfoTip title="Heuristic Analysis" content="Score based on email headers, auth signals, and linguistic threat markers.">
-                      <span className="flex items-center gap-1.5">
-                        Heuristics: {result.heuristic_score}/40
-                      </span>
-                    </InfoTip>
-                    <InfoTip title="Link Intelligence" content="Worst-case risk score identified across all scanned destination URLs.">
-                      <span className="flex items-center gap-1.5">
-                        Link Risk: {result.link_score}/100
-                      </span>
-                    </InfoTip>
+                ) : (
+                  <div className={`px-3 md:px-5 py-1.5 md:py-2 rounded-full font-bold font-tektur text-[9px] md:text-[11px] uppercase tracking-[0.2em] flex items-center gap-2 border transition-all hover:scale-105 active:scale-95 ${
+                    result.verdict_label === 'suspicious'
+                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-600'
+                    : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                  }`}>
+                    { result.verdict_label === 'suspicious' ? <AlertTriangle className="w-3 md:w-4 h-3 md:h-4" /> : <ShieldCheck className="w-3 md:w-4 h-3 md:h-4" /> }
+                    { result.verdict_label === 'suspicious' ? 'TRIAGE REQUIRED' : 'SECURE CONTENT' }
                   </div>
+                )}
+                
+                {result.identity.is_safe_harbor && (
+                  <div className="px-3 md:px-5 py-1.5 md:py-2 bg-blue-600/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 rounded-full font-black text-[9px] md:text-[11px] uppercase tracking-widest flex items-center gap-2">
+                    <ShieldCheck className="w-3 md:w-4 h-3 md:h-4" /> SAFE HARBOR
+                  </div>
+                )}
+
+                {(result.identity.mismatches || []).map((m: string, i: number) => (
+                  <span key={i} className="px-2 md:px-4 py-1 md:py-1.5 rounded-full bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-[8px] md:text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
+                    {m.replace(/_/g, ' ')}
+                  </span>
+                ))}
+              </div>
+              
+              <div className="space-y-3">
+                <p className="text-[9px] md:text-[11px] font-bold font-tektur uppercase tracking-[0.3em] text-zinc-500 dark:text-white/60">
+                  Forensic Findings & Conclusion
+                </p>
+                <h1 className="text-xl sm:text-2xl md:text-4xl font-black font-tektur tracking-tight uppercase leading-[1.1] text-zinc-900 dark:text-white" title={result.identity.subject}>
+                  {result.verdict_label === 'malicious' ? 'MALICIOUS THREAT DETECTED' : 
+                   result.verdict_label === 'suspicious' ? 'SUSPICIOUS SCAN RESULT' : 
+                   'SECURE SCAN RESULT'}
+                </h1>
+                <div className="flex items-center justify-center md:justify-start gap-2.5 opacity-70">
+                  <Mail className="w-3.5 h-3.5 md:w-4 md:h-4 text-cyber-light-accent dark:text-ornex-green" />
+                  <p className="text-[11px] md:text-[14px] font-mono font-bold text-zinc-600 dark:text-zinc-300 truncate max-w-xl tracking-tighter">
+                    {result.identity.subject || 'No Subject Specified'}
+                  </p>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2 lg:justify-end max-w-sm">
-                {Object.entries(result.suspicious_indicators).map(([key, active]) => active && (
-                  <span key={key} className="px-2.5 py-1 rounded-lg border bg-white/10 border-current/20 text-current text-[11px] font-bold uppercase tracking-widest whitespace-nowrap">
-                    {key.replace(/_/g, ' ')}
-                  </span>
+              
+              {/* Overall Email Intent Description */}
+              {result.functional_description && (
+                <div className="flex gap-3 md:gap-5 group/intent pt-2">
+                  <div className="w-0.5 md:w-1 rounded-full bg-gradient-to-b from-cyber-light-accent/50 dark:from-ornex-green/50 to-transparent shrink-0" />
+                  <div className="flex-1 text-left">
+                    <p className="text-[13px] md:text-[16px] font-medium leading-relaxed text-zinc-600 dark:text-zinc-300 italic">
+                      "{result.functional_description}"
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="p-4 md:p-6 rounded-2xl md:rounded-3xl bg-zinc-100/50 dark:bg-white/5 border border-zinc-200 dark:border-white/5 backdrop-blur-sm shadow-inner relative overflow-hidden group/tip">
+                <div className="absolute top-0 left-0 w-1 h-full bg-cyber-light-accent dark:bg-ornex-green opacity-20" />
+                <p className="text-[12px] md:text-[15px] font-semibold leading-relaxed text-zinc-700 dark:text-zinc-200 relative z-10">
+                  {result.verdict_label === 'malicious'
+                    ? 'Critical threat indicators identified. Automated recommendation: Immediate Block.' 
+                    : result.verdict_label === 'suspicious'
+                      ? 'Suspicious patterns detected. Exercise caution before interacting with links.'
+                      : (result.identity.mismatches || []).length > 0
+                        ? 'Technical forensic discrepancies found in mail headers. Verify sender authenticity.'
+                        : 'No active threats or evasion tactics identified in this forensic session.'}
+                </p>
+              </div>
+
+              {/* Score Breakdown - Tactical Transparency */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-8 pt-6 border-t border-black/5 dark:border-white/5 mt-2 items-start">
+                {[
+                  { icon: Fingerprint, label: 'Identity', score: result.score_identity },
+                  { icon: MessageSquare, label: 'Linguistic', score: result.score_linguistic },
+                  { icon: Link2, label: 'Links', score: result.link_risk_score }
+                ].map((item, i) => (
+                  <div key={i} className="space-y-2 md:space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 opacity-80">
+                        <item.icon className="w-3 h-3 md:w-4 md:h-4 text-zinc-500 dark:text-zinc-400" />
+                        <span className="text-[9px] md:text-[11px] font-bold font-tektur uppercase tracking-[0.2em] md:tracking-[0.3em] text-zinc-500 dark:text-zinc-400">{item.label}</span>
+                      </div>
+                      <span className="text-[10px] md:text-[12px] font-mono font-black text-zinc-700 dark:text-white">{Math.round(item.score)}%</span>
+                    </div>
+                    <div className="w-full h-1 md:h-1.5 bg-zinc-200 dark:bg-white/5 rounded-full overflow-hidden shadow-inner">
+                      <div 
+                        className={`h-full transition-all duration-1000 shadow-[0_0_8px_rgba(0,0,0,0.1)] ${item.score >= 75 ? 'bg-rose-500 shadow-rose-500/20' : item.score >= 40 ? 'bg-amber-500 shadow-amber-500/20' : 'bg-emerald-500 shadow-emerald-500/20'}`}
+                        style={{ width: `${Math.min(item.score, 100)}%` }}
+                      />
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
           </div>
 
+          {/* Centered Risk Gauge & Rescan - Tactical Command */}
+          <div className="flex flex-col items-center justify-center shrink-0 pt-6 lg:pt-0 border-t lg:border-t-0 lg:border-l border-zinc-200 dark:border-white/10 lg:pl-10 gap-6 w-full lg:w-auto">
+             <div className="w-24 h-24 md:w-32 md:h-32 flex items-center justify-center bg-white/5 rounded-full p-2 border border-white/5 shadow-2xl shrink-0">
+                <RiskGauge 
+                  score={result.final_risk_score ?? 0} 
+                  level={result.verdict_label.toUpperCase() as any} 
+                  size={window.innerWidth < 768 ? 90 : 120}
+                />
+             </div>
+             
+             <button 
+                onClick={() => handleSubmit(undefined, true)}
+                disabled={loading}
+                className="flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-2.5 bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 rounded-xl transition-all text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-white shadow-sm"
+             >
+               {loading ? (
+                 <div className="w-3.5 h-3.5 border-2 border-zinc-400 border-t-transparent rounded-full animate-spin" />
+               ) : (
+                 <RefreshCcw className="w-3.5 h-3.5" />
+               )}
+               {loading ? 'Analyzing...' : 'Rescan Payload'}
+             </button>
+          </div>
+        </div>
+
           {/* Main Forensic Details Card */}
-          <div className="p-10 bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-white/10 shadow-2xl relative group">
+          <div className="p-5 md:p-10 bg-white dark:bg-zinc-900 rounded-2xl md:rounded-3xl border border-zinc-200 dark:border-white/10 shadow-2xl relative group">
             <div className="space-y-8 relative">
               {/* Triage Stats */}
               <div className="flex flex-wrap gap-3 items-center">
                   <InfoTip title="Total Links" content="Total unique raw links identified in the email body.">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-100 dark:bg-white/5 rounded-xl border border-zinc-200 dark:border-white/10">
                       <Zap className="w-3 h-3 text-cyber-light-accent dark:text-ornex-green" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Total:</span>
-                      <span className="text-xs font-black text-cyber-light-heading dark:text-white">{result.total_extracted}</span>
+                      <span className="text-[9px] font-bold font-tektur uppercase tracking-[0.3em] text-zinc-500 dark:text-zinc-400">Total:</span>
+                      <span className="text-xs font-bold text-cyber-light-heading dark:text-white">{result.triage_stats.total_found}</span>
                     </div>
                   </InfoTip>
                   <InfoTip title="Scanned Destinations" content="High-priority unique destinations subjected to full forensic analysis.">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-cyber-light-accent/5 dark:bg-ornex-green/5 rounded-xl border border-cyber-light-accent/10 dark:border-ornex-green/10 text-cyber-light-accent dark:text-ornex-green">
                       <Shield className="w-3 h-3" />
-                      <span className="text-[10px] font-black uppercase tracking-widest">Scanned:</span>
-                      <span className="text-xs font-black">{result.scanned_count}</span>
+                      <span className="text-[9px] font-bold font-tektur uppercase tracking-[0.3em]">Scanned:</span>
+                      <span className="text-xs font-bold">{result.triage_stats.analyzed}</span>
                     </div>
                   </InfoTip>
                 {(result.triage_stats?.wrappers_unwrapped ?? 0) > 0 && (
                   <InfoTip title="Tracking Wrappers" content="Tracking URLs unwrapped to reveal and scan their true destinations.">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/5 rounded-xl border border-purple-500/10 text-purple-400">
                       <ExternalLink size={12} />
-                      <span className="text-[10px] font-black uppercase tracking-widest">Unwrapped:</span>
-                      <span className="text-xs font-black">{result.triage_stats?.wrappers_unwrapped}</span>
+                      <span className="text-[9px] font-bold font-tektur uppercase tracking-[0.3em]">Unwrapped:</span>
+                      <span className="text-xs font-bold">{result.triage_stats?.wrappers_unwrapped}</span>
                     </div>
                   </InfoTip>
                 )}
-                {(result.triage_stats?.pii_scrubbed_count ?? 0) > 0 && (
+                {(result.triage_stats?.pii_scrubbed ?? 0) > 0 && (
                   <InfoTip title="Identity Protection" content="Personal data (such as your email address) was securely removed from these links prior to analysis to ensure your privacy.">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/5 rounded-xl border border-blue-500/10 text-blue-400">
                       <ShieldAlert size={12} />
-                      <span className="text-[10px] font-black uppercase tracking-widest">Privacy Protected:</span>
-                      <span className="text-xs font-black">{result.triage_stats?.pii_scrubbed_count}</span>
+                      <span className="text-[9px] font-bold font-tektur uppercase tracking-[0.3em]">Privacy Protected:</span>
+                      <span className="text-xs font-bold">{result.triage_stats?.pii_scrubbed}</span>
                     </div>
                   </InfoTip>
                 )}
                   <InfoTip title="Skipped Assets" content="Redundant or known-safe links (like WhatsApp/socials) skipped to save quota.">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-100 dark:bg-white/5 rounded-xl border border-zinc-200 dark:border-white/10 opacity-60">
                       <CheckCircle2 className="w-3 h-3 text-zinc-400" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Skipped:</span>
-                      <span className="text-xs font-black text-zinc-600 dark:text-zinc-400">{(result.total_extracted ?? 0) - (result.scanned_count ?? 0)}</span>
+                      <span className="text-[9px] font-bold font-tektur uppercase tracking-[0.3em] text-zinc-500 dark:text-zinc-400">Skipped:</span>
+                      <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400">{(result.triage_stats.total_found ?? 0) - (result.triage_stats.analyzed ?? 0)}</span>
                     </div>
                   </InfoTip>
               </div>
 
               {/* Forensic Warnings */}
               {result.forensic_errors && result.forensic_errors.length > 0 && (
-                <div className="space-y-3">
-                  {result.forensic_errors.map((err, i) => (
-                    <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-amber-500/5 border border-amber-500/10 text-amber-500/80 text-[11px] font-mono">
-                      <AlertCircle className="w-4 h-4" />
-                      <span className="uppercase font-bold">[{err.stage}]:</span>
-                      <span>{err.message}</span>
-                    </div>
-                  ))}
+                <div className="p-4 rounded-2xl border border-amber-300/50 dark:border-amber-500/20 bg-amber-50/80 dark:bg-amber-500/5 flex items-center gap-4 transition-all duration-300">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-500 flex-shrink-0" />
+                  <div>
+                    <p className="text-[10px] font-bold font-tektur uppercase tracking-[0.3em] text-amber-700 dark:text-amber-400 mb-0.5">
+                      Partial Analysis
+                    </p>
+                    <p className="text-[11.5px] text-amber-800/70 dark:text-amber-500/80 font-semibold leading-tight">
+                      Some checks failed ({[...new Set(result.forensic_errors.map(e => e.engine))].join(', ')}). 
+                      Displaying available forensic markers.
+                    </p>
+                  </div>
                 </div>
               )}
 
               {/* Auth Signals */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
                 {[
                   { key: 'spf', title: 'SPF (Sender Policy Framework)', content: 'A DNS record that specifies which mail servers are authorized to send email on behalf of your domain.' },
                   { key: 'dkim', title: 'DKIM (DomainKeys Identified Mail)', content: 'A cryptographic signature that ensures the email content was not tampered with and truly originated from the domain.' },
                   { key: 'dmarc', title: 'DMARC Policy', content: 'A protocol that uses SPF and DKIM to tell receiving servers how to handle emails that fail authentication.' }
                 ].map(({ key, title, content }) => (
                   <InfoTip key={key} title={title} content={content} className="w-full relative flex items-center">
-                    <div className={`flex items-center justify-between p-3.5 rounded-2xl border backdrop-blur-sm w-full ${getAuthColor(result.auth_results?.[key as keyof typeof result.auth_results] || 'none')}`}>
-                      <span className="text-[11px] font-black uppercase tracking-widest">{key}</span>
-                      <span className="text-[11px] font-bold uppercase opacity-80">{result.auth_results?.[key as keyof typeof result.auth_results] || 'none'}</span>
+                    <div className={`flex items-center justify-between p-3.5 rounded-2xl border w-full transition-all duration-300 ${getAuthColor(result.auth?.[key as keyof typeof result.auth] as string || 'none')}`}>
+                      <span className="text-[10px] font-bold font-tektur uppercase tracking-[0.3em]">{key}</span>
+                      <span className="text-[10px] font-bold font-tektur uppercase opacity-80">{result.auth?.[key as keyof typeof result.auth] as string || 'none'}</span>
                     </div>
                   </InfoTip>
                 ))}
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
                 {/* Detection Reasons */}
-                <div className="glass-panel p-6 rounded-3xl dark:bg-black/20 border-zinc-200 dark:border-white/10 space-y-4">
-                  <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400 flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4" />
+                <div className="glass-panel p-6 rounded-3xl dark:bg-zinc-900/20 border-zinc-200 dark:border-white/10 space-y-4 flex flex-col h-full">
+                  <h4 className="text-[10px] font-bold font-tektur uppercase tracking-[0.3em] text-zinc-500 dark:text-zinc-400 flex items-center gap-2 mb-6">
+                    <AlertCircle className="w-4 h-4 opacity-70" />
                     Forensic Detection Logs
                   </h4>
                   <ul className="space-y-3">
-                    {result.reasons.map((reason, idx) => (
+                    {(result.reasons || []).map((reason: string, idx: number) => (
                       <li key={idx} className="flex items-start gap-3 text-sm text-cyber-light-text dark:text-zinc-300">
                         <ArrowRight className="w-4 h-4 text-cyber-light-accent dark:text-ornex-green mt-0.5 flex-shrink-0" />
                         <span className="leading-relaxed">{reason}</span>
@@ -697,67 +686,118 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                   </ul>
                 </div>
 
-                {/* Link Profile */}
-                <div className="glass-panel p-6 rounded-3xl dark:bg-black/20 border-zinc-200 dark:border-white/10 space-y-4">
-                  <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400 flex items-center gap-2">
-                    <Layout className="w-4 h-4" />
-                    Analyzed Link Profile
-                  </h4>
+                <div className="glass-panel p-6 rounded-3xl dark:bg-zinc-900/20 border-zinc-200 dark:border-white/10 space-y-4 flex flex-col h-full">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <h4 className="text-[10px] font-bold font-tektur uppercase tracking-[0.3em] text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
+                      <Layout className="w-4 h-4 opacity-70" />
+                      Analyzed Link Profile
+                    </h4>
+                    <div className="relative w-full sm:w-auto" ref={sortDropdownRef}>
+                      <button 
+                        onClick={() => setSortDropdownOpen(!sortDropdownOpen)}
+                        className="flex items-center justify-between w-full sm:w-44 gap-2 bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300 text-[10px] uppercase font-bold tracking-widest rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-cyber-light-accent dark:focus:ring-ornex-green cursor-pointer transition-colors hover:bg-zinc-200 dark:hover:bg-zinc-800"
+                      >
+                        <span>{linkSort === 'risk-desc' ? 'Risk: High to Low' : 'Risk: Low to High'}</span>
+                        <ChevronDown className={`w-3.5 h-3.5 text-zinc-400 transition-transform ${sortDropdownOpen ? 'rotate-180' : ''}`} />
+                      </button>
+                      
+                      {sortDropdownOpen && (
+                        <div className="absolute right-0 top-full mt-2 w-full sm:w-44 bg-white dark:bg-[#1a1a1a] border border-zinc-200 dark:border-white/10 rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                          <button
+                            onClick={() => { setLinkSort('risk-desc'); setSortDropdownOpen(false); }}
+                            className={`w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-colors ${linkSort === 'risk-desc' ? 'bg-cyber-light-accent/10 dark:bg-ornex-green/10 text-cyber-light-accent dark:text-ornex-green' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5'}`}
+                          >
+                            Risk: High to Low
+                          </button>
+                          <button
+                            onClick={() => { setLinkSort('risk-asc'); setSortDropdownOpen(false); }}
+                            className={`w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-colors ${linkSort === 'risk-asc' ? 'bg-cyber-light-accent/10 dark:bg-ornex-green/10 text-cyber-light-accent dark:text-ornex-green' : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5'}`}
+                          >
+                            Risk: Low to High
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                   <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                     {result.link_results.length > 0 ? (
-                      result.link_results.map((link, idx) => (
-                        <div 
-                          key={idx} 
-                          onClick={() => setExpandedUrls({ ...expandedUrls, [link.url]: !expandedUrls[link.url] })}
-                          className={`group cursor-pointer p-4 rounded-2xl border transition-all ${expandedUrls[link.url] ? 'bg-cyber-light-accent/5 dark:bg-ornex-green/5 border-cyber-light-accent/30 dark:border-ornex-green/30' : 'bg-zinc-50 dark:bg-white/5 border-zinc-100 dark:border-white/5'}`}
-                        >
-                          <div className="flex flex-col gap-2">
-                            {(() => {
-                              const unwrapEvent = result.unwrap_events?.find(e => e.destination_url === link.url);
-                              return (
-                                <div className="space-y-2 overflow-hidden">
-                                  {unwrapEvent && (
-                                    <div className="flex flex-col gap-1 p-2 rounded-lg bg-zinc-500/5 border border-zinc-500/10 mb-1">
-                                      <span className="text-[11px] font-black uppercase text-zinc-400 flex items-center gap-1">
-                                        Found Original URL:
-                                        <InfoTip title="Tracking Source" content="The raw URL found in the email body, containing tracking parameters." />
-                                      </span>
-                                      <span className="text-[11px] text-zinc-500 truncate font-mono opacity-60">
-                                        {unwrapEvent.found_url}
-                                      </span>
-                                    </div>
-                                  )}
-                                  <div className="flex justify-between items-center gap-4">
-                                    <div className="space-y-1 overflow-hidden">
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-[11px] font-black uppercase text-cyber-light-accent dark:text-ornex-green">
-                                          {unwrapEvent ? 'Scanned Destination:' : 'Scanned URL:'}
-                                        </span>
-                                        {formatUrl(link.url)}
-                                        <button onClick={(e) => copyToClipboard(link.url, e)} className="p-1 hover:bg-zinc-200 dark:hover:bg-white/10 rounded transition-colors">
-                                          <Copy size={10} className="text-zinc-400" />
-                                        </button>
-                                        {unwrapEvent && (
-                                          <span className="px-1.5 py-0.5 rounded bg-purple-500/10 text-[11px] font-black text-purple-400 border border-purple-500/20">UNWRAPPED</span>
-                                        )}
-                                      </div>
-                                      {link.risk_level === 'INCONCLUSIVE' && (
-                                        <span className="px-2 py-0.5 rounded bg-zinc-500/10 text-[11px] font-bold uppercase text-zinc-500 border border-zinc-500/20">FETCH ERROR (404)</span>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                      <div className={`px-2 py-1 rounded-lg text-[11px] font-black uppercase tracking-widest border ${getRiskColor(link.risk_level)}`}>
-                                        {link.risk_level}
-                                      </div>
-                                      <ChevronDown className={`w-4 h-4 text-zinc-400 transition-transform ${expandedUrls[link.url] ? 'rotate-180' : ''}`} />
-                                    </div>
+                      [...result.link_results].sort((a, b) => {
+                        if (linkSort === 'risk-desc') return b.risk_score - a.risk_score;
+                        return a.risk_score - b.risk_score;
+                      }).map((link, idx) => {
+                        const unwrapEvent = result.unwrap_events?.find((e: any) => e.destination_url === link.url);
+                        const isExpanded = expandedUrls[link.url];
+                        
+                        return (
+                          <div 
+                            key={idx} 
+                            onClick={() => setExpandedUrls({ ...expandedUrls, [link.url]: !isExpanded })}
+                            className={`group cursor-pointer p-4 rounded-2xl border transition-all duration-300 ${
+                              isExpanded 
+                                ? 'bg-cyber-light-accent/5 dark:bg-white/5 border-cyber-light-accent/30 dark:border-white/20' 
+                                : 'bg-zinc-50 dark:bg-white/[0.02] border-zinc-100 dark:border-white/5 hover:border-zinc-300 dark:hover:border-white/10'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1 min-w-0">
+                                  <div className="p-1.5 rounded-lg bg-zinc-200 dark:bg-white/5 text-zinc-500 shrink-0">
+                                    <Link2 className="w-3.5 h-3.5" />
                                   </div>
+                                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                                    <div className="min-w-0 flex-1 flex items-center font-mono text-xs">
+                                      {formatUrl(link.url)}
+                                    </div>
+                                    <button 
+                                      onClick={(e) => copyToClipboard(link.url, e)} 
+                                      className="p-1.5 hover:bg-zinc-200 dark:hover:bg-white/10 rounded-lg transition-colors group/copy shrink-0"
+                                      title="Copy Clean URL"
+                                    >
+                                      <Copy size={11} className="text-zinc-400 group-hover/copy:text-cyber-light-accent dark:group-hover/copy:text-ornex-green" />
+                                    </button>
+                                  </div>
+                                  {unwrapEvent && (
+                                    <span className="px-1.5 py-0.5 rounded bg-purple-500/10 text-[9px] font-black text-purple-400 border border-purple-500/20 uppercase tracking-widest shrink-0 ml-1">
+                                      UNWRAPPED
+                                    </span>
+                                  )}
+                                  {link.risk_level === 'INCONCLUSIVE' && (
+                                    <span className="px-1.5 py-0.5 rounded bg-zinc-500/10 text-[9px] font-black text-zinc-500 border border-zinc-500/20 uppercase tracking-widest shrink-0 ml-1">
+                                      INCONCLUSIVE
+                                    </span>
+                                  )}
                                 </div>
-                              );
-                            })()}
+
+                                {unwrapEvent && (
+                                  <div className="flex items-center gap-2 mt-2 ml-1 text-[10px] text-zinc-500 font-medium">
+                                    <ArrowRight className="w-3 h-3 opacity-30" />
+                                    <span className="opacity-40 uppercase tracking-tighter">Source:</span>
+                                    <span className="truncate opacity-60 font-mono italic max-w-[200px]" title={unwrapEvent.found_url}>
+                                      {unwrapEvent.found_url}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-3 shrink-0 mt-1">
+                                <div className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest border ${getRiskColor(link.risk_level)}`}>
+                                  {link.risk_level}
+                                </div>
+                                <ChevronDown className={`w-4 h-4 text-zinc-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+                              </div>
+                            </div>
+
+                            {/* Expanded Details - Quick Forensic Summary */}
+                            {isExpanded && (
+                              <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-white/5 animate-in slide-in-from-top-2 duration-200">
+                                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed italic">
+                                  {link.explanation || "No deep-dive explanation available for this asset."}
+                                </p>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     ) : (
                       <div className="flex flex-col items-center justify-center py-10 text-center space-y-4">
                         <div className="p-4 bg-zinc-100 dark:bg-white/5 rounded-3xl border border-zinc-200 dark:border-white/10">
@@ -766,7 +806,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                         <div className="space-y-1">
                           <p className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">No Forensic Links Identified</p>
                           <p className="text-[11px] text-zinc-500 max-w-[280px] leading-relaxed mx-auto">
-                            All extracted URLs ({result.total_extracted}) were identified as low-risk assets (CSS, Images, Tracking Pixels) and skipped to optimize forensic efficiency.
+                            All extracted URLs ({result.triage_stats.total_found}) were identified as low-risk assets (CSS, Images, Tracking Pixels) and skipped to optimize forensic efficiency.
                           </p>
                         </div>
                         <div className="pt-2">
@@ -779,6 +819,9 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                   </div>
                 </div>
               </div>
+
+              {/* Advanced Forensic Insights (Forensics++) */}
+              <EmailForensicInsight result={result} />
 
               {/* Expanded Deep Dives */}
               <div className="space-y-8 pt-4">
@@ -797,11 +840,11 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                       <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8 pb-6 border-b border-zinc-200 dark:border-white/10">
                         <div className="flex flex-col gap-3 flex-1 min-w-0">
                           <div className="flex items-center gap-4">
-                            <span className="text-[11px] font-black uppercase tracking-widest text-zinc-500 bg-zinc-200/50 dark:bg-white/5 px-3 py-1.5 rounded-lg border border-zinc-300/50 dark:border-white/10 shrink-0">
+                            <span className="text-[10px] font-bold font-tektur uppercase tracking-[0.3em] text-zinc-600 dark:text-zinc-500 bg-zinc-200/50 dark:bg-white/5 px-3 py-1.5 rounded-lg border border-zinc-300/50 dark:border-white/10 shrink-0">
                               Scan #{idx + 1}
                             </span>
                             <span className="text-[15px] font-bold text-cyber-light-heading dark:text-white uppercase tracking-tight truncate">
-                              {(() => {
+                              {link.verdictTitle || (() => {
                                 const mapped = mapToAnalysisResult(link);
                                 const flags = [];
                                 if (mapped.threat_intel?.is_known_malicious) flags.push("Threat Intel Match");
@@ -814,12 +857,18 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                                 
                                 if (flags.length > 0) return flags.join(" • ");
                                 
-                                if (link.risk_level?.toLowerCase() === 'high') return "Multiple High-Risk Indicators";
-                                if (link.risk_level?.toLowerCase() === 'medium') return "Suspicious Heuristics Detected";
-                                if (link.risk_level?.toLowerCase() === 'low') return "Safe Baseline Confirmed";
+                                const level = link.risk_level?.toLowerCase();
+                                if (level === 'high' || level === 'malicious') return "Multiple High-Risk Indicators";
+                                if (level === 'medium' || level === 'suspicious') return "Suspicious Heuristics Detected";
+                                if (level === 'low' || level === 'safe') return "Safe Baseline Confirmed";
                                 return "Analysis Inconclusive";
                               })()}
                             </span>
+                            {link.functional_category && (
+                              <span className="px-2 py-0.5 rounded-md bg-cyber-light-accent/10 dark:bg-ornex-green/10 text-[9px] font-black text-cyber-light-accent dark:text-ornex-green border border-cyber-light-accent/20 dark:border-ornex-green/20 uppercase tracking-widest">
+                                {link.functional_category}
+                              </span>
+                            )}
                           </div>
                           <span className="text-sm font-mono text-zinc-500 dark:text-zinc-400 truncate" title={link.url}>
                             {link.url}
@@ -831,13 +880,47 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult }: Emai
                           )}
                         </div>
                         
-                        <div className="flex items-center gap-3 shrink-0 pt-1">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Verdict:</span>
-                          <div className={`px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest border ${getRiskColor(link.risk_level)} shadow-sm`}>
-                            {link.risk_level}
+                        <div className="flex flex-col items-end gap-3 shrink-0 pt-1">
+                          <div className="flex items-center gap-3">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Verdict:</span>
+                            <div className={`px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest border ${
+                              (() => {
+                                const l = link.risk_level?.toLowerCase();
+                                if (l === 'high' || l === 'malicious') return 'bg-rose-500/10 border-rose-500/20 text-rose-600';
+                                if (l === 'medium' || l === 'suspicious') return 'bg-amber-500/10 border-amber-500/20 text-amber-600';
+                                if (l === 'low' || l === 'safe') return 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600';
+                                return 'bg-zinc-500/10 border-zinc-500/20 text-zinc-600';
+                              })()
+                            } shadow-sm`}>
+                              {link.risk_level}
+                            </div>
                           </div>
+                          
+                          {/* Integrated Action Button */}
+                          {link.risk_level?.toLowerCase() === 'malicious' || link.risk_level?.toLowerCase() === 'high' ? (
+                            <div className="px-4 py-2 bg-rose-600 text-white rounded-xl font-bold font-tektur text-[10px] uppercase tracking-[0.2em] animate-pulse shadow-lg shadow-rose-600/20 flex items-center gap-2">
+                              <ShieldX className="w-3 h-3" /> BLOCK LINK
+                            </div>
+                          ) : (
+                            <div className="px-4 py-2 bg-emerald-600/10 dark:bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl font-bold font-tektur text-[10px] uppercase tracking-[0.2em] flex items-center gap-2 transition-all duration-300">
+                              <ShieldCheck className="w-3 h-3" /> SECURE CONTENT
+                            </div>
+                          )}
                         </div>
                       </div>
+                      
+                      
+                      {/* Detailed Purpose Description */}
+                      {link.functional_description && (
+                        <div className="mb-8 flex gap-5 group/purpose">
+                          <div className="w-1.5 rounded-full bg-gradient-to-b from-purple-500/50 to-transparent shrink-0" />
+                          <div className="flex-1 text-left">
+                            <p className="text-[15px] font-medium leading-relaxed text-zinc-600 dark:text-zinc-300 italic">
+                              "{link.functional_description}"
+                            </p>
+                          </div>
+                        </div>
+                      )}
                       
                       {/* Forensic Details */}
                       <ResultDetails result={mapToAnalysisResult(link)} hideHeader={true} />
