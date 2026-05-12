@@ -13,13 +13,13 @@
 [![XGBoost](https://img.shields.io/badge/XGBoost-Lexical_Engine-FF6600.svg?style=flat-square)](https://xgboost.readthedocs.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
-LinkVeil-AI is an advanced, multi-layered security platform that provides real-time protection against sophisticated phishing attacks. By orchestrating XGBoost (lexical analysis), Gemini LLM (cognitive reasoning), Gemini Vision (visual forensics), and active browser probing, LinkVeil delivers high-accuracy verdicts with human-readable explanations.
+LinkVeil-AI is an advanced, multi-layered security platform that provides real-time protection against sophisticated phishing attacks. By orchestrating XGBoost (lexical analysis), DistilBERT (semantic analysis), Gemini LLM (cognitive reasoning), Gemini Vision (visual forensics), and active browser probing, LinkVeil delivers high-accuracy verdicts with human-readable explanations.
 
 ---
 
 ## 🔥 Key Highlights
 
-*   **⚡ Hybrid Intelligence**: Tri-model ensemble combining XGBoost (Lexical), Gemini LLM (Cognitive), and Gemini Vision (Visual).
+*   **⚡ Hybrid Intelligence**: Quad-model ensemble combining XGBoost (Lexical), DistilBERT (Semantic), Gemini LLM (Cognitive), and Gemini Vision (Visual).
 *   **📧 Email Forensic Scanner**: Deep analysis of `.eml` files and raw email text with header authentication (SPF/DKIM) and heuristic scoring.
 *   **🕵️ Active Probing**: Real-time browser agent (Playwright) analyzes live page behavior and redirects.
 *   **👁️ Visual Forensics**: Integrated Gemini Vision for visual brand recognition and impersonation detection.
@@ -160,16 +160,16 @@ pytest tests/test_email_scan.py
 
 ## 🧪 Manual Model Training (Developer Mode)
 
-Train the XGBoost phishing classifier from scratch:
+Train the ML engines (XGBoost & DistilBERT) from scratch:
 
 1.  **Prepare Data**: `python ml/datasets/prepare_data.py`
-2.  **Train XGBoost** (Fast — recommended):
+2.  **Train XGBoost** (Required):
     ```bash
     python ml/train_xgboost.py
     ```
-3.  **Train DistilBERT** (Optional — Research/Artifact only):
+3.  **Train DistilBERT** (Required):
     > [!NOTE]
-    > DistilBERT is provided as a training experiment. The live pipeline uses **XGBoost** and **Gemini** for inference to maintain high performance without GPU requirements.
+    > DistilBERT is fully integrated into the live pipeline alongside XGBoost and Gemini to provide deep semantic evaluation of malicious intent. A GPU is recommended for optimal inference speed.
     ```bash
     python ml/train.py
     ```
