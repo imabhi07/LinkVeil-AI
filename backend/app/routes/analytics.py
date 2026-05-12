@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone, date
 from backend.app.database import get_db
 from backend.app.models.db_models import ScanResult, EmailScanResult
-from sqlalchemy import func
+from sqlalchemy import func, case
 import json
 import logging
 from collections import Counter
@@ -42,6 +42,25 @@ def get_analytics(
     else:
         cutoff = None
 
+    # Define chart window and cutoff
+    if days > 0:
+        chart_days = days
+    else:
+        oldest_url = db.query(func.min(ScanResult.timestamp)).scalar()
+        if oldest_url:
+            try:
+                # Handle possible string vs date object from SQLite/Postgres
+                o_date = oldest_url.date() if hasattr(oldest_url, 'date') else datetime.fromisoformat(str(oldest_url)).date()
+            except (ValueError, TypeError, AttributeError):
+                o_date = now.date()
+            
+            diff_days = (now.date() - o_date).days + 1
+            chart_days = max(7, min(diff_days, 90))
+        else:
+            chart_days = 30
+    
+    chart_cutoff = now - timedelta(days=chart_days)
+
     # --- 1. URL INTELLIGENCE DATA ---
     # Fetch only the LATEST scan for each unique URL within the time window
     url_latest_sub = db.query(func.max(ScanResult.id).label("latest_id")).group_by(ScanResult.url)
@@ -56,30 +75,30 @@ def get_analytics(
     url_risk_raw = db.query(ScanResult.risk_level, func.count(ScanResult.id)) \
         .filter(ScanResult.id.in_(url_latest_ids)) \
         .group_by(ScanResult.risk_level).all()
-    url_risk_dist = {r[0]: r[1] for r in url_risk_raw}
+    # Normalize keys to lowercase for frontend consistency
+    url_risk_dist = {}
+    for r in url_risk_raw:
+        k = str(r[0] or "unknown").lower()
+        url_risk_dist[k] = url_risk_dist.get(k, 0) + r[1]
     
     # URL Daily Volume (unique scans per day)
     url_daily_raw = db.query(
         func.date(ScanResult.timestamp),
         func.count(ScanResult.id)
-    ).filter(ScanResult.id.in_(url_latest_ids)) \
+    ).filter(ScanResult.timestamp >= chart_cutoff) \
      .group_by(func.date(ScanResult.timestamp))\
      .order_by(func.date(ScanResult.timestamp)).all()
     
-    url_vol_map = {str(row[0]): row[1] for row in url_daily_raw}
-    
-    # Chart logic
-    if days > 0:
-        chart_days = days
-    else:
-        oldest_url = db.query(func.min(ScanResult.timestamp)).scalar()
-        if oldest_url:
-            diff_days = (now.date() - oldest_url.date()).days + 1
-            chart_days = max(7, min(diff_days, 90))
+    url_vol_map = {}
+    for row in url_daily_raw:
+        d_val = row[0]
+        # Robust date key normalization
+        if hasattr(d_val, 'strftime'):
+            d_key = d_val.strftime('%Y-%m-%d')
         else:
-            chart_days = 30
+            d_key = str(d_val).split(' ')[0]
+        url_vol_map[d_key] = row[1]
     
-    chart_cutoff = now - timedelta(days=chart_days)
     
     url_daily_volume = []
     for i in range(chart_days):
@@ -101,8 +120,8 @@ def get_analytics(
         ScanResult.tld,
         func.count(ScanResult.id).label("total"),
         func.sum(
-            func.case(
-                (ScanResult.risk_level.in_(["High", "Malicious"]), 1),
+            case(
+                (func.lower(ScanResult.risk_level).in_(["high", "malicious"]), 1),
                 else_=0
             )
         ).label("malicious_count")
@@ -129,7 +148,11 @@ def get_analytics(
     if cutoff:
         email_risk_q = email_risk_q.filter(EmailScanResult.timestamp >= cutoff)
     email_risk_raw = email_risk_q.group_by(EmailScanResult.verdict_label).all()
-    email_risk_dist = {r[0]: r[1] for r in email_risk_raw}
+    # Normalize keys to lowercase
+    email_risk_dist = {}
+    for r in email_risk_raw:
+        k = str(r[0] or "unknown").lower()
+        email_risk_dist[k] = email_risk_dist.get(k, 0) + r[1]
     
     # Email Daily Volume
     email_daily_raw = db.query(
@@ -139,7 +162,14 @@ def get_analytics(
      .group_by(func.date(EmailScanResult.timestamp))\
      .order_by(func.date(EmailScanResult.timestamp)).all()
     
-    email_vol_map = {str(row[0]): row[1] for row in email_daily_raw}
+    email_vol_map = {}
+    for row in email_daily_raw:
+        d_val = row[0]
+        if hasattr(d_val, 'strftime'):
+            d_key = d_val.strftime('%Y-%m-%d')
+        else:
+            d_key = str(d_val).split(' ')[0]
+        email_vol_map[d_key] = row[1]
     email_daily_volume = []
     for i in range(chart_days):
         d = (now - timedelta(days=chart_days - 1 - i)).date()
@@ -240,7 +270,7 @@ def get_analytics(
             day_data = trend_map[d_str]
             confidence_trend.append({
                 "date": d_str,
-                "avg_quality": round(day_data["weighted_sum"] / day_data["total"], 2) if day_data["total"] > 0 else 0,
+                "avg_quality": round((day_data["weighted_sum"] / day_data["total"]) * 100, 1) if day_data["total"] > 0 else 0,
                 "high": day_data["high"],
                 "medium": day_data["medium"],
                 "low": day_data["low"]
@@ -296,15 +326,15 @@ def get_scan_list(
 
     q = db.query(ScanResult).filter(ScanResult.id.in_(latest_ids))
     
-    # Risk filter
+    # Risk filter (Case-insensitive support for legacy and new labels)
     if filter == "malicious":
-        q = q.filter(ScanResult.risk_level.in_(["High", "Malicious"]))
+        q = q.filter(func.lower(ScanResult.risk_level).in_(["high", "malicious"]))
     elif filter == "suspicious":
-        q = q.filter(ScanResult.risk_level == "Medium")
+        q = q.filter(func.lower(ScanResult.risk_level).in_(["medium", "suspicious"]))
     elif filter == "safe":
-        q = q.filter(ScanResult.risk_level.in_(["Low", "Safe"]))
+        q = q.filter(func.lower(ScanResult.risk_level).in_(["low", "safe"]))
     elif filter == "offline":
-        q = q.filter(ScanResult.risk_level == "Unknown")
+        q = q.filter(func.lower(ScanResult.risk_level) == "unknown")
     
     scans = q.order_by(ScanResult.timestamp.desc()).limit(limit).all()
     

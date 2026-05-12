@@ -215,13 +215,13 @@ class FusionEngine:
         
         # Determine risk level
         if risk_score >= 71:
-            level = "MALICIOUS"
+            level = "malicious"
             rec = "Dangerous - Do Not Open"
         elif risk_score >= 31:
-            level = "SUSPICIOUS"
+            level = "suspicious"
             rec = "Suspicious - Proceed with Caution"
         else:
-            level = "SAFE"
+            level = "safe"
             rec = "Safe - You can proceed"
 
         llm_res = forensic_results.get("llm", {})
@@ -246,13 +246,13 @@ class FusionEngine:
         mitigation = llm_res.get("mitigationAdvice") or []
         if not mitigation:
 
-            if level == "MALICIOUS":
+            if level.lower() == "malicious":
                 mitigation = [
                     "CRITICAL: Do not click any links or download attachments from this URL.",
                     "Delete this email immediately and report it to your security team.",
                     "If you have already entered credentials, change your password immediately."
                 ]
-            elif level == "SUSPICIOUS":
+            elif level.lower() == "suspicious":
                 mitigation = [
                     "Proceed with extreme caution. Verify the sender's identity through a secondary channel.",
                     "Check for subtle typos in the domain name (e.g., 'micros0ft.com').",
