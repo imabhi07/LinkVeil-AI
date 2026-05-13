@@ -7,6 +7,7 @@ import { AnalyticsPanel } from './components/AnalyticsPanel';
 import { EmailScan } from './components/EmailScan';
 import { PrivacyModal } from './components/PrivacyModal';
 import { BackgroundPaths } from './components/ui/background-paths';
+import { CyberGlow } from './components/ui/cyber-glow';
 import { mapToAnalysisResult } from './utils/mapper';
 import './App.css';
 
@@ -457,16 +458,13 @@ function App() {
         }}
       />
 
-      {/* Background Glows - Absolute to scroll with content */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden h-[1200px]">
-        {/* Main Hero Glow */}
-        <div className="absolute -top-[10%] left-[10%] w-[1200px] h-[1000px] bg-cyber-light-accent/15 dark:bg-ornex-green/20 rounded-full blur-[180px] animate-pulse opacity-80"></div>
-        {/* Secondary Side Glow */}
-        <div className="absolute top-[0%] -left-[10%] w-[600px] h-[600px] bg-cyber-light-accent/10 dark:bg-ornex-green/15 rounded-full blur-[140px] animate-pulse animation-delay-2000 opacity-60"></div>
+      {/* Background Neural Glows - Layered below paths */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden h-[730px] z-[2]">
+        <CyberGlow />
       </div>
 
-      {/* Animated SVG paths - full bleed */}
-      <div className="absolute inset-x-0 top-0 h-[1000px] pointer-events-none overflow-hidden opacity-50 dark:opacity-35 z-0">
+      {/* Animated SVG paths - Layered above grid but below content */}
+      <div className="absolute inset-x-0 top-0 h-[1000px] pointer-events-none overflow-hidden opacity-50 dark:opacity-35 z-[5]">
         <BackgroundPaths />
         <div className="absolute inset-x-0 bottom-0 h-96 bg-gradient-to-t from-cyber-light-bg dark:from-black to-transparent" />
       </div>
@@ -479,7 +477,7 @@ function App() {
         <div className="w-full max-w-7xl frosted-nav dark:bg-ornex-panel dark:border-white/10 rounded-full px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between shadow-2xl shadow-black/5 dark:shadow-black/20 pointer-events-auto">
           <div className="flex items-center gap-3 group/logo cursor-pointer">
              <div className="relative">
-               <div className="absolute inset-0 bg-cyber-light-accent dark:bg-ornex-green blur-md opacity-20 group-hover/logo:opacity-50 transition-opacity animate-pulse" />
+               <div className="absolute inset-0 bg-cyber-light-accent dark:bg-ornex-green blur-md opacity-20 group-hover/logo:opacity-50 transition-opacity" />
                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-cyber-light-accent dark:bg-ornex-green flex items-center justify-center text-white dark:text-ornex-black shadow-[0_0_20px_rgba(0,200,83,0.3)] dark:shadow-[0_0_20px_rgba(57,255,20,0.4)] relative z-10 transition-transform group-hover/logo:scale-110">
                  <Shield className="w-5 h-5 sm:w-6 h-6 fill-current" />
                </div>
@@ -496,7 +494,7 @@ function App() {
 
           <div className="flex items-center gap-4">
             <span className="hidden md:inline-flex items-center gap-1.5 text-xs font-mono text-cyber-light-accent dark:text-zinc-500 uppercase tracking-wider">
-              <span className="w-2 h-2 bg-cyber-light-accent dark:bg-ornex-green rounded-full animate-pulse shadow-[0_0_8px_rgba(0,200,83,0.5)] dark:shadow-[0_0_8px_#39FF14]"></span>
+              <span className="w-2 h-2 bg-cyber-light-accent dark:bg-ornex-green rounded-full animate-status-flicker shadow-[0_0_8px_rgba(0,200,83,0.5)] dark:shadow-[0_0_8px_#39FF14]"></span>
               System Active
             </span>
             <div className="flex items-center gap-2 sm:gap-3">
@@ -529,16 +527,16 @@ function App() {
               {/* Hero Section */}
               <div className="text-center space-y-6 sm:space-y-8 flex flex-col items-center relative z-10 border-b border-[#00C853]/5 pb-8 sm:pb-12">
                 {/* Decorative Side Label - Right Side */}
-                <div className="hidden xl:block absolute right-[-5%] top-[75%] select-none">
+                <div className="hidden xl:block absolute right-[-5%] top-[75%] select-none z-20">
                   <div className="flex flex-col gap-3 text-zinc-500 dark:text-zinc-200/50 text-[12px] font-light uppercase tracking-[1.2em] text-left" style={{ fontFamily: "'Outfit', sans-serif" }}>
                     <span>Adaptive</span>
                     <span>Security.</span>
                   </div>
                 </div>
 
-                <div className="inline-flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-1.5 sm:py-2 rounded-full border border-cyber-light-accent/30 bg-cyber-light-accent/10 text-cyber-light-accent dark:border-ornex-green/30 dark:bg-ornex-green/10 dark:text-ornex-green text-[9px] sm:text-xs font-mono tracking-widest uppercase transition-colors text-center">
+                <div className="inline-flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-1.5 sm:py-2 rounded-full border border-cyber-light-accent/30 bg-cyber-light-accent/10 text-cyber-light-accent dark:border-ornex-green/30 dark:bg-ornex-green/10 dark:text-ornex-green text-[9px] sm:text-xs font-mono tracking-widest uppercase transition-all hover:bg-cyber-light-accent/20 dark:hover:bg-ornex-green/20 text-center">
                   <span className="relative flex h-2 w-2 sm:h-2.5 sm:w-2.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyber-light-accent dark:bg-ornex-green opacity-75"></span>
+                    <div className="absolute inset-0 bg-cyber-light-accent dark:bg-ornex-green blur-sm opacity-40 rounded-full" />
                     <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-cyber-light-accent dark:bg-ornex-green"></span>
                   </span>
                   Defend Yourself From Phishing

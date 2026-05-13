@@ -306,3 +306,34 @@ body {
   0%, 100% { box-shadow: 0 0 20px rgba(244, 63, 94, 0.2); }
   50% { box-shadow: 0 0 40px rgba(244, 63, 94, 0.4); }
 }
+@keyframes status-flicker {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(0.98); }
+}
+
+.animate-status-flicker {
+  animation: status-flicker 5s infinite;
+}
+
+/* Accessibility: Support for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-delay: -1ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    background-attachment: initial !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+  }
+  
+  .animate-status-flicker,
+  .animate-fade-in,
+  .animate-shimmer,
+  .animate-digital-pulse,
+  .animate-hover,
+  .active-hazard-glow {
+    animation: none !important;
+    transition: none !important;
+  }
+}
