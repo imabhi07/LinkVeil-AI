@@ -98,7 +98,7 @@ const AGENT_STEPS = [
 const FeatureCard = memo(({ icon, title, desc }: { icon: React.ReactNode, title: string, desc: string }) => (
   <div className="p-6 rounded-2xl glass-panel frosted-card-light dark:bg-zinc-900/40 card-gradient-border group h-full transition-all duration-500 hover:shadow-xl hover:-translate-y-1">
     <div className="flex items-start gap-4 mb-4">
-      <div className="p-2.5 bg-white/80 dark:bg-ornex-black rounded-xl border border-zinc-100 dark:border-white/10 group-hover:border-[#00C853]/50 dark:group-hover:border-ornex-green/50 transition-all shadow-sm">
+      <div className="p-2.5 bg-cyber-light-bg/80 dark:bg-ornex-black rounded-xl border border-zinc-100 dark:border-white/10 group-hover:border-[#00C853]/50 dark:group-hover:border-ornex-green/50 transition-all shadow-sm">
         {icon}
       </div>
       <div className="pt-1">
@@ -445,7 +445,7 @@ function App() {
   }, [history]);
 
   return (
-    <div className={`min-h-screen ${theme === 'light' ? 'light-hero-gradient' : 'bg-black'} transition-colors duration-500 overflow-x-hidden relative text-cyber-light-heading dark:text-zinc-100 font-sans pb-20`}>
+    <div className={`min-h-screen ${theme === 'light' ? 'light-hero-gradient' : 'bg-black'} transition-colors duration-500 overflow-x-hidden relative text-cyber-light-heading dark:text-zinc-100 font-sans`}>
 
       {/* 4K Grain Texture Overlay */}
       <div className="fixed inset-0 pointer-events-none z-[100] opacity-[0.03] mix-blend-overlay bg-[url('/noise.svg')]"></div>
@@ -528,7 +528,7 @@ function App() {
               <div className="text-center space-y-6 sm:space-y-8 flex flex-col items-center relative z-10 border-b border-[#00C853]/5 pb-8 sm:pb-12">
                 {/* Decorative Side Label - Right Side */}
                 <div className="hidden xl:block absolute right-[-5%] top-[75%] select-none z-20">
-                  <div className="flex flex-col gap-3 text-zinc-500 dark:text-zinc-200/50 text-[12px] font-light uppercase tracking-[1.2em] text-left" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                  <div className="flex flex-col gap-3 text-cyber-light-text dark:text-zinc-200/50 text-[12px] font-light uppercase tracking-[1.2em] text-left" style={{ fontFamily: "'Outfit', sans-serif" }}>
                     <span>Adaptive</span>
                     <span>Security.</span>
                   </div>
@@ -544,7 +544,7 @@ function App() {
 
                 <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-cyber-light-heading dark:text-white leading-[1.2] uppercase tracking-[0.05em] mb-2 sm:mb-4 px-2" style={{ fontFamily: "'Orbitron', sans-serif" }}>
                   Threats Move Fast <br className="hidden xs:block" />
-                  <span className="text-[#8A9E8A] dark:text-zinc-500">We Move Faster</span> <br className="hidden xs:block" />
+                  <span className="text-cyber-light-text dark:text-zinc-500">We Move Faster</span> <br className="hidden xs:block" />
                   <span className="text-[#00A846] dark:text-ornex-green drop-shadow-[0_0_20px_rgba(0,168,70,0.15)] dark:drop-shadow-[0_0_20px_rgba(57,255,20,0.3)]">Always.</span>
                 </h1>
 
@@ -556,7 +556,7 @@ function App() {
               {/* Scan Container */}
               <div className="flex flex-col items-center w-full space-y-12 relative z-20">
                 {/* Mode Toggle Tabs */}
-                <div className="flex p-1 bg-zinc-200/50 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-zinc-200 dark:border-white/10 relative z-20">
+                <div className="flex p-1 bg-cyber-light-bg/50 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-zinc-200 dark:border-white/10 relative z-20">
                   <button
                     onClick={() => {
                       setScanMode('url');
@@ -565,7 +565,7 @@ function App() {
                     className={`flex items-center justify-center gap-2 px-4 sm:px-8 py-2.5 sm:py-3 rounded-xl text-[10px] sm:text-xs md:text-sm font-bold uppercase tracking-widest transition-all flex-1 sm:flex-initial
                       ${scanMode === 'url' 
                         ? 'bg-white dark:bg-ornex-green text-cyber-light-accent dark:text-ornex-black shadow-lg shadow-black/5 dark:shadow-ornex-green/20 scale-[1.02]' 
-                        : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                        : 'text-cyber-light-text hover:text-zinc-700 dark:hover:text-zinc-300'
                       }`}
                   >
                     <Globe className="w-3.5 h-3.5 sm:w-4 h-4" />
@@ -579,7 +579,7 @@ function App() {
                     className={`flex items-center justify-center gap-2 px-4 sm:px-8 py-2.5 sm:py-3 rounded-xl text-[10px] sm:text-xs md:text-sm font-bold uppercase tracking-widest transition-all flex-1 sm:flex-initial
                       ${scanMode === 'email' 
                         ? 'bg-white dark:bg-ornex-green text-cyber-light-accent dark:text-ornex-black shadow-lg shadow-black/5 dark:shadow-ornex-green/20 scale-[1.02]' 
-                        : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                        : 'text-cyber-light-text hover:text-zinc-700 dark:hover:text-zinc-300'
                       }`}
                   >
                     <Mail className="w-3.5 h-3.5 sm:w-4 h-4" />
@@ -612,7 +612,7 @@ function App() {
                             ${loading
                               ? 'bg-[#00C853] dark:bg-ornex-green text-white dark:text-ornex-black cursor-wait shadow-[0_4px_20px_rgba(0,180,80,0.35)]'
                               : !url
-                                ? 'bg-[#E0E8E0] text-[#8CA58C] dark:bg-white/10 dark:text-zinc-600 cursor-not-allowed'
+                                ? 'bg-cyber-light-bg/80 text-cyber-light-text dark:bg-white/10 dark:text-zinc-600 cursor-not-allowed'
                                 : 'bg-gradient-to-br from-[#00C853] to-[#00A846] dark:bg-gradient-to-r dark:from-[#00C853] dark:to-ornex-green text-white dark:text-ornex-black shadow-[0_4px_20px_rgba(0,180,80,0.35)] hover:scale-105 active:scale-95'
                             }`}
                         >
@@ -760,18 +760,18 @@ function App() {
 
 
       {/* Footer */}
-      <footer className="mt-20 py-16 border-t border-zinc-200 dark:border-white/5 relative z-10 overflow-hidden">
+      <footer className="mt-20 py-8 border-t border-zinc-200 dark:border-white/5 relative z-10 overflow-hidden bg-cyber-light-bg/50 dark:bg-transparent backdrop-blur-md">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyber-light-accent/[0.03] dark:via-ornex-green/[0.03] to-transparent pointer-events-none" />
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-10 relative z-10">
-          <div className="flex items-center gap-4 group/foot-logo cursor-pointer opacity-70 hover:opacity-100 transition-all duration-500">
-            <div className="w-8 h-8 rounded-lg bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-zinc-600 dark:text-zinc-400 group-hover/foot-logo:bg-cyber-light-accent dark:group-hover/foot-logo:bg-ornex-green group-hover/foot-logo:text-white dark:group-hover/foot-logo:text-ornex-black transition-all">
+          <div className="flex items-center gap-4 group/foot-logo cursor-pointer group hover:scale-[1.02] transition-all duration-500">
+            <div className="w-9 h-9 rounded-xl bg-cyber-light-bg dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 flex items-center justify-center text-zinc-600 dark:text-zinc-400 group-hover/foot-logo:bg-cyber-light-accent dark:group-hover/foot-logo:bg-ornex-green group-hover/foot-logo:text-white dark:group-hover/foot-logo:text-ornex-black transition-all shadow-sm">
               <Shield className="w-4 h-4 fill-current" />
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-black tracking-widest text-zinc-600 dark:text-zinc-300 font-tektur uppercase">
+              <span className="text-sm font-black tracking-[0.2em] text-zinc-800 dark:text-zinc-200 font-tektur uppercase">
                 LinkVeil AI
               </span>
-              <span className="text-[9px] font-mono font-bold text-zinc-400 dark:text-zinc-600 uppercase tracking-tighter">
+              <span className="text-[9px] font-mono font-bold text-cyber-light-accent dark:text-ornex-green uppercase tracking-tighter opacity-100">
                 Forensic Intelligence
               </span>
             </div>
@@ -780,7 +780,7 @@ function App() {
           <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-4 text-[10px] sm:text-xs font-mono font-bold uppercase tracking-[0.25em]">
             <button 
               onClick={() => setShowPrivacy(true)}
-              className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 hover:text-cyber-light-accent dark:hover:text-ornex-green transition-all relative group/link"
+              className="flex items-center gap-2 text-cyber-light-text dark:text-zinc-400 hover:text-cyber-light-accent dark:hover:text-ornex-green transition-all relative group/link"
             >
               <Shield className="w-3.5 h-3.5 group-hover/link:scale-110 transition-transform" />
               Privacy Protocol
@@ -790,16 +790,18 @@ function App() {
               href="https://github.com/imabhi07/LinkVeil-AI" 
               target="_blank" 
               rel="noopener noreferrer" 
-              className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 hover:text-cyber-light-accent dark:hover:text-ornex-green transition-all relative group/link"
+              className="flex items-center gap-2 text-cyber-light-text dark:text-zinc-400 hover:text-cyber-light-accent dark:hover:text-ornex-green transition-all relative group/link"
             >
               <GithubIcon className="w-3.5 h-3.5 group-hover/link:scale-110 transition-transform" />
               Repository
               <span className="absolute -bottom-1 left-0 w-0 h-[1px] bg-current transition-all group-hover/link:w-full" />
             </a>
-            <span className="flex items-center gap-2 text-zinc-400 dark:text-zinc-700 cursor-default select-none">
-              <Terminal className="w-3 h-3" />
-              © 2026 // ABHIJEET P.
-            </span>
+            <div className="flex items-center gap-6">
+              <span className="flex items-center gap-2 text-zinc-500 dark:text-zinc-600 cursor-default select-none">
+                <Terminal className="w-3 h-3" />
+                © 2026 // ABHIJEET P.
+              </span>
+            </div>
           </div>
         </div>
       </footer>

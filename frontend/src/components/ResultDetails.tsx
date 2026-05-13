@@ -107,7 +107,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
 
       {/* Sentinel Recommendation Banner */}
       <div className={`p-5 sm:p-6 rounded-2xl sm:rounded-[2rem] border-2 flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-5 transition-all duration-700 shadow-[0_20px_50px_rgba(0,0,0,0.05)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.1)] relative overflow-hidden group ${
-        result.riskLevel === 'SAFE' ? 'bg-emerald-50 dark:bg-[#062e19]/90 border-emerald-500/30 dark:border-emerald-500/30 shadow-emerald-500/5' :
+        result.riskLevel === 'SAFE' ? 'bg-cyber-light-accent/5 dark:bg-[#062e19]/90 border-cyber-light-accent/30 dark:border-emerald-500/30 shadow-cyber-light-accent/5' :
         result.riskLevel === 'SUSPICIOUS' ? 'bg-amber-50 dark:bg-[#2e1d06]/90 border-amber-500/30 dark:border-amber-500/30 shadow-amber-500/5' :
         result.riskLevel === 'MALICIOUS' ? 'bg-rose-50 dark:bg-[#2e0606]/90 border-rose-500/30 dark:border-rose-500/30 shadow-rose-500/10 active-hazard-glow' :
         'bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-500/30'
@@ -119,9 +119,9 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
         <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent opacity-50" />
         
         <div className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl flex-shrink-0 shadow-lg ${
-          result.riskLevel === 'SAFE' ? 'bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' :
-          result.riskLevel === 'SUSPICIOUS' ? 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20' :
-          result.riskLevel === 'MALICIOUS' ? 'bg-rose-500/10 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20' :
+          result.riskLevel === 'SAFE' ? 'bg-cyber-light-accent/10 dark:bg-emerald-500/20 text-cyber-light-accent-deep dark:text-emerald-400 border border-cyber-light-accent/20' :
+          result.riskLevel === 'SUSPICIOUS' ? 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/20' :
+          result.riskLevel === 'MALICIOUS' ? 'bg-rose-500/10 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-500/20' :
           'bg-zinc-100 dark:bg-zinc-500/20 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-500/20'
         }`}>
           {result.riskLevel === 'SAFE' ? <ShieldCheck className="w-6 h-6 sm:w-7 sm:h-7" /> :
@@ -132,9 +132,9 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
         
         <div className="flex-1 relative z-10 text-center sm:text-left">
           <p className={`text-[10px] sm:text-[11px] font-bold font-tektur uppercase tracking-[0.3em] mb-1.5 sm:mb-2.5 ${
-            result.riskLevel === 'SAFE' ? 'text-emerald-600 dark:text-emerald-500/90' :
-            result.riskLevel === 'SUSPICIOUS' ? 'text-amber-600 dark:text-amber-500/90' :
-            result.riskLevel === 'MALICIOUS' ? 'text-rose-600 dark:text-rose-500/90' :
+            result.riskLevel === 'SAFE' ? 'text-cyber-light-accent-deep dark:text-emerald-500/90' :
+            result.riskLevel === 'SUSPICIOUS' ? 'text-amber-700 dark:text-amber-500/90' :
+            result.riskLevel === 'MALICIOUS' ? 'text-rose-700 dark:text-rose-500/90' :
             'text-zinc-500'
           }`}>
             Forensic Findings & Conclusion
@@ -171,7 +171,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
       {/* Unified Action-Oriented Forensic Header - PREMIUM DESIGN OVERHAUL */}
       {!hideHeader && (
         <div className={`group relative p-5 sm:p-8 rounded-3xl sm:rounded-[2.5rem] border shadow-2xl overflow-hidden transition-all duration-500 hover:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.15)] ${
-          result.riskLevel === 'SAFE' ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-500/30' :
+          result.riskLevel === 'SAFE' ? 'bg-cyber-light-accent/5 dark:bg-emerald-500/10 border-cyber-light-accent/20 dark:border-emerald-500/30' :
           result.riskLevel === 'SUSPICIOUS' ? 'bg-amber-50 dark:bg-amber-500/10 border-amber-500/30' :
           result.riskLevel === 'MALICIOUS' ? 'bg-rose-50 dark:bg-rose-500/10 border-rose-500/30' :
           'bg-zinc-50 dark:bg-zinc-500/10 border-zinc-200 dark:border-zinc-500/20'
@@ -190,9 +190,9 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                   'bg-zinc-500'
                 }`} />
                 <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl flex items-center justify-center border-2 backdrop-blur-xl relative z-10 transition-transform duration-500 group-hover/icon:scale-110 group-hover/icon:rotate-3 shadow-2xl ${
-                  result.riskLevel === 'SAFE' ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-600 dark:text-emerald-500 shadow-emerald-500/20' :
-                  result.riskLevel === 'SUSPICIOUS' ? 'bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-400 border-amber-500/20 shadow-amber-500/20' :
-                  result.riskLevel === 'MALICIOUS' ? 'bg-rose-500/10 border-rose-500/40 text-rose-600 dark:text-rose-500 shadow-rose-500/20 active-hazard-glow' :
+                  result.riskLevel === 'SAFE' ? 'bg-cyber-light-accent/10 border-cyber-light-accent/40 text-cyber-light-accent-deep dark:text-emerald-500 shadow-cyber-light-accent/10' :
+                  result.riskLevel === 'SUSPICIOUS' ? 'bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-400 border-amber-500/20 shadow-amber-500/20' :
+                  result.riskLevel === 'MALICIOUS' ? 'bg-rose-500/10 border-rose-500/40 text-rose-700 dark:text-rose-500 shadow-rose-500/20 active-hazard-glow' :
                   'bg-zinc-500/10 border-zinc-500/40 text-zinc-500'
                 }`}>
                   {result.riskLevel === 'SAFE' ? <ShieldCheck className="w-8 h-8 sm:w-10 sm:h-10" /> :
@@ -223,9 +223,9 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
 
                   {/* Moved Pill to Left */}
                   <div className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full font-bold font-tektur text-[8px] sm:text-[10px] uppercase tracking-[0.2em] sm:tracking-[0.25em] border shadow-sm ${
-                    result.riskLevel === 'MALICIOUS' ? 'bg-rose-600/10 border-rose-500/30 text-rose-600 dark:text-rose-400' :
-                    result.riskLevel === 'SUSPICIOUS' ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400' :
-                    'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                    result.riskLevel === 'MALICIOUS' ? 'bg-rose-600/10 border-rose-500/30 text-rose-700 dark:text-rose-400' :
+                    result.riskLevel === 'SUSPICIOUS' ? 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400' :
+                    'bg-cyber-light-accent/10 border-cyber-light-accent/30 text-cyber-light-accent-deep dark:text-emerald-400'
                   }`}>
                     {result.riskLevel === 'MALICIOUS' ? 'THREAT DETECTED' :
                      result.riskLevel === 'SUSPICIOUS' ? 'SUSPICIOUS TARGET' :
@@ -321,7 +321,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                        <span>Active Probing</span>
                      </div>
                    </InfoTip>
-                   <div className="bg-white dark:bg-zinc-900/80 backdrop-blur-md border border-zinc-200 dark:border-white/10 rounded-2xl p-5 pb-7 font-mono text-xs space-y-2 shadow-sm hover:shadow-md transition-all duration-300">
+                   <div className="bg-cyber-light-bg dark:bg-zinc-900/80 backdrop-blur-md border border-zinc-200 dark:border-white/10 rounded-2xl p-5 pb-7 font-mono text-xs space-y-2 shadow-sm hover:shadow-md transition-all duration-300">
                       <div className="flex justify-between border-b border-cyber-light-border dark:border-white/10 pb-2 mb-2">
                          <span className="text-cyber-light-text dark:text-zinc-400">Trace:</span>
                          <span className="text-cyber-light-accent-code dark:text-ornex-green truncate bg-zinc-100 dark:bg-transparent px-2 py-0.5 rounded font-mono font-bold">
@@ -345,7 +345,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                       <span>Visual Forensic</span>
                     </div>
                   </InfoTip>
-                  <div className="bg-white dark:bg-zinc-900/80 backdrop-blur-md border border-zinc-200 dark:border-white/10 rounded-2xl p-5 pb-7 font-mono text-xs space-y-2 shadow-sm hover:shadow-md transition-all duration-300">
+                  <div className="bg-cyber-light-bg dark:bg-zinc-900/80 backdrop-blur-md border border-zinc-200 dark:border-white/10 rounded-2xl p-5 pb-7 font-mono text-xs space-y-2 shadow-sm hover:shadow-md transition-all duration-300">
                      <div className="flex justify-between border-b border-cyber-light-border dark:border-white/10 pb-2 mb-2">
                         <span className="text-cyber-light-text dark:text-zinc-400">AI Brand Match:</span>
                         <span className="text-cyber-light-heading dark:text-zinc-200">
@@ -423,7 +423,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                               )}
                               
                               {/* Stage Label */}
-                              <div className="absolute top-3 left-3 px-3 py-1 rounded-lg bg-ornex-green/90 text-black text-[9px] font-black uppercase tracking-[0.1em] shadow-[0_0_15px_rgba(57,255,20,0.4)] pointer-events-none">
+                              <div className="absolute top-3 left-3 px-3 py-1 rounded-lg bg-cyber-light-accent dark:bg-ornex-green/90 text-white dark:text-black text-[9px] font-black uppercase tracking-[0.1em] shadow-[0_0_15px_rgba(0,200,83,0.3)] dark:shadow-[0_0_15px_rgba(57,255,20,0.4)] pointer-events-none">
                                 {activeScreenshotIndex === 0 ? 'Initial Load' : 
                                  activeScreenshotIndex === allScreenshots.length - 1 ? 'Final State' : 
                                  `Submission Step ${activeScreenshotIndex}`}
@@ -439,7 +439,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                                     onClick={() => setActiveScreenshotIndex(idx)}
                                     className={`relative flex-shrink-0 w-20 aspect-video rounded-lg overflow-hidden border-2 transition-all ${
                                       activeScreenshotIndex === idx 
-                                        ? 'border-ornex-green ring-2 ring-ornex-green/20' 
+                                        ? 'border-cyber-light-accent dark:border-ornex-green ring-2 ring-cyber-light-accent/20 dark:ring-ornex-green/20' 
                                         : 'border-white/5 hover:border-white/20 opacity-60 hover:opacity-100'
                                     }`}
                                   >
@@ -509,7 +509,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                           <span>URL Structure</span>
                         </div>
                       </InfoTip>
-                      <p className="text-xs sm:text-sm text-cyber-light-heading dark:text-zinc-100 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-cyber-light-border dark:border-white/5 font-mono shadow-sm hover:shadow-md transition-all duration-300 break-words whitespace-pre-wrap">
+                      <p className="text-xs sm:text-sm text-cyber-light-heading dark:text-zinc-100 bg-cyber-light-bg/80 dark:bg-zinc-900/80 backdrop-blur-md p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-cyber-light-border dark:border-white/5 font-mono shadow-sm hover:shadow-md transition-all duration-300 break-words whitespace-pre-wrap">
                         {cleanText(result.technicalDetails?.urlStructure)}
                       </p>
                     </div>
@@ -521,7 +521,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                           <span>Reputation</span>
                         </div>
                       </InfoTip>
-                      <p className="text-xs sm:text-sm text-cyber-light-heading dark:text-zinc-100 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-cyber-light-border dark:border-white/5 font-mono shadow-sm hover:shadow-md transition-all duration-300 break-words whitespace-pre-wrap">
+                      <p className="text-xs sm:text-sm text-cyber-light-heading dark:text-zinc-100 bg-cyber-light-bg/80 dark:bg-zinc-900/80 backdrop-blur-md p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-cyber-light-border dark:border-white/5 font-mono shadow-sm hover:shadow-md transition-all duration-300 break-words whitespace-pre-wrap">
                         {cleanText(result.technicalDetails?.domainReputation)}
                       </p>
                     </div>
@@ -533,7 +533,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                           <span>Social Eng.</span>
                         </div>
                       </InfoTip>
-                      <p className="text-xs sm:text-sm text-cyber-light-heading dark:text-zinc-100 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-cyber-light-border dark:border-white/5 font-mono shadow-sm hover:shadow-md transition-all duration-300 break-words whitespace-pre-wrap">
+                      <p className="text-xs sm:text-sm text-cyber-light-heading dark:text-zinc-100 bg-cyber-light-bg/80 dark:bg-zinc-900/80 backdrop-blur-md p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-cyber-light-border dark:border-white/5 font-mono shadow-sm hover:shadow-md transition-all duration-300 break-words whitespace-pre-wrap">
                         {cleanText(result.technicalDetails?.socialEngineeringTricks)}
                       </p>
                     </div>
@@ -560,7 +560,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
             <div className={`accordion-content ${expandedSections.has('findings') ? 'expanded' : 'collapsed'}`}>
               <div className="pt-6 space-y-6">
                  {/* Key Findings */}
-                 <div className="rounded-2xl p-5 sm:p-6 bg-white/50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-white/5 relative overflow-hidden">
+                 <div className="rounded-2xl p-5 sm:p-6 bg-cyber-light-bg/50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-white/5 relative overflow-hidden">
                    <div className="absolute top-0 right-0 p-3 opacity-5 pointer-events-none">
                        <Activity className="w-16 h-16 sm:w-24 sm:h-24" />
                    </div>
@@ -592,7 +592,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                     </h4>
                     <div className="grid grid-cols-1 gap-3 sm:gap-4">
                        {(result.mitigationAdvice && result.mitigationAdvice.length > 0) ? result.mitigationAdvice.map((advice, idx) => (
-                         <div key={idx} className="flex items-start gap-3 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-white/60 dark:bg-zinc-900/60 border border-cyber-light-accent/30 backdrop-blur-md shadow-sm">
+                         <div key={idx} className="flex items-start gap-3 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-cyber-light-bg/60 dark:bg-zinc-900/60 border border-cyber-light-accent/30 backdrop-blur-md shadow-sm">
                             <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-cyber-light-accent/10 dark:bg-ornex-green/10 flex items-center justify-center flex-shrink-0 text-cyber-light-accent dark:text-ornex-green font-bold text-[10px] sm:text-xs">
                                {idx + 1}
                             </div>
@@ -601,7 +601,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                             </p>
                          </div>
                        )) : (
-                          <div className="flex items-center gap-3 p-4 rounded-xl bg-white/60 dark:bg-zinc-900/60 border border-cyber-light-accent/30 backdrop-blur-md shadow-sm">
+                          <div className="flex items-center gap-3 p-4 rounded-xl bg-cyber-light-bg/60 dark:bg-zinc-900/60 border border-cyber-light-accent/30 backdrop-blur-md shadow-sm">
                             <Info className="w-4 h-4 text-cyber-light-accent" />
                             <p className="text-xs sm:text-sm text-cyber-light-text/70 italic">No specific mitigation required.</p>
                           </div>
@@ -682,7 +682,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                     )}
 
                     {/* Modal Stage Label */}
-                    <div className="absolute top-6 left-6 px-4 py-1.5 rounded-xl bg-ornex-green text-black text-[11px] font-black uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(57,255,20,0.4)] pointer-events-none">
+                    <div className="absolute top-6 left-6 px-4 py-1.5 rounded-xl bg-cyber-light-accent dark:bg-ornex-green text-white dark:text-black text-[11px] font-black uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(0,200,83,0.3)] dark:shadow-[0_0_30px_rgba(57,255,20,0.4)] pointer-events-none">
                       {activeScreenshotIndex === 0 ? 'Initial Load' : 
                        activeScreenshotIndex === allScreenshots.length - 1 ? 'Final State' : 
                        `Submission Step ${activeScreenshotIndex}`}

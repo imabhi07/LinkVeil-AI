@@ -16,11 +16,11 @@ interface ScanListItem {
 
 const SectionTooltip = ({ text }: { text: string }) => (
   <div className="group relative inline-flex items-center ml-1">
-    <Info className="w-3.5 h-3.5 text-zinc-400 cursor-help transition-colors hover:text-ornex-green" />
-    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 px-4 sm:px-5 py-3 sm:py-4 bg-zinc-900/98 dark:bg-zinc-800/98 backdrop-blur-xl border border-white/10 text-zinc-100 text-[10px] sm:text-xs rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0 pointer-events-none whitespace-normal min-w-[200px] sm:min-w-[280px] max-w-[calc(100vw-40px)] sm:max-w-[320px] shadow-[0_20px_50px_rgba(0,0,0,0.3)] z-[110] font-medium leading-relaxed">
-      <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-zinc-900/98 dark:border-t-zinc-800/98" />
+    <Info className="w-3.5 h-3.5 text-zinc-400 cursor-help transition-colors hover:text-cyber-light-accent dark:hover:text-ornex-green" />
+    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 px-4 sm:px-5 py-3 sm:py-4 bg-white/98 dark:bg-zinc-900/98 backdrop-blur-xl border border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-100 text-[10px] sm:text-xs rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0 pointer-events-none whitespace-normal min-w-[200px] sm:min-w-[280px] max-w-[calc(100vw-40px)] sm:max-w-[320px] shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)] z-[110] font-medium leading-relaxed">
+      <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-white/98 dark:border-t-zinc-900/98" />
       <div className="relative">
-        <div className="absolute -left-1 top-0 w-0.5 h-full bg-ornex-green/30 rounded-full" />
+        <div className="absolute -left-1 top-0 w-0.5 h-full bg-cyber-light-accent/30 dark:bg-ornex-green/30 rounded-full" />
         <p className="pl-3">{text}</p>
       </div>
     </div>
@@ -30,13 +30,13 @@ const SectionTooltip = ({ text }: { text: string }) => (
 const InfoTooltip = ({ text, children, className = "inline-flex items-center" }: { text: string, children: React.ReactNode, className?: string }) => (
   <div className={`group relative ${className}`}>
     {children}
-    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 px-3 py-2.5 bg-zinc-900/98 dark:bg-zinc-800/98 backdrop-blur-xl border border-white/10 text-zinc-100 text-[10px] rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0 pointer-events-none whitespace-normal w-max max-w-[140px] shadow-[0_20px_50px_rgba(0,0,0,0.3)] z-[110] font-medium leading-tight">
-      <div className="absolute top-full left-1/2 -translate-x-1/2 border-6 border-transparent border-t-zinc-900/98 dark:border-t-zinc-800/98" />
+    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 px-3 py-2.5 bg-white/98 dark:bg-zinc-900/98 backdrop-blur-xl border border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-100 text-[10px] rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0 pointer-events-none whitespace-normal w-max max-w-[140px] shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)] z-[110] font-medium leading-tight">
+      <div className="absolute top-full left-1/2 -translate-x-1/2 border-6 border-transparent border-t-white/98 dark:border-t-zinc-900/98" />
       <div className="relative">
-        <div className="absolute -left-1 top-0 w-0.5 h-full bg-ornex-green/30 rounded-full" />
+        <div className="absolute -left-1 top-0 w-0.5 h-full bg-cyber-light-accent dark:bg-ornex-green/30 rounded-full" />
         <div className="pl-2 flex flex-col gap-0.5">
           {text.split('|').map((part, i) => (
-            <span key={i} className={i === 0 ? 'text-zinc-500 dark:text-zinc-400 text-[10px] font-black uppercase tracking-widest' : 'text-[11px] font-black text-white dark:text-ornex-green uppercase tracking-tight'}>
+            <span key={i} className={i === 0 ? 'text-zinc-500 dark:text-zinc-400 text-[10px] font-black uppercase tracking-widest' : 'text-[11px] font-black text-cyber-light-accent-deep dark:text-ornex-green uppercase tracking-tight'}>
               {part.trim()}
             </span>
           ))}
@@ -124,26 +124,26 @@ function ScanListInline({ scans, loading, riskLevelColor, color, onReview }: Sca
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] text-zinc-500 dark:text-zinc-600 font-mono uppercase tracking-tighter opacity-50">Pulse</span>
-            <div className={`w-1 h-1 rounded-full ${loading ? 'bg-ornex-green animate-pulse' : 'bg-ornex-green/50'}`} />
+            <div className={`w-1 h-1 rounded-full ${loading ? 'bg-cyber-light-accent dark:bg-ornex-green animate-pulse' : 'bg-cyber-light-accent/50 dark:bg-ornex-green/50'}`} />
           </div>
         </div>
 
         {/* Search & Severity Filter */}
         <div className="flex items-center gap-2">
           <div className="relative flex-1 group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500 group-focus-within:text-ornex-green transition-colors" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500 group-focus-within:text-cyber-light-accent dark:group-focus-within:text-ornex-green transition-colors" />
             <input 
               type="text" 
               placeholder="Filter Intel..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-black/10 dark:bg-black/40 border border-zinc-200/50 dark:border-white/5 rounded-xl pl-9 pr-3 py-1.5 text-xs text-zinc-900 dark:text-zinc-300 focus:outline-none focus:border-ornex-green/30 transition-all font-mono"
+              className="w-full bg-black/10 dark:bg-black/40 border border-zinc-200/50 dark:border-white/5 rounded-xl pl-9 pr-3 py-1.5 text-xs text-zinc-900 dark:text-zinc-300 focus:outline-none focus:border-cyber-light-accent/30 dark:focus:border-ornex-green/30 transition-all font-mono"
             />
           </div>
           <select 
             value={severityFilter}
             onChange={(e) => setSeverityFilter(e.target.value as any)}
-            className="bg-black/10 dark:bg-black/40 border border-zinc-200/50 dark:border-white/5 rounded-xl px-2 py-1.5 text-[10px] font-black uppercase tracking-wider text-zinc-500 focus:outline-none cursor-pointer hover:border-ornex-green/30"
+            className="bg-black/10 dark:bg-black/40 border border-zinc-200/50 dark:border-white/5 rounded-xl px-2 py-1.5 text-[10px] font-black uppercase tracking-wider text-zinc-600 dark:text-zinc-500 focus:outline-none cursor-pointer hover:border-cyber-light-accent/30 dark:hover:border-ornex-green/30"
           >
             <option value="all">ALL</option>
             <option value="high">RISK</option>
@@ -155,7 +155,7 @@ function ScanListInline({ scans, loading, riskLevelColor, color, onReview }: Sca
       <div className="space-y-2 max-h-[280px] overflow-y-auto overflow-x-hidden custom-scrollbar pr-2">
         {loading && scans.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 gap-3">
-            <RefreshCw className="w-6 h-6 text-ornex-green/20 animate-spin" />
+            <RefreshCw className="w-6 h-6 text-cyber-light-accent/20 dark:text-ornex-green/20 animate-spin" />
             <span className="text-[10px] text-zinc-600 font-mono animate-pulse uppercase tracking-[0.2em]">Syncing...</span>
           </div>
         ) : filteredScans.length === 0 ? (
@@ -167,18 +167,18 @@ function ScanListInline({ scans, loading, riskLevelColor, color, onReview }: Sca
             const riskLower = (scan.risk_level || "").toLowerCase();
             const isHigh = riskLower === 'high' || riskLower === 'malicious';
             const isMedium = riskLower === 'medium' || riskLower === 'suspicious';
-            const statusColor = isHigh ? 'text-rose-500' : isMedium ? 'text-amber-500' : 'text-ornex-green';
-            const statusBg = isHigh ? 'bg-rose-500/10 border-rose-500/20' : isMedium ? 'bg-amber-500/10 border-amber-500/20' : 'bg-ornex-green/10 border-ornex-green/20';
+            const statusColor = isHigh ? 'text-rose-600 dark:text-rose-500' : isMedium ? 'text-amber-600 dark:text-amber-500' : 'text-cyber-light-accent dark:text-ornex-green';
+            const statusBg = isHigh ? 'bg-rose-500/10 border-rose-500/20' : isMedium ? 'bg-amber-500/10 border-amber-500/20' : 'bg-cyber-light-accent/10 border-cyber-light-accent/20 dark:bg-ornex-green/10 dark:border-ornex-green/20';
 
             return (
               <div key={i} className="group/item relative p-3 bg-zinc-100/50 dark:bg-black/30 border border-zinc-200/50 dark:border-white/5 rounded-xl flex items-center justify-between hover:bg-white dark:hover:bg-white/[0.03] hover:border-ornex-green/20 transition-all duration-200">
                 <div className="min-w-0 flex-1 pr-3">
-                  <div className="text-xs text-zinc-700 dark:text-zinc-300 truncate font-mono group-hover/item:text-ornex-green transition-colors tracking-tight">
+                  <div className="text-xs text-zinc-800 dark:text-zinc-300 truncate font-mono group-hover/item:text-cyber-light-accent dark:group-hover/item:text-ornex-green transition-colors tracking-tight">
                     {scan.url}
                   </div>
                   <div className="flex items-center gap-3 mt-1.5">
                     <div className={`flex items-center gap-1.5 px-2 py-0.5 ${statusBg} border rounded-md`}>
-                      <div className={`w-1 h-1 rounded-full ${isHigh ? 'bg-rose-500 animate-pulse' : isMedium ? 'bg-amber-500' : 'bg-ornex-green'}`} />
+                      <div className={`w-1 h-1 rounded-full ${isHigh ? 'bg-rose-500 animate-pulse' : isMedium ? 'bg-amber-500' : 'bg-cyber-light-accent dark:bg-ornex-green'}`} />
                       <span className={`text-[10px] font-black uppercase tracking-widest ${statusColor}`}>
                         {scan.risk_level}
                       </span>
@@ -192,12 +192,12 @@ function ScanListInline({ scans, loading, riskLevelColor, color, onReview }: Sca
                 <div className="flex items-center gap-3">
                   <button 
                     onClick={() => onReview && onReview(scan)}
-                    className="px-3 py-1.5 bg-ornex-green/5 hover:bg-ornex-green/20 border border-ornex-green/10 hover:border-ornex-green/30 rounded-lg text-[10px] font-black text-ornex-green uppercase tracking-widest transition-all opacity-0 group-hover/item:opacity-100 translate-x-2 group-hover/item:translate-x-0 cursor-pointer"
+                    className="px-3 py-1.5 bg-cyber-light-accent/5 dark:bg-ornex-green/5 hover:bg-cyber-light-accent/20 dark:hover:bg-ornex-green/20 border border-cyber-light-accent/10 dark:border-ornex-green/10 hover:border-cyber-light-accent/30 dark:hover:border-ornex-green/30 rounded-lg text-[10px] font-black text-cyber-light-accent dark:text-ornex-green uppercase tracking-widest transition-all opacity-0 group-hover/item:opacity-100 translate-x-2 group-hover/item:translate-x-0 cursor-pointer"
                   >
                     Review
                   </button>
                   <div className={`w-1 h-6 rounded-full opacity-30 group-hover/item:opacity-80 transition-all ${
-                    isHigh ? 'bg-rose-500' : isMedium ? 'bg-amber-500' : 'bg-ornex-green'
+                    isHigh ? 'bg-rose-500' : isMedium ? 'bg-amber-500' : 'bg-cyber-light-accent dark:bg-ornex-green'
                   }`} />
                 </div>
               </div>
@@ -380,16 +380,16 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="relative w-full max-w-6xl max-h-[95vh] overflow-hidden bg-white dark:bg-ornex-panel border border-cyber-light-border dark:border-white/10 rounded-3xl shadow-[0_0_80px_rgba(0,0,0,0.8)] flex flex-col">
+      <div className="relative w-full max-w-6xl max-h-[95vh] overflow-hidden bg-cyber-light-bg dark:bg-ornex-panel border border-cyber-light-border dark:border-white/10 rounded-3xl shadow-[0_0_80px_rgba(0,0,0,0.8)] flex flex-col">
         {/* Background Depth Glows */}
         <div className="absolute top-0 left-1/4 w-1/2 h-64 bg-ornex-green/5 blur-[120px] pointer-events-none" />
         <div className="absolute bottom-0 right-1/4 w-1/2 h-64 bg-ornex-green/3 blur-[120px] pointer-events-none" />
         
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 md:p-6 border-b border-cyber-light-border dark:border-white/5 bg-white/50 dark:bg-ornex-panel/50 backdrop-blur-xl gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 md:p-6 border-b border-cyber-light-border dark:border-white/5 bg-cyber-light-bg/50 dark:bg-ornex-panel/50 backdrop-blur-xl gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 md:p-2.5 bg-ornex-green/20 rounded-xl relative">
-              <BarChart3 className="w-5 h-5 md:w-6 md:h-6 text-ornex-green" />
+            <div className="p-2 md:p-2.5 bg-cyber-light-accent/10 dark:bg-ornex-green/20 rounded-xl relative">
+              <BarChart3 className="w-5 h-5 md:w-6 md:h-6 text-cyber-light-accent dark:text-ornex-green" />
               {isRefreshing && (
                 <div className="absolute -top-1 -right-1 w-2.5 h-2.5 md:w-3 md:h-3 bg-ornex-green rounded-full animate-ping" />
               )}
@@ -411,8 +411,8 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
                   }}
                   className={`px-3 md:px-4 py-1 md:py-1.5 rounded-lg text-[10px] md:text-xs font-black transition-all tracking-widest ${
                     days === d 
-                      ? 'bg-gradient-to-r from-[#00C853] to-ornex-green text-black shadow-lg shadow-ornex-green/20' 
-                      : 'text-cyber-light-text dark:text-zinc-500 hover:text-white hover:bg-black/10 dark:hover:bg-white/5'
+                    ? 'bg-gradient-to-r from-cyber-light-accent to-cyber-light-accent-deep dark:from-[#00C853] dark:to-ornex-green text-white dark:text-black shadow-lg shadow-cyber-light-accent/30 dark:shadow-ornex-green/20' 
+                      : 'text-cyber-light-text/70 dark:text-zinc-500 hover:text-cyber-light-heading dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/5'
                   }`}
                 >
                   {d === 0 ? 'ALL' : `${d}D`}
@@ -425,8 +425,8 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
               disabled={isRefreshing}
               className={`group/refresh p-2 rounded-xl border transition-all duration-300 flex items-center justify-center
                 ${isRefreshing 
-                  ? 'bg-ornex-green/10 border-ornex-green/30 text-ornex-green' 
-                  : 'bg-black/5 dark:bg-white/5 border-cyber-light-border dark:border-white/5 text-zinc-500 hover:text-ornex-green hover:border-ornex-green/30 hover:bg-ornex-green/5'}`}
+                  ? 'bg-cyber-light-accent/10 dark:bg-ornex-green/10 border-cyber-light-accent/30 dark:border-ornex-green/30 text-cyber-light-accent dark:text-ornex-green' 
+                  : 'bg-black/5 dark:bg-white/5 border-cyber-light-border dark:border-white/5 text-zinc-500 hover:text-cyber-light-accent dark:hover:text-ornex-green hover:border-cyber-light-accent/30 dark:hover:border-ornex-green/30 hover:bg-cyber-light-accent/5 dark:hover:bg-ornex-green/5'}`}
               title="Refresh Forensic Data"
             >
               <RefreshCw className={`w-4 h-4 md:w-5 md:h-5 ${isRefreshing ? 'animate-spin' : 'group-hover/refresh:rotate-180 transition-transform duration-500'}`} />
@@ -442,7 +442,7 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 md:p-8 space-y-8 custom-scrollbar relative">
+        <div className="flex-1 overflow-y-auto overscroll-contain p-6 md:p-8 space-y-8 custom-scrollbar relative">
           
           {/* Tab Switcher */}
           <div className="flex items-center gap-2 md:gap-4 border-b border-zinc-200 dark:border-white/5 pb-4 overflow-x-auto no-scrollbar">
@@ -453,16 +453,20 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
               }}
               className={`flex items-center gap-2 px-4 md:px-6 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-xs md:text-sm font-bold transition-all relative whitespace-nowrap ${
                 activeTab === 'url'
-                  ? 'text-ornex-green bg-ornex-green/10 border border-ornex-green/20'
-                  : 'text-zinc-500 hover:text-white hover:bg-white/5 border border-transparent'
+                  ? 'text-cyber-light-accent-deep dark:text-ornex-green bg-cyber-light-accent/15 dark:bg-ornex-green/10 border border-cyber-light-accent/30 dark:border-ornex-green/20 shadow-sm'
+                  : 'text-zinc-500 hover:text-cyber-light-heading dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 border border-transparent'
               }`}
             >
               <Globe className={`w-3.5 h-3.5 md:w-4 md:h-4 ${activeTab === 'url' ? 'animate-pulse' : ''}`} />
               URL Intelligence
               {activeTab === 'url' && (
-                <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-10 md:w-12 h-1 bg-ornex-green rounded-full" />
+                <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-10 md:w-12 h-1 bg-cyber-light-accent dark:bg-ornex-green rounded-full shadow-[0_0_10px_rgba(16,185,129,0.3)]" />
               )}
-              <span className="ml-1.5 px-1.5 py-0.5 bg-black/20 rounded-md text-[9px] md:text-[11px] font-mono opacity-60">
+              <span className={`ml-1.5 px-2 py-0.5 rounded-lg text-[9px] md:text-[11px] font-mono font-bold transition-colors ${
+                activeTab === 'url' 
+                  ? 'bg-cyber-light-accent/20 text-cyber-light-accent-deep dark:bg-ornex-green/20 dark:text-ornex-green' 
+                  : 'bg-zinc-200/80 text-zinc-500 dark:bg-black/40 dark:text-zinc-500'
+              }`}>
                 {data.url.total_scans}
               </span>
             </button>
@@ -473,16 +477,20 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
               }}
               className={`flex items-center gap-2 px-4 md:px-6 py-2 md:py-2.5 rounded-xl md:rounded-2xl text-xs md:text-sm font-bold transition-all relative whitespace-nowrap ${
                 activeTab === 'email'
-                  ? 'text-ornex-green bg-ornex-green/10 border border-ornex-green/20'
-                  : 'text-zinc-500 hover:text-white hover:bg-white/5 border border-transparent'
+                  ? 'text-cyber-light-accent-deep dark:text-ornex-green bg-cyber-light-accent/15 dark:bg-ornex-green/10 border border-cyber-light-accent/30 dark:border-ornex-green/20 shadow-sm'
+                  : 'text-zinc-500 hover:text-cyber-light-heading dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 border border-transparent'
               }`}
             >
               <ShieldAlert className={`w-3.5 h-3.5 md:w-4 md:h-4 ${activeTab === 'email' ? 'animate-pulse' : ''}`} />
               Email Intelligence
               {activeTab === 'email' && (
-                <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-10 md:w-12 h-1 bg-ornex-green rounded-full" />
+                <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-10 md:w-12 h-1 bg-cyber-light-accent dark:bg-ornex-green rounded-full shadow-[0_0_10px_rgba(16,185,129,0.3)]" />
               )}
-              <span className="ml-1.5 px-1.5 py-0.5 bg-black/20 rounded-md text-[9px] md:text-[11px] font-mono opacity-60">
+              <span className={`ml-1.5 px-2 py-0.5 rounded-lg text-[9px] md:text-[11px] font-mono font-bold transition-colors ${
+                activeTab === 'email' 
+                  ? 'bg-cyber-light-accent/20 text-cyber-light-accent-deep dark:bg-ornex-green/20 dark:text-ornex-green' 
+                  : 'bg-zinc-200/80 text-zinc-500 dark:bg-black/40 dark:text-zinc-500'
+              }`}>
                 {data.email.total_scans}
               </span>
             </button>
@@ -503,8 +511,8 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
                     onClick={() => handleCardClick(stat.filterKey)}
                     className={`relative p-4 md:p-6 border rounded-2xl md:rounded-3xl cursor-pointer transition-all duration-700 ease-[cubic-bezier(0.2,0,0,1)] overflow-hidden flex flex-col h-full
                       ${isActive 
-                        ? 'bg-white dark:bg-ornex-panel border-ornex-green/40 shadow-[0_25px_60px_rgba(0,0,0,0.9),0_0_20px_rgba(0,255,65,0.15)] md:scale-[1.02]' 
-                        : 'bg-white/60 dark:bg-zinc-900/50 border-zinc-200/50 dark:border-white/10 hover:bg-white/80 dark:hover:bg-zinc-900/80 shadow-xl hover:shadow-ornex-green/10 md:hover:-translate-y-2'}`}
+                        ? 'bg-cyber-light-bg dark:bg-ornex-panel border-cyber-light-accent/40 dark:border-ornex-green/40 shadow-[0_25px_60px_rgba(0,0,0,0.9),0_0_20px_rgba(0,255,65,0.15)] md:scale-[1.02]' 
+                        : 'bg-zinc-100/60 dark:bg-zinc-900/50 border-zinc-200/50 dark:border-white/10 hover:bg-zinc-100/80 dark:hover:bg-zinc-900/80 shadow-xl hover:shadow-cyber-light-accent/10 dark:hover:shadow-ornex-green/10 md:hover:-translate-y-2'}`}
                   >
                     {/* Background Glow Effect */}
                     <div className={`absolute -top-20 -right-20 w-40 h-40 rounded-full blur-[80px] transition-opacity duration-700 ${isActive ? 'opacity-10' : 'opacity-0'} ${riskColor}`} />
@@ -515,9 +523,9 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
                           <stat.icon className={`w-5 h-5 ${stat.color} transition-all duration-500 ${!isActive ? 'group-hover:scale-110' : ''}`} />
                         </div>
                         {isActive && (
-                          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-ornex-green/10 rounded-full border border-ornex-green/20">
-                             <span className="text-[11px] font-black text-ornex-green uppercase tracking-widest animate-pulse">Live</span>
-                             <div className="w-1 h-1 rounded-full bg-ornex-green" />
+                          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-cyber-light-accent/10 dark:bg-ornex-green/10 rounded-full border border-cyber-light-accent/20 dark:border-ornex-green/20">
+                             <span className="text-[11px] font-black text-cyber-light-accent dark:text-ornex-green uppercase tracking-widest animate-pulse">Live</span>
+                             <div className="w-1 h-1 rounded-full bg-cyber-light-accent dark:bg-ornex-green" />
                           </div>
                         )}
                       </div>
@@ -528,7 +536,7 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
                           {stat.value}
                         </div>
                         <div className={`font-bold uppercase tracking-[0.2em] transition-all duration-500
-                          ${isActive ? 'text-[10px] md:text-xs text-ornex-green/70' : 'text-[9px] md:text-xs text-zinc-500'}`}>
+                          ${isActive ? 'text-[10px] md:text-xs text-cyber-light-accent/70 dark:text-ornex-green/70' : 'text-[9px] md:text-xs text-zinc-500'}`}>
                           {stat.label}
                         </div>
                       </div>
@@ -560,7 +568,7 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
                 <div className="space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <h3 className="text-sm font-bold text-cyber-light-heading dark:text-zinc-300 flex items-center gap-2">
-                      <TrendingUp className="w-4 h-4 text-ornex-green dark:text-ornex-green" />
+                      <TrendingUp className="w-4 h-4 text-cyber-light-accent dark:text-ornex-green" />
                       Activity Distribution
                       <SectionTooltip text="Daily volume of analyzed items over the selected time window." />
                     </h3>
@@ -568,13 +576,13 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
                       Last {activeTab === 'url' ? data.url.daily_volume.length : data.email.daily_volume.length} days
                     </span>
                   </div>
-                  <div className="h-[140px] bg-white/40 dark:bg-zinc-900/40 rounded-3xl p-6 pb-10 border border-cyber-light-border dark:border-white/10 flex flex-col relative overflow-visible shadow-inner">
-                    <div className="absolute inset-0 bg-gradient-to-t from-ornex-green/5 to-transparent pointer-events-none rounded-3xl" />
+                  <div className="h-[140px] bg-zinc-100/40 dark:bg-zinc-900/40 rounded-3xl p-6 pb-10 border border-cyber-light-border dark:border-white/10 flex flex-col relative overflow-visible shadow-inner">
+                    <div className="absolute inset-0 bg-gradient-to-t from-cyber-light-accent/5 dark:from-ornex-green/5 to-transparent pointer-events-none rounded-3xl" />
                     
                     {/* Grid Lines */}
                     <div className="absolute inset-0 p-6 pb-10 flex flex-col justify-between pointer-events-none opacity-20">
                       {[1, 2, 3].map(i => (
-                        <div key={i} className="w-full h-px border-t border-dashed border-ornex-green/30" />
+                        <div key={i} className="w-full h-px border-t border-dashed border-cyber-light-accent/20 dark:border-ornex-green/30" />
                       ))}
                     </div>
 
@@ -590,7 +598,7 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
                                   {v.count}
                                 </span>
                                 <div 
-                                  className="w-[70%] bg-gradient-to-t from-ornex-green/40 to-ornex-green/20 dark:from-ornex-green/50 dark:to-ornex-green/25 group-hover:from-ornex-green/60 group-hover:to-ornex-green/40 dark:group-hover:from-ornex-green/70 dark:group-hover:to-ornex-green/40 border-t-2 border-ornex-green rounded-t-lg transition-all duration-500 ease-out relative shadow-[0_-4px_12px_rgba(0,200,83,0.1)] overflow-hidden"
+                                  className="w-[70%] bg-gradient-to-t from-cyber-light-accent/40 to-cyber-light-accent/20 dark:from-ornex-green/50 dark:to-ornex-green/25 group-hover:from-cyber-light-accent/60 group-hover:to-cyber-light-accent/40 dark:group-hover:from-ornex-green/70 dark:group-hover:to-ornex-green/40 border-t-2 border-cyber-light-accent dark:border-ornex-green rounded-t-lg transition-all duration-500 ease-out relative shadow-[0_-4px_12px_rgba(0,200,83,0.1)] overflow-hidden"
                                   style={{ height: v.count > 0 ? `${Math.max(height, 8)}%` : '2px', opacity: v.count > 0 ? 1 : 0.2 }}
                                 >
                                   {/* Scanline effect */}
@@ -623,7 +631,7 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
                     Infrastructure Risk
                     <SectionTooltip text="Top-level domains associated with malicious infrastructure." />
                   </h3>
-                  <div className="bg-white/40 dark:bg-zinc-900/40 rounded-3xl p-5 md:p-6 border border-cyber-light-border dark:border-white/10 shadow-inner">
+                  <div className="bg-zinc-100/40 dark:bg-zinc-900/40 rounded-3xl p-5 md:p-6 border border-cyber-light-border dark:border-white/10 shadow-inner">
                     <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 items-start">
                       {data.url.top_malicious_tlds.length > 0 ? (
                         data.url.top_malicious_tlds.map((t, i) => {
@@ -672,7 +680,7 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-bold text-cyber-light-heading dark:text-zinc-300 flex items-center gap-2">
-                      <TrendingUp className="w-4 h-4 text-ornex-green dark:text-ornex-green" />
+                      <TrendingUp className="w-4 h-4 text-cyber-light-accent dark:text-ornex-green" />
                       Email Forensic Activity Distribution
                       <SectionTooltip text="Volume of deep-scan email forensic analyses processed. Peak activity often correlates with active phishing campaigns." />
                     </h3>
@@ -680,13 +688,13 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
                       Showing last {data.email.daily_volume.length} days
                     </span>
                   </div>
-                  <div className="h-[140px] bg-white/40 dark:bg-zinc-900/40 rounded-3xl p-6 pb-10 border border-cyber-light-border dark:border-white/10 flex flex-col relative overflow-visible shadow-inner">
-                    <div className="absolute inset-0 bg-gradient-to-t from-ornex-green/5 to-transparent pointer-events-none rounded-3xl" />
+                  <div className="h-[140px] bg-zinc-100/40 dark:bg-zinc-900/40 rounded-3xl p-6 pb-10 border border-cyber-light-border dark:border-white/10 flex flex-col relative overflow-visible shadow-inner">
+                    <div className="absolute inset-0 bg-gradient-to-t from-cyber-light-accent/5 dark:from-ornex-green/5 to-transparent pointer-events-none rounded-3xl" />
                     
                     {/* Grid Lines */}
                     <div className="absolute inset-0 p-6 pb-10 flex flex-col justify-between pointer-events-none opacity-20">
                       {[1, 2, 3].map(i => (
-                        <div key={i} className="w-full h-px border-t border-dashed border-ornex-green/30" />
+                        <div key={i} className="w-full h-px border-t border-dashed border-cyber-light-accent/20 dark:border-ornex-green/30" />
                       ))}
                     </div>
 
@@ -702,13 +710,13 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
                                   {v.count}
                                 </span>
                                 <div 
-                                  className="w-[70%] bg-gradient-to-t from-ornex-green/40 to-ornex-green/20 dark:from-ornex-green/50 dark:to-ornex-green/25 group-hover:from-ornex-green/60 group-hover:to-ornex-green/40 dark:group-hover:from-ornex-green/70 dark:group-hover:to-ornex-green/40 border-t-2 border-ornex-green rounded-t-lg transition-all duration-500 ease-out relative shadow-[0_-4px_12px_rgba(0,200,83,0.1)] overflow-hidden"
+                                  className="w-[70%] bg-gradient-to-t from-cyber-light-accent/40 to-cyber-light-accent/20 dark:from-ornex-green/50 dark:to-ornex-green/25 group-hover:from-cyber-light-accent/60 group-hover:to-cyber-light-accent/40 dark:group-hover:from-ornex-green/70 dark:group-hover:to-ornex-green/40 border-t-2 border-cyber-light-accent dark:border-ornex-green rounded-t-lg transition-all duration-500 ease-out relative shadow-[0_-4px_12px_rgba(0,200,83,0.1)] overflow-hidden"
                                   style={{ height: v.count > 0 ? `${Math.max(height, 8)}%` : '2px', opacity: v.count > 0 ? 1 : 0.2 }}
                                 >
                                   {/* Scanline effect */}
                                   <div className="absolute inset-0 bg-[linear-gradient(0deg,transparent_24%,rgba(255,255,255,0.05)_25%,rgba(255,255,255,0.05)_26%,transparent_27%,transparent_74%,rgba(255,255,255,0.05)_75%,rgba(255,255,255,0.05)_76%,transparent_77%)] bg-[length:100%_4px] opacity-20" />
                                   
-                                  <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-[9px] py-1 px-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-zinc-200 dark:border-white/10 whitespace-nowrap z-50 shadow-xl">
+                                  <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-cyber-light-bg dark:bg-zinc-800 text-zinc-900 dark:text-white text-[9px] py-1 px-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-zinc-200 dark:border-white/10 whitespace-nowrap z-50 shadow-xl">
                                     {new Date(v.date.replace(/-/g, '/')).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} - {v.count} forensic logs
                                   </div>
                                 </div>
@@ -736,9 +744,9 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
                       <ShieldAlert className="w-4 h-4 text-rose-500" />
                       How They Attacked
                       <SectionTooltip text="Categorizes the 'psychological angle' or technical weakness exploited in the detected phishing attempts." />
-                      <span className="text-[11px] text-rose-500/60 font-mono ml-2 bg-rose-500/5 px-2 py-0.5 rounded-lg border border-rose-500/10 uppercase">Primary Method</span>
+                      <span className="text-[11px] text-rose-600 dark:text-rose-400/80 font-mono ml-2 bg-rose-500/5 px-2 py-0.5 rounded-lg border border-rose-500/10 uppercase">Primary Method</span>
                     </h3>
-                    <div className="bg-white/40 dark:bg-zinc-900/40 rounded-[2.5rem] p-6 sm:p-8 border border-cyber-light-border dark:border-white/10 shadow-2xl flex flex-col flex-1 h-full min-h-[340px] relative overflow-visible group/card">
+                    <div className="bg-zinc-100/40 dark:bg-zinc-900/40 rounded-[2.5rem] p-6 sm:p-8 border border-cyber-light-border dark:border-white/10 shadow-2xl flex flex-col flex-1 h-full min-h-[340px] relative overflow-visible group/card">
                       {/* Decorative Background Elements Wrapper */}
                       <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-[2.5rem] z-0">
                         <div className="absolute -top-24 -right-24 w-64 h-64 bg-rose-500/10 rounded-full blur-[80px] group-hover/card:bg-rose-500/20 transition-colors duration-1000" />
@@ -765,7 +773,7 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
                               }} 
                             />
                             {/* Inner Glass Ring */}
-                            <div className="absolute inset-[15%] bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md rounded-full border border-white/20 dark:border-white/5 flex items-center justify-center flex-col shadow-inner overflow-hidden">
+                            <div className="absolute inset-[15%] bg-cyber-light-bg/90 dark:bg-zinc-950/90 backdrop-blur-md rounded-full border border-white/20 dark:border-white/5 flex items-center justify-center flex-col shadow-inner overflow-hidden">
                               <div className="absolute inset-0 bg-gradient-to-br from-white/50 to-transparent dark:from-white/5 opacity-50" />
                               <span className="relative text-lg md:text-2xl font-black text-zinc-900 dark:text-white leading-none">
                                 {data.email.attack_vectors[0]?.percentage || 0}%
@@ -778,11 +786,11 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
                           <div className="flex-1 space-y-3 w-full">
                             {data.email.attack_vectors.map((av, i) => {
                               const colors = [
-                                { bg: 'bg-rose-500', text: 'text-rose-500', border: 'border-rose-500/10', bar: 'bg-rose-500/10' },
-                                { bg: 'bg-amber-500', text: 'text-amber-500', border: 'border-amber-500/10', bar: 'bg-amber-500/10' },
-                                { bg: 'bg-purple-500', text: 'text-purple-500', border: 'border-purple-500/10', bar: 'bg-purple-500/10' },
-                                { bg: 'bg-blue-500', text: 'text-blue-500', border: 'border-blue-500/10', bar: 'bg-blue-500/10' }
-                              ][i] || { bg: 'bg-zinc-500', text: 'text-zinc-500', border: 'border-zinc-500/10', bar: 'bg-zinc-500/10' };
+                                { bg: 'bg-rose-500', text: 'text-rose-600 dark:text-rose-500', border: 'border-rose-500/10', bar: 'bg-rose-500/10' },
+                                { bg: 'bg-amber-500', text: 'text-amber-700 dark:text-amber-500', border: 'border-amber-500/10', bar: 'bg-amber-500/10' },
+                                { bg: 'bg-purple-500', text: 'text-purple-600 dark:text-purple-500', border: 'border-purple-500/10', bar: 'bg-purple-500/10' },
+                                { bg: 'bg-blue-500', text: 'text-blue-600 dark:text-blue-500', border: 'border-blue-500/10', bar: 'bg-blue-500/10' }
+                              ][i] || { bg: 'bg-zinc-500', text: 'text-zinc-700 dark:text-zinc-500', border: 'border-zinc-500/10', bar: 'bg-zinc-500/10' };
 
                               const getIcon = (cat: string) => {
                                 const low = cat.toLowerCase();
@@ -802,12 +810,12 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
                                         {getIcon(av.category)}
                                       </div>
                                       <div className="flex flex-col">
-                                        <span className="text-[11px] md:text-[12px] text-zinc-900 dark:text-zinc-100 font-bold truncate leading-tight tracking-tight uppercase">{av.category}</span>
-                                        <span className="text-[9px] md:text-[11px] text-zinc-500 dark:text-zinc-400 font-medium mt-1 uppercase tracking-wider">{av.count} detected</span>
+                                        <span className={`text-[11px] md:text-[12px] ${colors.text} font-black truncate leading-tight tracking-tight uppercase`}>{av.category}</span>
+                                        <span className="text-[9px] md:text-[11px] text-zinc-700 dark:text-zinc-300 font-bold mt-1 uppercase tracking-[0.05em]">{av.count} detected</span>
                                       </div>
                                     </div>
                                     <div className="flex flex-col items-end shrink-0 ml-4">
-                                      <span className={`font-mono font-black ${colors.text} text-sm md:text-lg leading-none`}>{av.percentage}%</span>
+                                      <span className={`font-mono font-black ${colors.text} text-sm md:text-xl leading-none`}>{av.percentage}%</span>
                                       <span className="text-[7px] md:text-[8px] text-zinc-400 uppercase font-bold mt-1 tracking-tighter">Impact</span>
                                     </div>
                                   </div>
@@ -839,9 +847,9 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
                       <Microscope className="w-4 h-4 text-purple-500" />
                       How Sure is the AI?
                       <SectionTooltip text="The Forensic Certainty Index (FCI) measures the conclusiveness of evidence. A low average often indicates a high volume of safe traffic diluting the peak malicious certainty." />
-                      <span className="text-[11px] text-purple-500/60 font-mono ml-2 bg-purple-500/5 px-2 py-0.5 rounded-lg border border-purple-500/10 uppercase">FCI Analytics</span>
+                      <span className="text-[11px] text-purple-600 dark:text-purple-400/80 font-mono ml-2 bg-purple-500/5 px-2 py-0.5 rounded-lg border border-purple-500/10 uppercase">FCI Analytics</span>
                     </h3>
-                    <div className="bg-white/40 dark:bg-zinc-900/40 rounded-[2.5rem] p-6 sm:p-8 border border-cyber-light-border dark:border-white/10 shadow-2xl min-h-[340px] relative flex flex-col flex-1 h-full group/card overflow-visible">
+                    <div className="bg-zinc-100/40 dark:bg-zinc-900/40 rounded-[2.5rem] p-6 sm:p-8 border border-cyber-light-border dark:border-white/10 shadow-2xl min-h-[340px] relative flex flex-col flex-1 h-full group/card overflow-visible">
                       {/* Decorative Background Elements Wrapper */}
                       <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-[2.5rem] z-0">
                         <div className="absolute -top-24 -right-24 w-64 h-64 bg-purple-500/10 rounded-full blur-[80px] group-hover/card:bg-purple-500/20 transition-colors duration-1000" />
@@ -900,7 +908,7 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
                                                { label: "PRELIMINARY", color: "text-zinc-500", desc: "Limited evidence; requires deeper probing" };
                                  return (
                                    <>
-                                     <div className={`text-xs font-black ${verdict.color} tracking-[0.2em] mb-1`}>{verdict.label} EVIDENCE</div>
+                                     <div className={`text-[13px] font-black ${verdict.color} tracking-[0.25em] mb-1.5 drop-shadow-sm`}>{verdict.label} EVIDENCE</div>
                                      <div className="text-[9px] text-zinc-400 font-medium px-4 leading-tight">{verdict.desc}</div>
                                    </>
                                  );
@@ -952,7 +960,7 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
                                                )}
                                                <div className="absolute top-0 left-0 right-0 h-1 bg-white/10 rounded-full opacity-0 group-hover/dot:opacity-100 transition-opacity" />
                                             </div>
-                                            <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[8px] font-mono font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-tighter opacity-0 group-hover/dot:opacity-100 transition-all group-hover/dot:-translate-y-1">
+                                            <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[8px] font-mono font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-tighter transition-all">
                                               {new Date(t.date.replace(/-/g, '/')).toLocaleDateString(undefined, { weekday: 'short' })}
                                             </span>
                                           </InfoTooltip>
@@ -979,12 +987,12 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
                   {/* Authentication Posture */}
                   <div className="space-y-4 flex flex-col">
                     <h3 className="text-sm font-bold text-cyber-light-heading dark:text-zinc-300 flex items-center gap-2">
-                      <Fingerprint className="w-4 h-4 text-ornex-green" />
+                      <Fingerprint className="w-4 h-4 text-cyber-light-accent-deep dark:text-ornex-green" />
                       Is the Sender Real?
                       <SectionTooltip text="Checks the sender's identity against global security standards (SPF, DKIM, DMARC) to detect spoofing." />
-                      <span className="text-[11px] text-ornex-green/60 font-mono ml-2 bg-ornex-green/5 px-2 py-0.5 rounded-lg border border-ornex-green/10 uppercase">Identity Check</span>
+                      <span className="text-[11px] text-cyber-light-accent-deep/80 dark:text-ornex-green/60 font-mono ml-2 bg-cyber-light-accent/5 dark:bg-ornex-green/5 px-2 py-0.5 rounded-lg border border-cyber-light-accent/20 dark:border-ornex-green/10 uppercase">Identity Check</span>
                     </h3>
-                    <div className="bg-white/40 dark:bg-zinc-900/40 rounded-3xl p-5 border border-cyber-light-border dark:border-white/10 shadow-inner flex flex-col justify-between flex-1 h-full min-h-[200px]">
+                    <div className="bg-zinc-100/40 dark:bg-zinc-900/40 rounded-3xl p-5 border border-cyber-light-border dark:border-white/10 shadow-inner flex flex-col justify-between flex-1 h-full min-h-[200px]">
                       <div className="space-y-3">
                         {['spf', 'dkim', 'dmarc'].map((type) => {
                           const stats = data.email.auth_posture[type as keyof typeof data.email.auth_posture];
@@ -1003,11 +1011,11 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
                             <div key={type} className="group cursor-default">
                               <div className="flex items-center justify-between mb-2 relative z-10">
                                 <div className="flex items-center gap-3">
-                                  <div className={`w-1 h-6 md:h-8 rounded-full ${passPct > 80 ? 'bg-ornex-green shadow-[0_0_8px_rgba(0,255,65,0.4)]' : passPct > 50 ? 'bg-amber-500' : 'bg-rose-500'}`} />
+                                  <div className={`w-1 h-6 md:h-8 rounded-full ${passPct > 80 ? 'bg-cyber-light-accent-deep dark:bg-ornex-green shadow-[0_0_8px_rgba(5,150,105,0.2)] dark:shadow-[0_0_8px_rgba(0,255,65,0.4)]' : passPct > 50 ? 'bg-amber-500' : 'bg-rose-500'}`} />
                                   <div className="flex flex-col">
                                     <div className="flex items-center gap-1.5">
                                       <InfoTooltip text={tooltips[type as keyof typeof tooltips]}>
-                                        <span className="text-[11px] md:text-[12px] font-bold uppercase tracking-wider text-zinc-900 dark:text-zinc-100 hover:text-ornex-green transition-colors cursor-help border-b border-dotted border-zinc-500/30">
+                                        <span className="text-[11px] md:text-[12px] font-bold uppercase tracking-wider text-zinc-900 dark:text-zinc-100 hover:text-cyber-light-accent-deep dark:hover:text-ornex-green transition-colors cursor-help border-b border-dotted border-zinc-500/30">
                                           {type} Protocol
                                         </span>
                                       </InfoTooltip>
@@ -1016,16 +1024,16 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
                                   </div>
                                 </div>
                                 <div className="flex flex-col items-end">
-                                  <span className={`text-xs md:text-[12px] font-mono font-black ${passPct > 80 ? 'text-ornex-green' : 'text-amber-500'} leading-none`}>
+                                  <span className={`text-xs md:text-[12px] font-mono font-black ${passPct > 80 ? 'text-cyber-light-accent-deep dark:text-ornex-green' : 'text-amber-500'} leading-none`}>
                                     {Math.round(passPct)}%
                                   </span>
                                   <span className="text-[8px] md:text-[10px] text-zinc-400 uppercase font-bold mt-1 tracking-tighter italic opacity-50">Score</span>
                                 </div>
                               </div>
                               
-                              <div className="relative h-1 md:h-1.5 w-full bg-zinc-200 dark:bg-white/5 rounded-full overflow-hidden flex shadow-inner border border-black/[0.02] dark:border-white/[0.02]">
+                              <div className="relative h-2 md:h-2.5 w-full bg-zinc-200 dark:bg-black/20 rounded-full overflow-hidden flex gap-[2px] shadow-inner border border-black/[0.05] dark:border-white/[0.02]">
                                 <div 
-                                  className="h-full bg-ornex-green transition-all duration-1000 ease-out shadow-[0_0_12px_rgba(0,255,65,0.3)]" 
+                                  className="h-full bg-cyber-light-accent dark:bg-ornex-green transition-all duration-1000 ease-out shadow-[0_0_12px_rgba(16,185,129,0.2)] dark:shadow-[0_0_12px_rgba(0,255,65,0.3)] rounded-l-full" 
                                   style={{ width: `${passPct}%` }} 
                                 />
                                 <div 
@@ -1033,7 +1041,7 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
                                   style={{ width: `${failPct}%` }} 
                                 />
                                 <div 
-                                  className="h-full bg-zinc-400 dark:bg-white/10 transition-all duration-1000 ease-out" 
+                                  className="h-full bg-zinc-400 dark:bg-white/10 transition-all duration-1000 ease-out rounded-r-full" 
                                   style={{ width: `${nonePct}%` }} 
                                 />
                               </div>
@@ -1045,7 +1053,7 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
                       <div className="flex flex-col sm:flex-row items-center justify-between mt-3 pt-3 border-t border-cyber-light-border dark:border-white/5 gap-3">
                         <div className="flex flex-wrap items-center justify-center gap-3 md:gap-4">
                           <div className="flex items-center gap-2">
-                            <div className="w-2 md:w-2.5 h-2 md:h-2.5 rounded-full bg-ornex-green shadow-[0_0_8px_rgba(0,255,65,0.5)]" />
+                            <div className="w-2 md:w-2.5 h-2 md:h-2.5 rounded-full bg-cyber-light-accent-deep dark:bg-ornex-green shadow-[0_0_8px_rgba(5,150,105,0.3)] dark:shadow-[0_0_8px_rgba(0,255,65,0.5)]" />
                             <span className="text-[9px] md:text-[11px] font-bold uppercase text-zinc-500 dark:text-zinc-400 tracking-tight">Pass</span>
                           </div>
                           <div className="flex items-center gap-2">
@@ -1057,7 +1065,7 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
                             <span className="text-[9px] md:text-[11px] font-bold uppercase text-zinc-500 dark:text-zinc-400 tracking-tight">None</span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1.5 text-ornex-green/60 hover:text-ornex-green transition-colors cursor-default group/verified">
+                        <div className="flex items-center gap-1.5 text-cyber-light-accent-deep/80 dark:text-ornex-green/60 hover:text-cyber-light-accent-deep dark:hover:text-ornex-green transition-colors cursor-default group/verified">
                           <ShieldCheck className="w-3 md:w-3.5 h-3 md:h-3.5 transition-transform group-hover/verified:scale-110" />
                           <span className="text-[8px] md:text-[9px] font-black uppercase tracking-widest font-mono">Forensic Pipeline</span>
                         </div>
@@ -1071,9 +1079,9 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
                       <Activity className="w-4 h-4 text-cyan-500" />
                       Hiding Techniques
                       <SectionTooltip text="Identifies clever tricks attackers use to hide malicious links or text from security scanners." />
-                      <span className="text-[11px] text-cyan-500/60 font-mono ml-2 bg-cyan-500/5 px-2 py-0.5 rounded-lg border border-cyan-500/10 uppercase">Detected Tricks</span>
+                      <span className="text-[11px] text-cyan-600 dark:text-cyan-400/80 font-mono ml-2 bg-cyan-500/5 px-2 py-0.5 rounded-lg border border-cyan-500/10 uppercase">Detected Tricks</span>
                     </h3>
-                    <div className="bg-white/40 dark:bg-zinc-900/40 rounded-3xl p-5 border border-cyber-light-border dark:border-white/10 shadow-inner min-h-[200px] flex flex-col relative overflow-hidden group/heatmap">
+                    <div className="bg-zinc-100/40 dark:bg-zinc-900/40 rounded-3xl p-5 border border-cyber-light-border dark:border-white/10 shadow-inner min-h-[200px] flex flex-col relative overflow-hidden group/heatmap">
                       {/* Grid Backdrop */}
                       <div className="absolute inset-0 opacity-[0.02] dark:opacity-[0.05] pointer-events-none" style={{ backgroundImage: 'linear-gradient(currentColor 1px, transparent 1px), linear-gradient(to right, currentColor 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
                       
@@ -1090,7 +1098,7 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
                                     <div className={`w-1.5 h-3 rounded-full ${intensity > 0.7 ? 'bg-cyan-400' : intensity > 0.3 ? 'bg-cyan-600' : 'bg-cyan-900'}`} />
                                     <span className="text-[11px] font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-tight">{h.technique}</span>
                                   </div>
-                                  <span className="text-[11px] font-mono font-black text-cyan-500">INTENSITY: {Math.round(intensity * 100)}%</span>
+                                  <span className="text-[11px] font-mono font-black text-cyan-600 dark:text-cyan-400">INTENSITY: {Math.round(intensity * 100)}%</span>
                                 </div>
                                 
                                 <div className="flex gap-1 h-4">
@@ -1149,22 +1157,22 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
           {/* Top Impersonated Brands */}
           <div className="space-y-4">
             <h3 className="text-sm font-bold text-cyber-light-heading dark:text-zinc-300 flex items-center gap-2">
-              <Globe className="w-4 h-4 text-ornex-green" />
+              <Globe className="w-4 h-4 text-cyber-light-accent-deep dark:text-ornex-green" />
               Top Impersonated Brands
               <SectionTooltip text="Global threat intelligence data showing the most common brands exploited in recent phishing campaigns." />
-              <span className="text-[11px] text-cyber-light-text dark:text-ornex-green/60 font-mono ml-2 bg-white dark:bg-ornex-green/5 px-2 py-0.5 rounded-lg border dark:border-ornex-green/10">GLOBAL INTEL</span>
+              <span className="text-[11px] text-cyber-light-accent-deep dark:text-ornex-green/60 font-mono ml-2 bg-cyber-light-accent/5 dark:bg-ornex-green/5 px-2 py-0.5 rounded-lg border border-cyber-light-accent/20 dark:border-ornex-green/10">GLOBAL INTEL</span>
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 items-start">
               {data.top_impersonated_brands.length > 0 ? (
                 data.top_impersonated_brands.slice(0, 8).map((b, i) => (
-                  <div key={i} className="relative group overflow-hidden p-3.5 md:p-4 bg-white/40 dark:bg-white/[0.03] rounded-xl md:rounded-2xl border border-cyber-light-border dark:border-white/5 hover:bg-white/60 dark:hover:bg-white/[0.08] hover:border-ornex-green/20 transition-all shadow-sm hover:shadow-md">
+                  <div key={i} className="relative group overflow-hidden p-3.5 md:p-4 bg-zinc-100/40 dark:bg-white/[0.03] rounded-xl md:rounded-2xl border border-cyber-light-border dark:border-white/5 hover:bg-zinc-200/60 dark:hover:bg-white/[0.08] hover:border-cyber-light-accent/30 dark:hover:border-ornex-green/20 transition-all shadow-sm hover:shadow-md">
                     <div 
-                      className="absolute inset-0 bg-ornex-green/[0.08] dark:bg-ornex-green/[0.05] border-r-2 border-ornex-green/20 transition-all duration-1000 ease-out origin-left"
+                      className="absolute inset-0 bg-cyber-light-accent/5 dark:bg-ornex-green/[0.05] border-r-2 border-cyber-light-accent/20 dark:border-ornex-green/20 transition-all duration-1000 ease-out origin-left"
                       style={{ width: b.share.includes('%') ? b.share : `${b.share}%` }}
                     />
                     <div className="relative flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2.5 md:gap-3 min-w-0">
-                        <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg md:rounded-xl bg-white dark:bg-zinc-900 border border-cyber-light-border dark:border-white/5 flex items-center justify-center text-[10px] md:text-xs font-black text-ornex-green dark:text-ornex-green shadow-sm shrink-0">
+                        <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg md:rounded-xl bg-cyber-light-bg dark:bg-zinc-900 border border-cyber-light-border dark:border-white/5 flex items-center justify-center text-[10px] md:text-xs font-black text-cyber-light-accent-deep dark:text-ornex-green shadow-sm shrink-0">
                           {i + 1}
                         </div>
                         <div className="flex flex-col min-w-0">
@@ -1172,7 +1180,7 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
                           <span className="text-[8px] md:text-[10px] text-cyber-light-text font-mono uppercase tracking-wider truncate">{b.category}</span>
                         </div>
                       </div>
-                      <div className="text-[10px] md:text-xs font-mono font-black text-cyber-light-accent-data dark:text-ornex-green bg-cyber-light-accent-bg dark:bg-ornex-green/10 px-1.5 md:px-2 py-0.5 md:py-1 rounded-lg border border-ornex-green/10 shrink-0">
+                      <div className="text-[10px] md:text-xs font-mono font-black text-cyber-light-accent-deep dark:text-ornex-green bg-cyber-light-accent/10 dark:bg-ornex-green/10 px-1.5 md:px-2 py-0.5 md:py-1 rounded-lg border border-cyber-light-accent/20 dark:border-ornex-green/10 shrink-0">
                         {b.share}
                       </div>
                     </div>
@@ -1188,13 +1196,13 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
         </div>
 
         {/* Footer - Final Polish */}
-        <div className="p-5 sm:p-6 md:p-8 bg-zinc-50/50 dark:bg-black/20 border-t border-cyber-light-border dark:border-white/5">
+        <div className="p-5 sm:p-6 md:p-8 bg-cyber-light-bg/50 dark:bg-black/20 border-t border-cyber-light-border dark:border-white/5">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-6 sm:gap-4">
             <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-6">
-              <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 shadow-sm transition-all hover:border-ornex-green/30">
-                 <RefreshCw className={`w-3 h-3 text-ornex-green ${isRefreshing ? 'animate-spin' : ''}`} />
+              <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-cyber-light-bg dark:bg-white/5 border border-zinc-200 dark:border-white/10 shadow-sm transition-all hover:border-cyber-light-accent/40 dark:hover:border-ornex-green/30">
+                 <RefreshCw className={`w-3 h-3 text-cyber-light-accent-deep dark:text-ornex-green ${isRefreshing ? 'animate-spin' : ''}`} />
                  <p className="text-[9px] md:text-xs text-cyber-light-text dark:text-zinc-400 font-mono font-bold uppercase tracking-widest">
-                   Last Intel Sync: <span className="text-cyber-light-accent dark:text-ornex-green">{new Date(data.last_updated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+                   Last Intel Sync: <span className="text-cyber-light-accent-deep dark:text-ornex-green">{new Date(data.last_updated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
                  </p>
               </div>
               
@@ -1206,7 +1214,7 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
 
             <div className="flex flex-col items-center sm:items-end gap-1.5">
               <p className="text-[10px] md:text-xs text-cyber-light-text dark:text-zinc-400 font-mono font-black uppercase tracking-[0.15em] opacity-80">
-                LinkVeil-AI Forensic Engine <span className="text-cyber-light-accent dark:text-ornex-green">v2.1.0</span>
+                LinkVeil-AI Forensic Engine <span className="text-cyber-light-accent-deep dark:text-ornex-green">v2.1.0</span>
               </p>
               <div className="flex items-center gap-2 opacity-40 hover:opacity-100 transition-opacity cursor-default">
                 <span className="text-[8px] md:text-[9px] text-cyber-light-text font-mono uppercase tracking-[0.3em]">Quantum-Secure Pipeline • vVision Enabled</span>

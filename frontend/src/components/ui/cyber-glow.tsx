@@ -36,9 +36,9 @@ export function CyberGlow() {
     >
       {/* Subtle Base Grid */}
       <div
-        className="absolute inset-0 opacity-[0.05] dark:opacity-[0.08]"
+        className="absolute inset-0 opacity-[0.1] dark:opacity-[0.08]"
         style={{
-          backgroundImage: `linear-gradient(var(--color-primary, #00C853) 1px, transparent 1px), linear-gradient(90deg, var(--color-primary, #00C853) 1px, transparent 1px)`,
+          backgroundImage: `linear-gradient(var(--color-primary, #059669) 1px, transparent 1px), linear-gradient(90deg, var(--color-primary, #059669) 1px, transparent 1px)`,
           backgroundSize: '5vw 5vw'
         }}
       />
@@ -55,15 +55,14 @@ export function CyberGlow() {
         {cells.map((cell) => (
           <motion.div
             key={cell.id}
-            className="bg-ornex-green/30 border border-ornex-green/40 shadow-[0_0_10px_rgba(57,255,20,0.1)] aspect-square" // aspect-square to force squareness
+            className="bg-[var(--color-primary,#059669)]/30 border border-[var(--color-primary,#059669)]/40 shadow-[0_0_20px_var(--color-primary-glow,rgba(5,150,105,0.3))] aspect-square" 
             style={{
               gridColumnStart: cell.x + 1,
               gridRowStart: cell.y + 1,
             }}
             animate={{
-              opacity: [0, 0.6, 0],
-              scale: [0.95, 1, 0.95],
-              backgroundColor: ['rgba(57, 255, 20, 0)', 'rgba(57, 255, 20, 0.25)', 'rgba(57, 255, 20, 0)'],
+              opacity: [0, 0.8, 0],
+              scale: [0.95, 1.05, 0.95],
             }}
             transition={{
               duration: cell.duration,
@@ -77,7 +76,7 @@ export function CyberGlow() {
 
       {/* Sweeping Scan Beam - Horizontal (Constrained to clipping) */}
       <motion.div
-        className="absolute inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-ornex-green to-transparent opacity-20 shadow-[0_0_15px_#39FF14]"
+        className="absolute inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-[var(--color-primary,#059669)] to-transparent opacity-40 shadow-[0_0_25px_var(--color-primary,#059669)]"
         animate={{
           top: ['-10%', '110%'],
         }}
@@ -89,7 +88,7 @@ export function CyberGlow() {
       />
 
       {/* Ambient Glow Gradient - Anchored to top right */}
-      <div className="absolute top-0 right-0 w-[1000px] h-[1000px] bg-ornex-green/[0.07] blur-[160px] rounded-full translate-x-1/3 -translate-y-1/3" />
+      <div className="absolute top-0 right-0 w-[1000px] h-[1000px] bg-[var(--color-primary,#059669)]/[0.12] blur-[160px] rounded-full translate-x-1/3 -translate-y-1/3" />
     </div>
   );
 }

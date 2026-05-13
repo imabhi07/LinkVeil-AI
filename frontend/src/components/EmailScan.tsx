@@ -153,7 +153,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initia
         return 'text-amber-900 dark:text-amber-500 bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20';
       case 'low':
       case 'safe':
-        return 'text-emerald-900 dark:text-ornex-green bg-emerald-50 dark:bg-ornex-green/10 border-emerald-200 dark:border-ornex-green/20';
+        return 'text-cyber-light-accent-deep dark:text-ornex-green bg-cyber-light-accent/5 dark:bg-ornex-green/10 border-cyber-light-accent/20 dark:border-ornex-green/20';
       case 'inconclusive': 
         return 'text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20';
       default: return 'text-zinc-700 dark:text-zinc-500 bg-zinc-50 dark:bg-zinc-500/10 border-zinc-200 dark:border-zinc-500/20';
@@ -195,8 +195,8 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initia
       <div className="glass-panel p-4 sm:p-6 md:p-8 rounded-2xl md:rounded-3xl dark:bg-zinc-900/40 border-zinc-200 dark:border-white/10 shadow-xl shadow-black/5">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8 md:mb-10">
           <div className="flex items-center gap-3 md:gap-4">
-            <div className="p-2.5 md:p-3 bg-cyber-light-accent/10 dark:bg-ornex-green/10 rounded-xl md:rounded-2xl border border-cyber-light-accent/20 dark:border-ornex-green/20 shrink-0">
-              <Mail className="w-5 h-5 md:w-6 md:h-6 text-cyber-light-accent dark:text-ornex-green" />
+            <div className="p-2.5 md:p-3 bg-cyber-light-accent/10 dark:bg-ornex-green/10 rounded-xl md:rounded-2xl border border-cyber-light-accent/30 dark:border-ornex-green/20 shrink-0">
+              <Mail className="w-5 h-5 md:w-6 md:h-6 text-cyber-light-accent-deep dark:text-ornex-green" />
             </div>
             <div className="space-y-0.5 md:space-y-1">
               <h2 className="text-xl md:text-2xl font-bold text-cyber-light-heading dark:text-white uppercase tracking-tight leading-none">Email Forensic Scan</h2>
@@ -209,9 +209,9 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initia
               onClick={() => setShowGuide(!showGuide)}
               className={`flex items-center justify-center gap-2 px-4 py-2.5 md:py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border
                 ${showGuide 
-                  ? 'bg-cyber-light-accent/10 border-cyber-light-accent/30 text-cyber-light-accent dark:bg-ornex-green/10 dark:border-ornex-green/30 dark:text-ornex-green' 
+                  ? 'bg-cyber-light-accent/10 border-cyber-light-accent/40 text-cyber-light-accent-deep dark:bg-ornex-green/10 dark:border-ornex-green/30 dark:text-ornex-green' 
                   : 'bg-zinc-100 dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
-                }`}
+                } transition-all`}
             >
               <Info className="w-3.5 h-3.5" />
               {showGuide ? 'Hide Guide' : 'How to Scan'}
@@ -233,7 +233,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initia
                     type="button"
                     onClick={() => setScanMode(tab.id as any)}
                     aria-label={`Switch to ${tab.fullLabel} mode`}
-                    className={`w-full flex items-center justify-center gap-2 px-3 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-widest transition-all ${scanMode === tab.id ? 'bg-white dark:bg-white/10 shadow-sm text-cyber-light-accent dark:text-ornex-green' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
+                    className={`w-full flex items-center justify-center gap-2 px-3 md:px-4 py-2 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-widest transition-all ${scanMode === tab.id ? 'bg-white dark:bg-white/10 shadow-sm text-cyber-light-accent-deep dark:text-ornex-green' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'}`}
                   >
                     <tab.icon className="w-3.5 h-3.5" />
                     <span className="hidden xs:inline">{tab.fullLabel}</span>
@@ -247,15 +247,15 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initia
 
         {showGuide && (
           <div className="mb-8 space-y-6 animate-slide-down" role="dialog" aria-labelledby="privacy-modal-title" aria-modal="true" onKeyDown={(e) => { if (e.key === 'Escape') setShowGuide(false); }}>
-            <div className="p-5 md:p-8 rounded-2xl md:rounded-[2rem] bg-zinc-50 dark:bg-zinc-900/40 border border-[#00C853]/20 dark:border-ornex-green/20 shadow-2xl relative overflow-hidden group">
+            <div className="p-5 md:p-8 rounded-2xl md:rounded-[2rem] bg-cyber-light-bg dark:bg-zinc-900/40 border border-cyber-light-accent/30 dark:border-ornex-green/20 shadow-2xl relative overflow-hidden group">
               {/* Background Decoration */}
               <div className="absolute top-0 right-0 w-64 h-64 bg-cyber-light-accent/5 dark:bg-ornex-green/5 blur-[100px] -mr-32 -mt-32 pointer-events-none" />
               
               <div className="relative space-y-6 md:space-y-8">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-200 dark:border-white/5 pb-6">
                   <div className="flex items-center gap-4">
-                    <div className="p-3 bg-[#00C853]/10 dark:bg-ornex-green/20 rounded-2xl shrink-0">
-                      <Zap className="w-5 h-5 text-[#00C853] dark:text-ornex-green" />
+                    <div className="p-3 bg-cyber-light-accent/10 dark:bg-ornex-green/20 rounded-2xl shrink-0">
+                      <Zap className="w-5 h-5 text-cyber-light-accent-deep dark:text-ornex-green" />
                     </div>
                     <div>
                       <h4 id="privacy-modal-title" className="text-base md:text-lg font-black uppercase tracking-tighter text-cyber-light-heading dark:text-white">
@@ -299,7 +299,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initia
                         </div>
                       </div>
                       <div className="lg:col-span-2 space-y-4">
-                        <div className="flex items-center gap-2 text-cyber-light-accent dark:text-ornex-green">
+                        <div className="flex items-center gap-2 text-cyber-light-accent-deep dark:text-ornex-green">
                           <Clipboard className="w-4 h-4" />
                           <span className="text-[11px] font-black uppercase tracking-[0.2em]">Quick Extraction (Select Your Client)</span>
                         </div>
@@ -309,7 +309,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initia
                             { name: 'Outlook', steps: ['Open Email', 'Click ... (More)', 'View message source'] },
                             { name: 'Apple Mail', steps: ['Menu: View', 'Message', 'Raw Source'] }
                           ].map((client) => (
-                            <div key={client.name} className="p-4 rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/5 hover:border-cyber-light-accent/30 dark:hover:border-ornex-green/30 transition-all group/card">
+                            <div key={client.name} className="p-4 rounded-2xl bg-zinc-100/50 dark:bg-white/5 border border-zinc-200 dark:border-white/5 hover:border-cyber-light-accent/40 dark:hover:border-ornex-green/30 transition-all group/card">
                               <span className="text-[11px] font-black text-cyber-light-heading dark:text-white uppercase tracking-widest block mb-3 border-b border-zinc-200 dark:border-white/5 pb-2">{client.name}</span>
                               <div className="space-y-2">
                                 {client.steps.map((step, i) => (
@@ -341,9 +341,9 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initia
                           <span className="text-[10px] font-black uppercase tracking-[0.2em]">How to export</span>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
-                          <div className="p-4 rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/5 flex flex-col gap-3">
+                          <div className="p-4 rounded-2xl bg-zinc-100/50 dark:bg-white/5 border border-zinc-200 dark:border-white/5 flex flex-col gap-3">
                             <div className="flex items-center gap-3">
-                              <div className="p-2 bg-zinc-200 dark:bg-white/5 rounded-lg text-cyber-light-accent dark:text-ornex-green">
+                              <div className="p-2 bg-zinc-200 dark:bg-white/5 rounded-lg text-cyber-light-accent-deep dark:text-ornex-green">
                                 <Mail className="w-4 h-4" />
                               </div>
                               <span className="text-[11px] font-bold text-cyber-light-heading dark:text-white uppercase tracking-widest">Gmail Export</span>
@@ -404,8 +404,8 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initia
                 accept=".eml" 
                 className="hidden" 
               />
-              <div className="p-4 md:p-5 rounded-2xl bg-cyber-light-accent/5 dark:bg-ornex-green/5 border border-cyber-light-accent/10 dark:border-ornex-green/10 group-hover:scale-110 transition-transform">
-                <FileUp className="w-6 h-6 md:w-8 md:h-8 text-cyber-light-accent dark:text-ornex-green" />
+              <div className="p-4 md:p-5 rounded-2xl bg-cyber-light-accent/5 dark:bg-ornex-green/5 border border-cyber-light-accent/20 dark:border-ornex-green/10 group-hover:scale-110 transition-transform">
+                <FileUp className="w-6 h-6 md:w-8 md:h-8 text-cyber-light-accent-deep dark:text-ornex-green" />
               </div>
               <div className="text-center">
                 <p className="text-xs md:text-sm font-bold text-cyber-light-heading dark:text-white uppercase tracking-widest mb-1">
@@ -485,8 +485,8 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initia
                 ) : (
                   <div className={`px-3 md:px-5 py-1.5 md:py-2 rounded-full font-bold font-tektur text-[9px] md:text-[11px] uppercase tracking-[0.2em] flex items-center gap-2 border transition-all hover:scale-105 active:scale-95 ${
                     result.verdict_label === 'suspicious'
-                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-600'
-                    : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-700'
+                    : 'bg-cyber-light-accent/10 border-cyber-light-accent/30 text-cyber-light-accent-deep dark:text-emerald-400'
                   }`}>
                     { result.verdict_label === 'suspicious' ? <AlertTriangle className="w-3 md:w-4 h-3 md:h-4" /> : <ShieldCheck className="w-3 md:w-4 h-3 md:h-4" /> }
                     { result.verdict_label === 'suspicious' ? 'TRIAGE REQUIRED' : 'SECURE CONTENT' }
@@ -510,13 +510,13 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initia
                 <p className="text-[9px] md:text-[11px] font-bold font-tektur uppercase tracking-[0.3em] text-zinc-500 dark:text-white/60">
                   Forensic Findings & Conclusion
                 </p>
-                <h1 className="text-xl sm:text-2xl md:text-4xl font-black font-tektur tracking-tight uppercase leading-[1.1] text-zinc-900 dark:text-white" title={result.identity.subject}>
+                <h1 className="text-xl sm:text-2xl md:text-4xl font-bold font-tektur tracking-tight uppercase leading-[1.1] text-zinc-900 dark:text-white" title={result.identity.subject}>
                   {result.verdict_label === 'malicious' ? 'MALICIOUS THREAT DETECTED' : 
                    result.verdict_label === 'suspicious' ? 'SUSPICIOUS SCAN RESULT' : 
                    'SECURE SCAN RESULT'}
                 </h1>
                 <div className="flex items-center justify-center md:justify-start gap-2.5 opacity-70">
-                  <Mail className="w-3.5 h-3.5 md:w-4 md:h-4 text-cyber-light-accent dark:text-ornex-green" />
+                  <Mail className="w-3.5 h-3.5 md:w-4 md:h-4 text-cyber-light-accent-deep dark:text-ornex-green" />
                   <p className="text-[11px] md:text-[14px] font-mono font-bold text-zinc-600 dark:text-zinc-300 truncate max-w-xl tracking-tighter">
                     {result.identity.subject || 'No Subject Specified'}
                   </p>
@@ -607,13 +607,13 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initia
               <div className="flex flex-wrap gap-3 items-center">
                   <InfoTip title="Total Links" content="Total unique raw links identified in the email body.">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-100 dark:bg-white/5 rounded-xl border border-zinc-200 dark:border-white/10">
-                      <Zap className="w-3 h-3 text-cyber-light-accent dark:text-ornex-green" />
+                      <Zap className="w-3 h-3 text-cyber-light-accent-deep dark:text-ornex-green" />
                       <span className="text-[9px] font-bold font-tektur uppercase tracking-[0.3em] text-zinc-500 dark:text-zinc-400">Total:</span>
                       <span className="text-xs font-bold text-cyber-light-heading dark:text-white">{result.triage_stats.total_found}</span>
                     </div>
                   </InfoTip>
                   <InfoTip title="Scanned Destinations" content="High-priority unique destinations subjected to full forensic analysis.">
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-cyber-light-accent/5 dark:bg-ornex-green/5 rounded-xl border border-cyber-light-accent/10 dark:border-ornex-green/10 text-cyber-light-accent dark:text-ornex-green">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-cyber-light-accent/5 dark:bg-ornex-green/5 rounded-xl border border-cyber-light-accent/20 dark:border-ornex-green/10 text-cyber-light-accent-deep dark:text-ornex-green">
                       <Shield className="w-3 h-3" />
                       <span className="text-[9px] font-bold font-tektur uppercase tracking-[0.3em]">Scanned:</span>
                       <span className="text-xs font-bold">{result.triage_stats.analyzed}</span>
@@ -693,7 +693,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initia
                   <ul className="space-y-3">
                     {(result.reasons || []).map((reason: string, idx: number) => (
                       <li key={idx} className="flex items-start gap-3 text-sm text-cyber-light-text dark:text-zinc-300">
-                        <ArrowRight className="w-4 h-4 text-cyber-light-accent dark:text-ornex-green mt-0.5 flex-shrink-0" />
+                        <ArrowRight className="w-4 h-4 text-cyber-light-accent-deep dark:text-ornex-green mt-0.5 flex-shrink-0" />
                         <span className="leading-relaxed">{reason}</span>
                       </li>
                     ))}

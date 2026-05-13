@@ -35,15 +35,15 @@ export default {
           slatebg: '#020617',
           panelbg: '#0f172a',
           light: {
-            bg: '#F0F4F0',
-            border: '#D4E8D4',
-            heading: '#0D1F0D',
-            text: '#4A5E4A',
-            accent: '#00A846', // Deeper, richer green for text contrast
-            'accent-deep': '#006B2B', // For SAFE badges and chart labels
-            'accent-data': '#005C2A', // For key data points like %
-            'accent-code': '#007A35', // For payload/monospace text
-            'accent-bg': '#C8F5DC',   // Light background for green badges
+            bg: '#f1f5f1',       // Softer, less "blinding" off-white with hint of green
+            border: '#e2e8e2',   // More defined borders for structure
+            heading: '#020617',  // Deepest slate for maximum contrast (WCAG AAA)
+            text: '#334155',     // Deep slate-700 for body text
+            accent: '#10b981',   // Electric Emerald-500
+            'accent-deep': '#059669', // Vibrant Emerald-600 for text
+            'accent-data': '#047857', // High-focus Emerald-700
+            'accent-code': '#10b981',
+            'accent-bg': '#f0fdf4',   // Lighter Emerald-50 background
           }
         }
       },

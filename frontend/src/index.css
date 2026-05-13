@@ -6,14 +6,18 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --glass-bg: rgba(255, 255, 255, 0.75);
-  --glass-border: rgba(255, 255, 255, 0.9);
+  --glass-bg: rgba(241, 245, 249, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.95);
   --glass-blur: 20px;
+  --color-primary: #059669;
+  --color-primary-glow: rgba(5, 150, 105, 0.3);
 }
 .dark {
   --glass-bg: rgba(18, 18, 18, 0.9);
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-blur: 16px;
+  --color-primary: #00FF41;
+  --color-primary-glow: rgba(0, 255, 65, 0.4);
 }
 
 /* ── Global ── */
@@ -23,6 +27,13 @@ html, body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.3s, color 0.3s;
+  background-color: #f1f5f9;
+  color: #1e293b;
+}
+
+html.dark, .dark body {
+  background-color: #0a0a0a;
+  color: #f1f5f9;
 }
 
 .font-tektur {
@@ -165,7 +176,10 @@ html, body {
 
 /* ── Light Mode Specifics ── */
 .light-hero-gradient {
-  background: radial-gradient(ellipse at 30% 20%, #D4EDD4 0%, #EDF5ED 60%, #F5F8F5 100%);
+  background: 
+    radial-gradient(circle at 0% 0%, rgba(0, 200, 83, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 100% 100%, rgba(0, 200, 83, 0.03) 0%, transparent 50%),
+    #f1f5f9;
 }
 
 .badge-safe-light {
@@ -181,7 +195,7 @@ html, body {
 }
 
 .frosted-card-light {
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(241, 245, 249, 0.7);
   backdrop-filter: blur(8px);
   border: 1px solid rgba(200, 240, 210, 0.6);
 }

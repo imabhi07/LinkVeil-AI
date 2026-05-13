@@ -31,22 +31,22 @@ export const PrivacyModal = ({ isOpen, onClose }: PrivacyModalProps) => {
               aria-labelledby="privacy-modal-title"
               onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
               tabIndex={-1}
-              className="w-full max-w-2xl max-h-[85vh] glass-panel dark:bg-zinc-900/90 rounded-3xl overflow-hidden pointer-events-auto flex flex-col shadow-2xl border-ornex-green/20 relative outline-none"
+              className="w-full max-w-2xl max-h-[85vh] bg-white/95 dark:bg-zinc-900/90 backdrop-blur-xl rounded-3xl overflow-hidden pointer-events-auto flex flex-col shadow-[0_20px_50px_rgba(0,0,0,0.1),0_0_30px_rgba(0,200,83,0.05)] border border-cyber-light-accent/20 dark:border-ornex-green/20 relative outline-none"
             >
               {/* Active Scanline Effect */}
               <motion.div 
                 animate={{ top: ['-10%', '110%'] }}
                 transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-ornex-green/20 to-transparent z-[102] pointer-events-none"
+                className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-cyber-light-accent/20 dark:via-ornex-green/20 to-transparent z-[102] pointer-events-none"
               />
 
               {/* Shimmer Background */}
               <div className="absolute inset-0 bg-gradient-to-br from-cyber-light-accent/5 via-transparent to-transparent opacity-30 pointer-events-none" />
               {/* Header */}
-              <div className="p-6 border-b border-zinc-200 dark:border-white/10 flex items-center justify-between bg-white/50 dark:bg-black/20">
+              <div className="p-6 border-b border-zinc-100 dark:border-white/10 flex items-center justify-between bg-white/60 dark:bg-black/20">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-cyber-light-accent/10 dark:bg-ornex-green/10 rounded-xl">
-                    <Shield className="w-5 h-5 text-cyber-light-accent dark:text-ornex-green" />
+                    <Shield className="w-5 h-5 text-cyber-light-accent-deep dark:text-ornex-green" />
                   </div>
                   <div>
                     <h2 id="privacy-modal-title" className="text-lg font-black uppercase tracking-widest font-tektur text-cyber-light-heading dark:text-white">
@@ -78,7 +78,7 @@ export const PrivacyModal = ({ isOpen, onClose }: PrivacyModalProps) => {
                     transition: { staggerChildren: 0.1, delayChildren: 0.2 }
                   }
                 }}
-                className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar font-sans relative"
+                className="flex-1 overflow-y-auto overscroll-contain p-8 space-y-8 custom-scrollbar font-sans relative"
               >
                 {[
                   {
@@ -110,7 +110,7 @@ export const PrivacyModal = ({ isOpen, onClose }: PrivacyModalProps) => {
                     }}
                     className="space-y-4 relative group"
                   >
-                    <div className="flex items-center gap-3 text-cyber-light-accent dark:text-ornex-green">
+                    <div className="flex items-center gap-3 text-cyber-light-accent-deep dark:text-ornex-green">
                       <div className="p-1.5 rounded-lg bg-cyber-light-accent/10 dark:bg-ornex-green/10 group-hover:scale-110 transition-transform">
                         <section.icon className="w-4 h-4" />
                       </div>
@@ -129,11 +129,11 @@ export const PrivacyModal = ({ isOpen, onClose }: PrivacyModalProps) => {
                   }}
                   className="pt-6 border-t border-zinc-200 dark:border-white/10"
                 >
-                  <div className="p-4 rounded-2xl bg-cyber-light-accent/5 dark:bg-ornex-green/5 border border-cyber-light-accent/10 dark:border-ornex-green/10 relative overflow-hidden group">
+                  <div className="p-4 rounded-2xl bg-cyber-light-accent/5 dark:bg-ornex-green/5 border border-cyber-light-accent/20 dark:border-ornex-green/10 relative overflow-hidden group">
                     <motion.div 
                       animate={{ opacity: [0.1, 0.2, 0.1] }}
                       transition={{ duration: 2, repeat: Infinity }}
-                      className="absolute inset-0 bg-ornex-green/5 pointer-events-none"
+                      className="absolute inset-0 bg-cyber-light-accent/5 dark:bg-ornex-green/5 pointer-events-none"
                     />
                     <p className="text-[11px] text-cyber-light-text dark:text-zinc-500 italic text-center relative z-10">
                       "Security is a shared responsibility. While we protect your forensic data, always exercise caution when interacting with unknown digital assets."
@@ -143,7 +143,7 @@ export const PrivacyModal = ({ isOpen, onClose }: PrivacyModalProps) => {
               </motion.div>
 
               {/* Footer */}
-              <div className="p-6 bg-zinc-50 dark:bg-black/40 border-t border-zinc-200 dark:border-white/10 flex justify-end">
+              <div className="p-6 bg-white/80 dark:bg-black/40 border-t border-zinc-100 dark:border-white/10 flex justify-end">
                 <button
                   onClick={onClose}
                   className="px-8 py-2.5 bg-cyber-light-accent dark:bg-ornex-green text-white dark:text-ornex-black rounded-full font-bold uppercase tracking-widest text-[10px] shadow-lg shadow-cyber-light-accent/20 dark:shadow-ornex-green/20 hover:scale-105 active:scale-95 transition-all"
