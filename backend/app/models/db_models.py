@@ -43,6 +43,7 @@ class ScanResult(Base):
     # Forensic Analytics Enhancements
     tld = Column(String, nullable=True)              # e.g., "xyz", "com", "top"
     functional_category = Column(String, nullable=True)  # e.g., "Login Page"
+    client_id = Column(String(64), index=True, nullable=True) # Anonymous telemetry isolation
 
 class EmailScanResult(Base):
     __tablename__ = "email_scans"
@@ -56,6 +57,7 @@ class EmailScanResult(Base):
     final_risk_score = Column(Float)
     email_risk_score = Column(Float)
     link_risk_score = Column(Float)
+    client_id = Column(String(64), index=True, nullable=True) # Anonymous telemetry isolation
     
     # Social Engineering (for Attack Vector analytics)
     se_categories = Column(Text, nullable=True)  # JSON blob
@@ -79,3 +81,13 @@ class EmailScanResult(Base):
     links_malicious = Column(Integer, default=0)
     
     timestamp = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+class ForensicSession(Base):
+    __tablename__ = "forensic_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    session_token = Column(String(64), unique=True, index=True, nullable=False)
+    tenant_id = Column(String(64), index=True, nullable=False)
+    is_admin = Column(Boolean, default=False)
+    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
