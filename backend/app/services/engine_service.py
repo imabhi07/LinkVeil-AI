@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import copy
 import time
 from functools import lru_cache
 from typing import Optional
@@ -12,7 +13,7 @@ import tldextract
 from backend.app.services.xgb_service import xgb_service
 from backend.app.services.dl_service import dl_service
 from backend.app.services.llm_service import analyze_url
-from backend.app.services.probe_agent import run_probe_async, probe_result_to_dict, FAKE_USER
+from backend.app.services.probe_agent import run_probe_async, probe_result_to_dict, to_secure_url, refresh_probe_urls, FAKE_USER
 from backend.app.services.threat_intel_service import threat_intel_service
 from backend.app.services.whois_service import whois_service
 from backend.app.services.brand_service import detect_brand_mismatch, get_legit_domains
@@ -358,8 +359,26 @@ async def evaluate_url(url: str, db: Session, auth_context: Optional[dict] = Non
     if not force_refresh:
         cached = _get_cached(url)
         if cached is not None:
-            _save_to_db(cached, db)
-            return cached
+            # Re-associate this cached result with the current client session in DB
+            _save_to_db(cached, db, client_id=client_id)
+            
+            # Create a deep copy to ensure session-specific URLs don't pollute the global cache
+            result_to_return = copy.deepcopy(cached)
+            
+            # Dynamically refresh forensic URLs if we have a client_id session
+            if client_id:
+                agent_report = result_to_return.get("agentReport")
+                if isinstance(agent_report, dict):
+                    active_probing = agent_report.get("activeProbing")
+                    if isinstance(active_probing, dict):
+                        try:
+                            refreshed = refresh_probe_urls(active_probing, client_id)
+                            if refreshed is not None:
+                                result_to_return["agentReport"]["activeProbing"] = refreshed
+                        except Exception as e:
+                            logger.warning(f"Forensic URL refresh failed for client {client_id}. Error: {e}")
+            
+            return result_to_return
     else:
         logger.info(f"Forcing REFRESH for {url} (Cache bypassed)")
 
@@ -535,7 +554,7 @@ async def evaluate_url(url: str, db: Session, auth_context: Optional[dict] = Non
             logger.info(f"Selective Vision: Skipping Vision for {url} (No login form and LLM score {llm_score} is low)")
 
             visual_result = {
-                "screenshot_path": probe_result.screenshot_path,
+                "screenshot_path": to_secure_url(probe_result.screenshot_path, client_id),
                 "visual_score": 0.0,
                 "brand_logo_guess": "UNKNOWN",
                 "explanation": "Selective Vision: AI analysis optimized away for low-risk, non-credential-harvesting page."
@@ -544,7 +563,7 @@ async def evaluate_url(url: str, db: Session, auth_context: Optional[dict] = Non
             logger.info(f"Vision Required: Invoking Gemini Vision for {url}")
             visual_result = await vision_service.analyze_screenshot(probe_result.screenshot_path)
             if visual_result:
-                visual_result["screenshot_path"] = probe_result.screenshot_path
+                visual_result["screenshot_path"] = to_secure_url(probe_result.screenshot_path, client_id)
     
     # WHOIS Boosts
     whois_boost = 0
@@ -719,7 +738,7 @@ async def evaluate_url(url: str, db: Session, auth_context: Optional[dict] = Non
             "brand": brand_result,
             "threat": threat_result,
             "visual": visual_result,
-            "probe": probe_result_to_dict(probe_result) if isinstance(probe_result, object) and probe_result != "SKIPPED" else None
+            "probe": probe_result_to_dict(probe_result, tenant_id=client_id) if probe_result is not None and probe_result != "SKIPPED" else None
         },
         forensic_errors=forensic_errors,
         degraded_engines=degraded_engines,
@@ -750,7 +769,7 @@ async def evaluate_url(url: str, db: Session, auth_context: Optional[dict] = Non
         })
     elif probe_result:
         # Map probe_result to dict and merge into agentReport's activeProbing sub-object
-        probe_data = probe_result_to_dict(probe_result)
+        probe_data = probe_result_to_dict(probe_result, tenant_id=client_id)
         if "activeProbing" not in verdict["agentReport"]:
             verdict["agentReport"]["activeProbing"] = {}
         verdict["agentReport"]["activeProbing"].update(probe_data)
@@ -759,7 +778,8 @@ async def evaluate_url(url: str, db: Session, auth_context: Optional[dict] = Non
             "redirect_chain": getattr(probe_result, "redirect_chain", []),
             "form_fields": getattr(probe_result, "form_fields", {}),
             "final_url": getattr(probe_result, "final_url", url),
-            "page_title": getattr(probe_result, "page_title", "")
+            "page_title": getattr(probe_result, "page_title", ""),
+            "screenshots": getattr(probe_result, "screenshots", [])
         }
 
     _set_cache(url, verdict)

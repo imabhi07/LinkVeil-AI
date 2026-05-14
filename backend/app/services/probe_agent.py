@@ -23,7 +23,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, List, Dict
 from dataclasses import dataclass, field
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote
 
 logger = logging.getLogger(__name__)
 
@@ -648,19 +648,34 @@ async def run_probe_async(url: str) -> ProbeResult:
     return await loop.run_in_executor(_probe_executor, run_probe, url)
 
 
-def probe_result_to_dict(r: ProbeResult) -> dict:
+def to_secure_url(path: Optional[str], tenant_id: Optional[str] = None) -> Optional[str]:
+    """
+    Security Note: Converts local file paths to authenticated API URLs.
+    Extracts only the filename to prevent path traversal.
+    """
+    if not path:
+        return None
+        
+    # If it's already a URL, strip existing query params to avoid double-CID issues
+    clean_path = path.split('?')[0]
+    
+    # Extract just the filename to prevent path traversal/leakage
+    filename = os.path.basename(clean_path)
+    if not filename or filename.isspace():
+        return None
+    
+    # Return the authenticated API path with tenant ID as query param for image tag compatibility
+    url = f"/api/v1/screenshots/{filename}"
+    if tenant_id:
+        url += f"?cid={quote(tenant_id)}"
+    return url
+
+
+def probe_result_to_dict(r: ProbeResult, tenant_id: Optional[str] = None) -> dict:
     """
     Converts ProbeResult to the agentReport.activeProbing dict the frontend expects.
     Security Note: Converts local file paths to authenticated API URLs.
     """
-    def to_secure_url(path: Optional[str]) -> Optional[str]:
-        if not path:
-            return None
-        # Extract just the filename to prevent path traversal/leakage
-        filename = os.path.basename(path)
-        # Return the authenticated API path
-        return f"/api/v1/scan/screenshots/{filename}"
-
     return {
         "performed": r.performed,
         "credentialsUsed": r.credentials_used,
@@ -675,10 +690,35 @@ def probe_result_to_dict(r: ProbeResult) -> dict:
         "finalUrl": r.final_url,
         "error": r.error,
         # New Forensic Fields (Securely Mapped)
-        "screenshotPath": to_secure_url(r.screenshot_path),
-        "screenshots": [to_secure_url(s) for s in r.screenshots if s],
+        "screenshotPath": to_secure_url(r.screenshot_path, tenant_id),
+        "screenshots": [to_secure_url(s, tenant_id) for s in r.screenshots if s],
         "redirectChain": r.redirect_chain,
         "explicitlyOffline": r.explicitly_offline,
         "formFields": r.form_fields,
         "contentSnippet": r.content_snippet
     }
+
+
+def refresh_probe_urls(probe_dict: Optional[dict], tenant_id: str) -> Optional[dict]:
+    """
+    Utility to re-attach or update client_id (cid) in probe URLs.
+    Used when returning cached results to a new session.
+    Returns a shallow copy of the probe_dict to avoid mutating shared cache data.
+    """
+    if probe_dict is None:
+        return None
+        
+    # Create a shallow copy to prevent side-effects on the source dictionary
+    new_probe = probe_dict.copy()
+    
+    if not new_probe:
+        return new_probe
+    
+    # Refresh individual screenshot URLs
+    if "screenshotPath" in new_probe and new_probe["screenshotPath"]:
+        new_probe["screenshotPath"] = to_secure_url(new_probe["screenshotPath"], tenant_id)
+        
+    if "screenshots" in new_probe and new_probe["screenshots"]:
+        new_probe["screenshots"] = [to_secure_url(s, tenant_id) for s in probe_dict.get("screenshots", []) if s]
+        
+    return new_probe

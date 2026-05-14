@@ -277,18 +277,22 @@ async def get_screenshot(
         return FileResponse(file_path)
 
     # Otherwise, verify this screenshot belongs to a scan performed for this user's client_id
-    # Note: We look for the filename in the screenshot_path column
+    # Note: We look for the filename in both the main screenshot_path and the deeper probe_artifacts JSON blob
     # Sanitize for SQL LIKE to prevent wildcard injection (e.g., % and _ in filename)
     escaped_filename = clean_filename.replace("/", "//").replace("%", "/%").replace("_", "/_")
-    scan = db.query(ScanResult).filter(ScanResult.screenshot_path.like(f"%{escaped_filename}", escape="/")).first()
+    
+    # Query for ANY scan (URL or Email) that contains this filename and belongs to this user
+    scan = db.query(ScanResult).filter(
+        ScanResult.client_id == user.client_id,
+        (
+            (ScanResult.screenshot_path.like(f"%{escaped_filename}", escape="/")) |
+            (ScanResult.probe_artifacts.like(f"%{escaped_filename}%", escape="/"))
+        )
+    ).first()
     
     if not scan:
-        # If the scan doesn't exist in our DB records, we deny access by default for security
-        logger.warning(f"Access Denied: Screenshot {filename} requested by user {user.username} but no matching scan found in DB.")
+        logger.warning(f"Access Denied: Screenshot {filename} requested by client {user.client_id} but no matching scan found in DB.")
         raise HTTPException(status_code=403, detail="Access denied: Resource not found or unauthorized.")
 
-    if scan.client_id != user.client_id:
-        logger.warning(f"Access Denied: Screenshot {filename} belongs to client {scan.client_id}, but user {user.username} (client {user.client_id}) requested it.")
-        raise HTTPException(status_code=403, detail="Access denied: You do not have permission to view this asset.")
 
     return FileResponse(file_path)
