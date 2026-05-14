@@ -19,6 +19,7 @@ import re
 import threading
 import os
 import hashlib
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, List, Dict
 from dataclasses import dataclass, field
@@ -232,9 +233,12 @@ def run_probe(url: str) -> ProbeResult:
             
             # Identify if it's a known aggressive bot-blocker
             headers = {}
-            if "t.co" in url or "wa.me" in url:
-                # Mimic a click from a social app or standard browser
-                headers["Referer"] = "https://t.co/" if "t.co" in url else "https://wa.me/"
+            parsed_url = urlparse(url)
+            host = (parsed_url.hostname or "").lower()
+            if host == "t.co" or host.endswith(".t.co"):
+                headers["Referer"] = "https://t.co/"
+            elif host == "wa.me" or host.endswith(".wa.me"):
+                headers["Referer"] = "https://wa.me/"
             
             if headers:
                 page.set_extra_http_headers(headers)
@@ -267,8 +271,11 @@ def run_probe(url: str) -> ProbeResult:
             except Exception:
                 page.wait_for_timeout(5000)
             
-            url_hash = hashlib.md5(url.encode()).hexdigest()
-            initial_screenshot = f"data/screenshots/{url_hash}_initial.png"
+            # Use a unique UUID for this probe session instead of an easily guessable URL hash
+            probe_session_id = str(uuid.uuid4())
+            
+            initial_screenshot_name = f"{probe_session_id}_initial.png"
+            initial_screenshot = os.path.join("data/screenshots", initial_screenshot_name)
             os.makedirs("data/screenshots", exist_ok=True)
             page.screenshot(path=initial_screenshot)
             result.screenshots.append(initial_screenshot)
@@ -291,11 +298,16 @@ def run_probe(url: str) -> ProbeResult:
                     result.outcome = "Target reached but load timed out (partial data captured)."
                     
                     # Try to get a screenshot of what DID load
-                    url_hash = hashlib.md5(url.encode()).hexdigest()
-                    screenshot_path = f"data/screenshots/{url_hash}_partial.png"
+                    # Use a unique UUID if not already created
+                    if 'probe_session_id' not in locals():
+                        probe_session_id = str(uuid.uuid4())
+                        
+                    partial_screenshot_name = f"{probe_session_id}_partial.png"
+                    screenshot_path = os.path.join("data/screenshots", partial_screenshot_name)
                     os.makedirs("data/screenshots", exist_ok=True)
                     page.screenshot(path=screenshot_path)
                     result.screenshot_path = screenshot_path
+                    result.screenshots.append(screenshot_path)
                     result.content_snippet = page.content()[:2000]
                     logger.info(f"Probe: Partial recovery for {url}")
                     return result 
@@ -377,7 +389,8 @@ def run_probe(url: str) -> ProbeResult:
                     page.wait_for_timeout(3000)
                     
                     # Capture intermediate step for forensics
-                    step_screenshot = f"data/screenshots/{url_hash}_step1.png"
+                    step_screenshot_name = f"{probe_session_id}_step1.png"
+                    step_screenshot = os.path.join("data/screenshots", step_screenshot_name)
                     page.screenshot(path=step_screenshot)
                     result.screenshots.append(step_screenshot)
 
@@ -489,7 +502,8 @@ def run_probe(url: str) -> ProbeResult:
         
         # Take a post-submit screenshot to capture the final forensic state
         try:
-            final_screenshot_path = f"data/screenshots/{url_hash}_final.png"
+            final_screenshot_name = f"{probe_session_id}_final.png"
+            final_screenshot_path = os.path.join("data/screenshots", final_screenshot_name)
             page.screenshot(path=final_screenshot_path)
             result.screenshots.append(final_screenshot_path)
             result.screenshot_path = final_screenshot_path
@@ -556,14 +570,14 @@ def run_probe(url: str) -> ProbeResult:
                 )
 
         elif showed_success and not is_trusted:
-             result.accepted_fake_creds = True
-             result.behavior_risk = "High"
-             result.outcome = (
-                 f"⚠️  CREDENTIAL HARVESTER CONFIRMED: Fake credentials were accepted "
-                 f"and a success-like response was shown on an unverified domain. "
-                 "Legitimate services never accept obviously fake credentials. "
-                 f"Page title: '{post_title}'."
-             )
+            result.accepted_fake_creds = True
+            result.behavior_risk = "High"
+            result.outcome = (
+                f"⚠️  CREDENTIAL HARVESTER CONFIRMED: Fake credentials were accepted "
+                f"and a success-like response was shown on an unverified domain. "
+                "Legitimate services never accept obviously fake credentials. "
+                f"Page title: '{post_title}'."
+            )
 
         else:
             result.accepted_fake_creds = False
@@ -599,8 +613,29 @@ def run_probe(url: str) -> ProbeResult:
 # We use a small pool to allow parallel probing of multiple links.
 _probe_executor = ThreadPoolExecutor(max_workers=5, thread_name_prefix="pw-probe")
 
+def _shutdown_playwright():
+    """Cleanup Playwright instances across all threads on process exit."""
+    logger.info("Initiating Playwright resource cleanup...")
+    # Since we can't easily iterate all threads' local storage from here,
+    # we close the ones on the current thread and log. 
+    # For a robust solution in multi-threaded envs, we'd need a registry.
+    if hasattr(_thread_local, 'browser') and _thread_local.browser:
+        try:
+            _thread_local.browser.close()
+            logger.info("Thread-local browser closed.")
+        except Exception as e:
+            logger.error(f"Error closing browser during shutdown: {e}")
+
+    if hasattr(_thread_local, 'pw_instance') and _thread_local.pw_instance:
+        try:
+            _thread_local.pw_instance.stop()
+            logger.info("Thread-local Playwright instance stopped.")
+        except Exception as e:
+            logger.error(f"Error stopping Playwright during shutdown: {e}")
+
 def _shutdown_probe_pool():
-    _probe_executor.shutdown(wait=False)
+    _shutdown_playwright() # Ensure local thread is cleaned
+    _probe_executor.shutdown(wait=True)
     logger.info("Probe thread pool shut down.")
 
 import atexit
@@ -614,7 +649,18 @@ async def run_probe_async(url: str) -> ProbeResult:
 
 
 def probe_result_to_dict(r: ProbeResult) -> dict:
-    """Converts ProbeResult to the agentReport.activeProbing dict the frontend expects."""
+    """
+    Converts ProbeResult to the agentReport.activeProbing dict the frontend expects.
+    Security Note: Converts local file paths to authenticated API URLs.
+    """
+    def to_secure_url(path: Optional[str]) -> Optional[str]:
+        if not path:
+            return None
+        # Extract just the filename to prevent path traversal/leakage
+        filename = os.path.basename(path)
+        # Return the authenticated API path
+        return f"/api/v1/scan/screenshots/{filename}"
+
     return {
         "performed": r.performed,
         "credentialsUsed": r.credentials_used,
@@ -628,9 +674,9 @@ def probe_result_to_dict(r: ProbeResult) -> dict:
         "pageTitle": r.page_title,
         "finalUrl": r.final_url,
         "error": r.error,
-        # New Forensic Fields
-        "screenshotPath": r.screenshot_path,
-        "screenshots": r.screenshots,
+        # New Forensic Fields (Securely Mapped)
+        "screenshotPath": to_secure_url(r.screenshot_path),
+        "screenshots": [to_secure_url(s) for s in r.screenshots if s],
         "redirectChain": r.redirect_chain,
         "explicitlyOffline": r.explicitly_offline,
         "formFields": r.form_fields,

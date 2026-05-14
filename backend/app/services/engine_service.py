@@ -325,7 +325,7 @@ class FusionEngine:
 fusion_engine = FusionEngine()
 
 
-async def evaluate_url(url: str, db: Session, auth_context: Optional[dict] = None, force_refresh: bool = False) -> dict:
+async def evaluate_url(url: str, db: Session, auth_context: Optional[dict] = None, force_refresh: bool = False, client_id: Optional[str] = None) -> dict:
     """
     Hybrid evaluation pipeline:
     1. Check Protocol (Safety for local resources)
@@ -376,7 +376,7 @@ async def evaluate_url(url: str, db: Session, auth_context: Optional[dict] = Non
             logger.info(f"Auth Trust HIT: Short-circuiting for {url} (Authenticated sender {sender_domain})")
             verdict = _get_trusted_verdict(url)
             verdict["explanation"] = f"✅ Verified: This link belongs to {url_root}, which was confirmed via email authentication (DMARC/SPF pass) for the sender {sender_domain}."
-            _save_to_db(verdict, db)
+            _save_to_db(verdict, db, client_id=client_id)
             return verdict
 
     # ── 2.5 Global Whitelist Short-circuit ──
@@ -388,7 +388,7 @@ async def evaluate_url(url: str, db: Session, auth_context: Optional[dict] = Non
         logger.info(f"Global Whitelist HIT: Short-circuiting for {url}")
         verdict = _get_trusted_verdict(url)
         verdict["explanation"] = f"✅ Safe Authority: {url_root} is a verified, high-authority domain. Deep forensic analysis skipped for this trusted infrastructure."
-        _save_to_db(verdict, db)
+        _save_to_db(verdict, db, client_id=client_id)
         return verdict
 
     # ── 3. Threat Intel (Short-circuit) ──
@@ -410,7 +410,7 @@ async def evaluate_url(url: str, db: Session, auth_context: Optional[dict] = Non
             "agentReport": {"activeProbing": {"performed": False, "outcome": "Short-circuited by threat intel."}},
             "threat_intel": threat_result
         }
-        _save_to_db(verdict, db)
+        _save_to_db(verdict, db, client_id=client_id)
         return verdict
 
     # ── 4. Parallel Analysis ──
@@ -699,7 +699,7 @@ async def evaluate_url(url: str, db: Session, auth_context: Optional[dict] = Non
                     "note": "Hard offline domain override"
                 }
             }
-            _save_to_db(verdict, db)
+            _save_to_db(verdict, db, client_id=client_id)
             return verdict
         
     # For Timeouts/Partial loads, we proceed with the ML score
@@ -763,11 +763,11 @@ async def evaluate_url(url: str, db: Session, auth_context: Optional[dict] = Non
         }
 
     _set_cache(url, verdict)
-    _save_to_db(verdict, db)
+    _save_to_db(verdict, db, client_id=client_id)
     return verdict
 
 
-def _save_to_db(verdict: dict, db: Session):
+def _save_to_db(verdict: dict, db: Session, client_id: Optional[str] = None):
     """Persist all forensic and analytical data to DB."""
     try:
         probe_art = verdict.get("probe_artifacts", {})
@@ -798,6 +798,7 @@ def _save_to_db(verdict: dict, db: Session):
             fusion_trace=json.dumps(verdict.get("fusion_trace")),
             tld=tld_val,
             functional_category=verdict.get("functional_category"),
+            client_id=client_id,
             timestamp=datetime.now(timezone.utc),
         )
         db.add(db_scan)

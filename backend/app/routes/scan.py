@@ -1,6 +1,10 @@
 import logging
+from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Header
+from fastapi.responses import FileResponse
 import asyncio
-from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
+import os
+import uuid
+from typing import Optional
 from sqlalchemy.orm import Session
 from backend.app.database import get_db
 from backend.app.models.schemas import URLRequest, ScanResponse, EmailScanRequest, EmailScanResponse
@@ -17,18 +21,25 @@ SCAN_TIMEOUT = 60.0
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+from backend.app.utils.auth import get_current_user, AuthUser
+
 @router.post("/scan", response_model=ScanResponse)
-async def scan_url(request: URLRequest, db: Session = Depends(get_db)):
+async def scan_url(
+    request: URLRequest, 
+    db: Session = Depends(get_db),
+    current_user: AuthUser = Depends(get_current_user)
+):
     """Legacy URL scan endpoint."""
     url_str = _normalize_url(str(request.url))
+    x_client_id = current_user.client_id
     try:
-        verdict = await evaluate_url(url_str, db, force_refresh=request.force_refresh)
+        verdict = await evaluate_url(url_str, db, force_refresh=request.force_refresh, client_id=x_client_id)
         return ScanResponse(**verdict)
     except Exception as e:
         logger.error(f"Engine failure for {url_str}: {e}")
         raise HTTPException(status_code=500, detail=f"Internal engine failure: {str(e)}")
 
-async def _execute_email_analysis(parsed_data: dict, input_type: str, db: Session, force_refresh: bool = False):
+async def _execute_email_analysis(parsed_data: dict, input_type: str, db: Session, force_refresh: bool = False, client_id: Optional[str] = None):
     """
     Forensics++ Pipeline:
     1. Email Heuristics (Intent)
@@ -53,7 +64,7 @@ async def _execute_email_analysis(parsed_data: dict, input_type: str, db: Sessio
             async with semaphore:
                 try:
                     result = await asyncio.wait_for(
-                        evaluate_url(url, db, auth_context=parsed_data.get("auth"), force_refresh=force_refresh), 
+                        evaluate_url(url, db, auth_context=parsed_data.get("auth"), force_refresh=force_refresh, client_id=client_id), 
                         timeout=SCAN_TIMEOUT
                     )
                     return ScanResponse(**result)
@@ -140,11 +151,11 @@ async def _execute_email_analysis(parsed_data: dict, input_type: str, db: Sessio
     )
 
     # 5. Persist to DB for Analytics
-    _save_email_to_db(response, parsed_data, db)
+    _save_email_to_db(response, parsed_data, db, client_id=client_id)
     
     return response
 
-def _save_email_to_db(response: EmailScanResponse, parsed_data: dict, db: Session):
+def _save_email_to_db(response: EmailScanResponse, parsed_data: dict, db: Session, client_id: Optional[str] = None):
     """Persists email scan result for long-term analytics."""
     try:
         # Extract obfuscation techniques from html_findings
@@ -176,6 +187,7 @@ def _save_email_to_db(response: EmailScanResponse, parsed_data: dict, db: Sessio
             confidence_level=response.confidence.get('level'),
             links_total=len(response.link_results),
             links_malicious=len([r for r in response.link_results if r.risk_score >= 70]),
+            client_id=client_id
         )
         db.add(db_email)
         db.commit()
@@ -184,13 +196,18 @@ def _save_email_to_db(response: EmailScanResponse, parsed_data: dict, db: Sessio
         db.rollback()
 
 @router.post("/scan/email", response_model=EmailScanResponse)
-async def scan_email(request: EmailScanRequest, force_refresh: bool = False, db: Session = Depends(get_db)):
+async def scan_email(
+    request: EmailScanRequest, 
+    force_refresh: bool = False, 
+    db: Session = Depends(get_db),
+    current_user: AuthUser = Depends(get_current_user)
+):
+    x_client_id = current_user.client_id
     # Prioritize query param force_refresh, then fall back to body field
     effective_force = force_refresh or request.force_refresh
     
     if request.raw_email:
         parsed_data = await parse_email_from_string(request.raw_email)
-
         input_type = "paste"
     else:
         # ── Manual Mode ──
@@ -217,14 +234,61 @@ async def scan_email(request: EmailScanRequest, force_refresh: bool = False, db:
         }
         input_type = "manual"
         
-    return await _execute_email_analysis(parsed_data, input_type, db, force_refresh=effective_force)
+    return await _execute_email_analysis(parsed_data, input_type, db, force_refresh=effective_force, client_id=x_client_id)
 
 @router.post("/scan/eml", response_model=EmailScanResponse)
-async def scan_eml(file: UploadFile = File(...), force_refresh: bool = False, db: Session = Depends(get_db)):
+async def scan_eml(
+    file: UploadFile = File(...), 
+    force_refresh: bool = False, 
+    db: Session = Depends(get_db),
+    current_user: AuthUser = Depends(get_current_user)
+):
+    x_client_id = current_user.client_id
     filename = file.filename or ""
     if not filename.lower().endswith('.eml'):
         raise HTTPException(status_code=400, detail="Only .eml files are supported")
         
     content = await file.read()
     parsed_data = await parse_email_from_bytes(content)
-    return await _execute_email_analysis(parsed_data, "eml", db, force_refresh=force_refresh)
+    return await _execute_email_analysis(parsed_data, "eml", db, force_refresh=force_refresh, client_id=x_client_id)
+
+@router.get("/screenshots/{filename}")
+async def get_screenshot(
+    filename: str, 
+    user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Authenticated retrieval of forensic screenshots.
+    Enforces tenant isolation by verifying the user has access to the scan that produced the file.
+    """
+    # 1. Path Traversal Protection
+    clean_filename = os.path.basename(filename)
+    if clean_filename != filename or ".." in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename format")
+    
+    file_path = os.path.join("data/screenshots", filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Screenshot not found")
+
+    # 2. RBAC & Multi-tenant Isolation Check
+    # If the user is an admin, they can see everything
+    if user.is_admin:
+        return FileResponse(file_path)
+
+    # Otherwise, verify this screenshot belongs to a scan performed for this user's client_id
+    # Note: We look for the filename in the screenshot_path column
+    # Sanitize for SQL LIKE to prevent wildcard injection (e.g., % and _ in filename)
+    escaped_filename = clean_filename.replace("/", "//").replace("%", "/%").replace("_", "/_")
+    scan = db.query(ScanResult).filter(ScanResult.screenshot_path.like(f"%{escaped_filename}", escape="/")).first()
+    
+    if not scan:
+        # If the scan doesn't exist in our DB records, we deny access by default for security
+        logger.warning(f"Access Denied: Screenshot {filename} requested by user {user.username} but no matching scan found in DB.")
+        raise HTTPException(status_code=403, detail="Access denied: Resource not found or unauthorized.")
+
+    if scan.client_id != user.client_id:
+        logger.warning(f"Access Denied: Screenshot {filename} belongs to client {scan.client_id}, but user {user.username} (client {user.client_id}) requested it.")
+        raise HTTPException(status_code=403, detail="Access denied: You do not have permission to view this asset.")
+
+    return FileResponse(file_path)
