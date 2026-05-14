@@ -9,7 +9,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
-from backend.app.routes import scan, analytics
+from backend.app.routes import scan, analytics, auth
 from backend.app.database import engine, Base
 
 logger = logging.getLogger(__name__)
@@ -56,12 +56,20 @@ app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # ── CORS configuration ──
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+# Safety: prevent wildcard origins with credentials in production
+if "*" in allowed_origins and os.getenv("ENV", "production") == "production":
+    logger.warning("Wildcard '*' in ALLOWED_ORIGINS is insecure with allow_credentials=True. Removing wildcard.")
+    allowed_origins = [o for o in allowed_origins if o != "*"]
+    if not allowed_origins:
+        logger.error("ALLOWED_ORIGINS cannot be empty in production when allow_credentials=True. Security policy violation.")
+        raise RuntimeError("Insecure CORS configuration: ALLOWED_ORIGINS must be explicitly defined in production.")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS", "DELETE"],
+    allow_headers=["Content-Type", "Authorization", "X-Client-ID", "X-Requested-With"],
 )
 
 # ── Request-level timing middleware ──
@@ -77,10 +85,10 @@ async def add_process_time_header(request: Request, call_next):
 
 app.include_router(scan.router, prefix="/api/v1", tags=["Scanning"])
 app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["Analytics"])
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["Auth"])
 
-# ── Serve screenshots ──
+# Ensure screenshot directory exists but do not mount it publicly
 os.makedirs("data/screenshots", exist_ok=True)
-app.mount("/data/screenshots", StaticFiles(directory="data/screenshots"), name="screenshots")
 
 @app.get("/health")
 def health_check():

@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Header, HTTPException
+from typing import Optional
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone, date
 from backend.app.database import get_db
 from backend.app.models.db_models import ScanResult, EmailScanResult
+from backend.app.utils.auth import get_current_user, has_access_to_client, AuthUser, validate_client_id_pattern
 from sqlalchemy import func, case
 import json
 import logging
@@ -29,11 +31,22 @@ GLOBAL_TOP_BRANDS = [
 @router.get("/")
 def get_analytics(
     db: Session = Depends(get_db),
-    days: int = Query(default=7, ge=0, description="Filter window in days. 0 = all time.")
+    days: int = Query(default=7, ge=0, description="Filter window in days. 0 = all time."),
+    x_client_id: Optional[str] = Header(None),
+    current_user: AuthUser = Depends(get_current_user)
 ):
     """
     Returns historical scan data for the dashboard with time-filtering.
+
+    Args:
+        db (Session): Database session.
+        days (int): Time window filter in days.
+        x_client_id (Optional[str]): The client identifier passed via X-Client-Id header. Scopes data to this client.
+        current_user (AuthUser): Authenticated user principal.
     """
+    # Enforce authorization: verify user can access this client_id
+    has_access_to_client(current_user, x_client_id)
+    
     now = datetime.now(timezone.utc)
     
     # Define time cutoff
@@ -46,7 +59,12 @@ def get_analytics(
     if days > 0:
         chart_days = days
     else:
-        oldest_url = db.query(func.min(ScanResult.timestamp)).scalar()
+        # Filter by client_id if present for chart range
+        oldest_url_q = db.query(func.min(ScanResult.timestamp))
+        if x_client_id:
+            oldest_url_q = oldest_url_q.filter(ScanResult.client_id == x_client_id)
+        oldest_url = oldest_url_q.scalar()
+
         if oldest_url:
             try:
                 # Handle possible string vs date object from SQLite/Postgres
@@ -66,6 +84,9 @@ def get_analytics(
     url_latest_sub = db.query(func.max(ScanResult.id).label("latest_id")).group_by(ScanResult.url)
     if cutoff:
         url_latest_sub = url_latest_sub.filter(ScanResult.timestamp >= cutoff)
+    if x_client_id:
+        url_latest_sub = url_latest_sub.filter(ScanResult.client_id == x_client_id)
+        
     url_latest_ids = url_latest_sub.subquery()
 
     # Total Unique URL Scans
@@ -82,11 +103,14 @@ def get_analytics(
         url_risk_dist[k] = url_risk_dist.get(k, 0) + r[1]
     
     # URL Daily Volume (unique scans per day)
-    url_daily_raw = db.query(
+    url_daily_q = db.query(
         func.date(ScanResult.timestamp),
         func.count(ScanResult.id)
-    ).filter(ScanResult.timestamp >= chart_cutoff) \
-     .group_by(func.date(ScanResult.timestamp))\
+    ).filter(ScanResult.timestamp >= chart_cutoff)
+    if x_client_id:
+        url_daily_q = url_daily_q.filter(ScanResult.client_id == x_client_id)
+        
+    url_daily_raw = url_daily_q.group_by(func.date(ScanResult.timestamp))\
      .order_by(func.date(ScanResult.timestamp)).all()
     
     url_vol_map = {}
@@ -141,12 +165,17 @@ def get_analytics(
     email_total_q = db.query(EmailScanResult)
     if cutoff:
         email_total_q = email_total_q.filter(EmailScanResult.timestamp >= cutoff)
+    if x_client_id:
+        email_total_q = email_total_q.filter(EmailScanResult.client_id == x_client_id)
     email_total_scans = email_total_q.count()
     
     # Email Risk Distribution
     email_risk_q = db.query(EmailScanResult.verdict_label, func.count(EmailScanResult.id))
     if cutoff:
         email_risk_q = email_risk_q.filter(EmailScanResult.timestamp >= cutoff)
+    if x_client_id:
+        email_risk_q = email_risk_q.filter(EmailScanResult.client_id == x_client_id)
+        
     email_risk_raw = email_risk_q.group_by(EmailScanResult.verdict_label).all()
     # Normalize keys to lowercase
     email_risk_dist = {}
@@ -155,11 +184,14 @@ def get_analytics(
         email_risk_dist[k] = email_risk_dist.get(k, 0) + r[1]
     
     # Email Daily Volume
-    email_daily_raw = db.query(
+    email_daily_q = db.query(
         func.date(EmailScanResult.timestamp),
         func.count(EmailScanResult.id)
-    ).filter(EmailScanResult.timestamp >= chart_cutoff)\
-     .group_by(func.date(EmailScanResult.timestamp))\
+    ).filter(EmailScanResult.timestamp >= chart_cutoff)
+    if x_client_id:
+        email_daily_q = email_daily_q.filter(EmailScanResult.client_id == x_client_id)
+        
+    email_daily_raw = email_daily_q.group_by(func.date(EmailScanResult.timestamp))\
      .order_by(func.date(EmailScanResult.timestamp)).all()
     
     email_vol_map = {}
@@ -179,6 +211,8 @@ def get_analytics(
     av_q = db.query(EmailScanResult.se_categories)
     if cutoff:
         av_q = av_q.filter(EmailScanResult.timestamp >= cutoff)
+    if x_client_id:
+        av_q = av_q.filter(EmailScanResult.client_id == x_client_id)
     
     av_results = av_q.all()
     av_counter = Counter()
@@ -201,6 +235,8 @@ def get_analytics(
     auth_q = db.query(EmailScanResult.spf_result, EmailScanResult.dkim_result, EmailScanResult.dmarc_result)
     if cutoff:
         auth_q = auth_q.filter(EmailScanResult.timestamp >= cutoff)
+    if x_client_id:
+        auth_q = auth_q.filter(EmailScanResult.client_id == x_client_id)
     
     auth_results = auth_q.all()
     auth_posture = {
@@ -227,6 +263,9 @@ def get_analytics(
     ob_q = db.query(EmailScanResult.obfuscation_techniques)
     if cutoff:
         ob_q = ob_q.filter(EmailScanResult.timestamp >= cutoff)
+    if x_client_id:
+        ob_q = ob_q.filter(EmailScanResult.client_id == x_client_id)
+        
     ob_results = ob_q.all()
     ob_counter = Counter()
     for res in ob_results:
@@ -250,6 +289,9 @@ def get_analytics(
     )
     if cutoff:
         trend_q = trend_q.filter(EmailScanResult.timestamp >= cutoff)
+    if x_client_id:
+        trend_q = trend_q.filter(EmailScanResult.client_id == x_client_id)
+        
     trend_raw = trend_q.group_by(func.date(EmailScanResult.timestamp), EmailScanResult.analysis_quality).all()
     
     trend_map = {}
@@ -310,9 +352,24 @@ def get_scan_list(
     db: Session = Depends(get_db),
     filter: str = Query(default="all", description="Filter: 'all', 'malicious', or 'safe'"),
     days: int = Query(default=7, ge=0, description="Time window. 0 = all time."),
-    limit: int = Query(default=50, ge=1, le=100)
+    limit: int = Query(default=50, ge=1, le=100),
+    x_client_id: Optional[str] = Header(None),
+    current_user: AuthUser = Depends(get_current_user)
 ):
-    """Returns a filtered list of scans for the stat card drill-down."""
+    """
+    Returns a filtered list of scans for the stat card drill-down.
+
+    Args:
+        db (Session): Database session.
+        filter (str): Filter criteria ('all', 'malicious', 'suspicious', 'safe', 'offline').
+        days (int): Time window in days.
+        limit (int): Max results to return.
+        x_client_id (Optional[str]): The client identifier passed via X-Client-Id header. Filters results by client.
+        current_user (AuthUser): Authenticated user principal.
+    """
+    # Enforce authorization: verify user can access this client_id
+    has_access_to_client(current_user, x_client_id)
+    
     now = datetime.now(timezone.utc)
     
     # Time cutoff
@@ -322,6 +379,8 @@ def get_scan_list(
     sub_q = db.query(func.max(ScanResult.id)).group_by(ScanResult.url)
     if cutoff:
         sub_q = sub_q.filter(ScanResult.timestamp >= cutoff)
+    if x_client_id:
+        sub_q = sub_q.filter(ScanResult.client_id == x_client_id)
     latest_ids = sub_q.subquery()
 
     q = db.query(ScanResult).filter(ScanResult.id.in_(latest_ids))
@@ -351,9 +410,24 @@ def get_email_scan_list(
     db: Session = Depends(get_db),
     filter: str = Query(default="all", description="Filter: 'all', 'malicious', 'suspicious', or 'safe'"),
     days: int = Query(default=7, ge=0, description="Time window. 0 = all time."),
-    limit: int = Query(default=50, ge=1, le=100)
+    limit: int = Query(default=50, ge=1, le=100),
+    x_client_id: Optional[str] = Header(None),
+    current_user: AuthUser = Depends(get_current_user)
 ):
-    """Returns a filtered list of email scans for the stat card drill-down."""
+    """
+    Returns a filtered list of email scans for the stat card drill-down.
+
+    Args:
+        db (Session): Database session.
+        filter (str): Filter criteria ('all', 'malicious', 'suspicious', 'safe').
+        days (int): Time window in days.
+        limit (int): Max results to return.
+        x_client_id (Optional[str]): The client identifier passed via X-Client-Id header. Filters results by client.
+        current_user (AuthUser): Authenticated user principal.
+    """
+    # Enforce authorization: verify user can access this client_id
+    has_access_to_client(current_user, x_client_id)
+    
     now = datetime.now(timezone.utc)
     
     q = db.query(EmailScanResult)
@@ -362,6 +436,10 @@ def get_email_scan_list(
     if days > 0:
         q = q.filter(EmailScanResult.timestamp >= now - timedelta(days=days))
     
+    # Client filter
+    if x_client_id:
+        q = q.filter(EmailScanResult.client_id == x_client_id)
+        
     # Risk filter
     if filter == "malicious":
         q = q.filter(EmailScanResult.verdict_label == "malicious")
