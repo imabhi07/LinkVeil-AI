@@ -18,7 +18,7 @@ LinkVeil-AI solves this using a **Defense-in-Depth** approach, combining seven s
 
 ### 🛡️ High-Level Component View
 1. **Frontend (React/Vite)**: Gathers input (URL/Email) and provides a real-time forensic visualizer with theme-aware high-contrast accessibility.
-2. **API Layer (FastAPI)**: Manages async orchestration of seven forensic engines.
+2. **API Layer (FastAPI v0.115+)**: Manages async orchestration of seven forensic engines with versioned routes (`/api/v1`).
 3. **Engine 1: Dual-ML Classifier (XGBoost + DistilBERT)**: Checks URL "DNA" via lexical and semantic signals.
 4. **Engine 2: Playwright Agent (Live Probe)**: Analyzes "Behavior" of the destination in a sandbox.
 5. **Engine 3: Gemini AI (Cognitive Analyst)**: Synthesizes multi-engine evidence into explanations.
@@ -85,7 +85,7 @@ When an email is submitted, LinkVeil-AI executes a multi-stage forensic extracti
 
 ---
 
-## 7. Score Orchestration Logic
+## 7. Score Orchestration Logic (v1.1.0)
 Scores are aggregated into a **Final Risk Score (0-100)** using a weighted fusion system:
 1. **Base Blend**: LLM score (60%) + XGBoost score (20%) + DistilBERT score (20%) form the base risk value.
 2. **Signal Boosts**: WHOIS age, brand mismatch (Engine 7), suspicious TLD, and visual forensics (Engine 4) add incremental risk. Shared hosting platforms (Vercel, Firebase) bypass the "Safe Domain" age bonus to ensure malicious redirectors are accurately penalized.
@@ -94,7 +94,21 @@ Scores are aggregated into a **Final Risk Score (0-100)** using a weighted fusio
 
 ---
 
-## 8. Frontend Design System
+## 8. Forensic Data Privacy & Isolation
+LinkVeil-AI implements a multi-tenant data isolation strategy based on server-provisioned identifiers and secure session management:
+- **Tenant Isolation (`X-Client-ID`)**: All forensic telemetry is scoped to a unique Tenant ID. Tenant IDs must be server-provisioned; client-side generation (e.g., in `localStorage`) is strictly prohibited to prevent collision and unauthorized session bootstrapping.
+- **Session Security**: Sensitive session tokens must be migrated from `localStorage` to `httpOnly`, `SameSite=Strict` cookies to mitigate XSS-based credential theft. 
+- **Authorization & Identity (v1.1.0 Implementation)**:
+    - **Session Initialization**: Clients must call `/api/v1/auth/session` to obtain a server-provisioned Tenant ID and a secure `linkveil_session` cookie.
+    - **Separation of Concerns**: The `X-Client-ID` acts as a tenant identifier for data scoping, while the cookie-based session token handles cryptographic identity verification.
+    - **Verification Loop**: Every API request in `scan.py` and `analytics.py` uses the `get_current_user` dependency. This ensures the authenticated identity is verified *before* the `has_access_to_client` utility performs the final authorization check against the requested tenant resource.
+- **Infrastructure Hardening**:
+    - **Transport Security**: Mandatory TLS 1.2+ is required for all forensic data exchange to prevent MITM interception.
+    - **Lifecycle Management**: Implementation requires mandatory identifier rotation, 24-hour TTL-based expiration, and centralized revocation support for compromised sessions.
+
+---
+
+## 9. Frontend Design System
 The UI was designed to feel like a high-end security operations center (SOC) tool:
 - **Glassmorphism**: Elegant, transparent UI elements with subtle motion.
 - **Forensic Intelligence Dashboard**: A centralized panel featuring `AnalyticsPanel.tsx` for trend tracking and indicator aggregation.
@@ -104,13 +118,15 @@ The UI was designed to feel like a high-end security operations center (SOC) too
 
 ---
 
-## 9. Database & Caching
-- **SQLite/Postgres**: Stores every scan result with full forensic context (WHOIS, probe artifacts, fusion trace).
-- **In-Process Cache**: If a URL was scanned in the last 5 minutes, the system returns the cached result instantly, saving API costs and compute time.
+## 10. Database & Schema Evolution
+- **Hybrid Persistence**: SQLite is the default forensic store for local and standard deployments. PostgreSQL is supported and recommended for high-scale, multi-tenant production workloads.
+- **Concurrency & Scaling**: SQLite allows only a single concurrent writer (write bottleneck). High-concurrency environments should migrate to PostgreSQL or MySQL to prevent database contention during heavy scan volume.
+- **Migration Strategy**: The `migrate_db.py` utility provides secure, validated schema updates (parameterized SQL). Note that SQLite's limited `ALTER TABLE` support may make some schema evolutions disruptive; migration to robust backends is recommended for zero-downtime requirements.
+- **Hardened Schema**: All `client_id` columns use an explicit `String(64)` constraint for optimized indexing and cross-backend compatibility. Ensure these constraints are strictly validated during backend transitions.
 
 ---
 
-## 10. Multimodal Visual Forensics (Engine 4)
+## 11. Multimodal Visual Forensics (Engine 4)
 Using Gemini Vision, LinkVeil-AI can now "see" like a human analyst:
 - **Logo Recognition**: Identifies if a page is visually claiming to be Amazon, Google, or Microsoft.
 - **Anti-SSO Heuristics**: Distinguishes between legitimate "Login with Google" buttons and malicious pages designed entirely around fake Google portals.
@@ -118,18 +134,11 @@ Using Gemini Vision, LinkVeil-AI can now "see" like a human analyst:
 
 ---
 
-## 11. Intelligence Analytics & Historics
+## 12. Intelligence Analytics & Historics
 The platform now features a dedicated intelligence panel:
 - **Indicator Aggregation**: Tracks category trends (Financial, Social Media, Tech) across all scans.
 - **Historical Trends**: Visualizes scan volume and risk distribution over time.
-- **Data Persistence**: Uses a forensic SQLite/Postgres store to ensure all intelligence is available for retroactive auditing.
-
----
-
-## 12. Future Roadmap
-- [x] **Email Forensic Pipeline**: Full header/body analysis and link triage.
-- [ ] **Browser Extension**: Real-time protection while browsing (In Progress).
-- [ ] **Collaborative Forensic Sharing**: Community-driven threat intelligence.
+- **Data Persistence**: SQLite is the default forensic store for standard telemetry; however, PostgreSQL is supported and recommended for high-scale, multi-tenant deployments requiring persistent concurrent access.
 
 ---
 
