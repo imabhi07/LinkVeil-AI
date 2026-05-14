@@ -55,7 +55,7 @@ app = FastAPI(
 app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # ── CORS configuration ──
-allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",")
 # Safety: prevent wildcard origins with credentials in production
 if "*" in allowed_origins and os.getenv("ENV", "production") == "production":
     logger.warning("Wildcard '*' in ALLOWED_ORIGINS is insecure with allow_credentials=True. Removing wildcard.")

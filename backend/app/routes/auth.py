@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Response, Depends, HTTPException, Cookie
+from fastapi import APIRouter, Response, Depends, HTTPException, Cookie, Header
 from typing import Optional
 import secrets
 import logging
@@ -11,15 +11,20 @@ from backend.app.models.db_models import ForensicSession
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-@router.get("/session")
-async def initialize_session(response: Response, db: Session = Depends(get_db)):
+@router.post("/session")
+async def initialize_session(
+    response: Response, 
+    db: Session = Depends(get_db),
+    x_client_id: Optional[str] = Header(None, alias="X-Client-ID")
+):
     """
     Server-side session provisioning.
     Sets an httpOnly SameSite cookie for the session token and 
     returns a server-generated tenant identifier.
     """
-    # 1. Provision a new tenant ID
-    # Shared with the client for forensic scoping (X-Client-ID)
+    # 1. Provision a new server-side tenant ID
+    # We always generate a secure ID server-side to prevent client-controlled impersonation.
+    # The client-sent X-Client-ID is no longer blindly trusted as a primary identity.
     tenant_id = secrets.token_hex(16)
     
     # 2. Generate and persist a secure session token
