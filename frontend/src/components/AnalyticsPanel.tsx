@@ -209,7 +209,7 @@ function ScanListInline({ scans, loading, riskLevelColor, color, onReview }: Sca
   );
 }
 
-export function AnalyticsPanel({ onClose, onReview, clientId, isInitializing, initError }: { onClose: () => void; onReview?: (scan: ScanListItem) => void; clientId: string; isInitializing?: boolean; initError?: string | null }) {
+export function AnalyticsPanel({ onClose, onReview, clientId, isInitializing, initError, onReinitSession }: { onClose: () => void; onReview?: (scan: ScanListItem) => void; clientId: string; isInitializing?: boolean; initError?: string | null; onReinitSession?: () => Promise<any> }) {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -246,6 +246,12 @@ export function AnalyticsPanel({ onClose, onReview, clientId, isInitializing, in
         setData(json);
         hasDataRef.current = true;
       } else {
+        if (response.status === 401) {
+          if (onReinitSession) await onReinitSession();
+          // After refreshing, try one more time
+          fetchAnalytics(isSilent);
+          return;
+        }
         if (!isSilent) setError(true);
       }
     } catch (err) {
@@ -307,6 +313,10 @@ export function AnalyticsPanel({ onClose, onReview, clientId, isInitializing, in
           timestamp: s.timestamp
         }));
         setScanList(list);
+      } else if (res.status === 401) {
+        if (onReinitSession) await onReinitSession();
+        handleCardClick(filterKey);
+        return;
       }
     } catch (err) {
       console.error("Failed to fetch scan list:", err);

@@ -171,8 +171,13 @@ function App() {
     setIsInitializing(true);
     setInitError(null);
     try {
+      const headers: Record<string, string> = { 'Accept': 'application/json' };
+      const storedId = localStorage.getItem('linkveil_client_id');
+      if (storedId) headers['X-Client-ID'] = storedId;
+
       const response = await fetch(`${API_BASE_URL}/api/v1/auth/session`, {
-        headers: { 'Accept': 'application/json' },
+        method: 'POST',
+        headers: headers,
         credentials: 'include'
       });
       if (response.ok) {
@@ -181,6 +186,7 @@ function App() {
           setClientId(data.tenant_id);
           localStorage.setItem('linkveil_client_id', data.tenant_id);
           console.log("Forensic session initialized with server-provisioned Tenant ID.");
+          return true;
         } else {
           throw new Error("No tenant ID returned from server.");
         }
@@ -191,17 +197,16 @@ function App() {
       console.error("Failed to initialize secure forensic session:", error);
       setInitError(error.message || "Failed to establish secure forensic session. Network error or server offline.");
       setClientId(''); // Ensure clientId is reset on error
+      return false;
     } finally {
       setIsInitializing(false);
     }
   }, [API_BASE_URL]);
 
   useEffect(() => {
-    // If no client ID exists, we MUST fetch one from the server (Server-Provisioned requirement)
-    if (!clientId) {
-      initSession();
-    }
-  }, [clientId, initSession]);
+    // Always initialize/refresh session on mount to ensure secure cookie is present
+    initSession();
+  }, [initSession]);
 
   const [currentTip, setCurrentTip] = useState("");
   const [showAnalytics, setShowAnalytics] = useState(false);
@@ -340,9 +345,21 @@ function App() {
           force_refresh: forceRefresh
         }),
         signal: controller.signal,
+        credentials: 'include'
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          // Session might have expired or cookie was missing. 
+          // Re-init session to get a fresh cookie/tenant pair.
+          const refreshed = await initSession();
+          if (refreshed) {
+            throw new Error("Security session refreshed. Please try your scan again.");
+          } else {
+            throw new Error("Security session expired and could not be refreshed. Please reload the page.");
+          }
+        }
+
         const errBody = await response.json().catch(() => ({}));
         let message = `Server error (${response.status})`;
         
@@ -350,7 +367,6 @@ function App() {
           if (typeof errBody.detail === 'string') {
             message = errBody.detail;
           } else if (Array.isArray(errBody.detail)) {
-            // FastAPI validation error format
             message = errBody.detail.map((e: any) => e.msg).join(', ');
           } else {
             message = JSON.stringify(errBody.detail);
@@ -699,6 +715,7 @@ function App() {
                       onShowPrivacy={() => setShowPrivacy(true)}
                       isInitializing={isInitializing}
                       initError={initError}
+                      onReinitSession={initSession}
                     />
                   </div>
                 )}
@@ -878,6 +895,7 @@ function App() {
           clientId={clientId}
           isInitializing={isInitializing}
           initError={initError}
+          onReinitSession={initSession}
         />
       )}
 

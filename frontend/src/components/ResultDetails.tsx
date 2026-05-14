@@ -386,15 +386,15 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                         return (
                           <>
                             <div className="relative w-full h-full group/main-img">
-                              <img 
-                                src={`${API_BASE_URL}/${screenshotPath.replace(/^\//, '')}`} 
-                                alt={`Phishing Page Screenshot ${activeScreenshotIndex + 1}`}
-                                className="w-full h-full object-cover object-top opacity-90 hover:opacity-100 transition-opacity cursor-zoom-in"
-                                onClick={() => setIsImageModalOpen(true)}
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).src = `https://placehold.co/600x400/18181b/71717a?text=Evidence+Render+Failed`;
-                                }}
-                              />
+                                <img 
+                                  src={`${API_BASE_URL}/${screenshotPath.replace(/^\//, '')}`} 
+                                  alt={`Phishing Page Screenshot ${activeScreenshotIndex + 1}`}
+                                  className="w-full h-full object-cover object-top opacity-90 hover:opacity-100 transition-opacity cursor-zoom-in"
+                                  onClick={() => setIsImageModalOpen(true)}
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src = `https://placehold.co/600x400/18181b/71717a?text=Evidence+Render+Failed`;
+                                  }}
+                                />
 
                               {/* Navigation Arrows */}
                               {allScreenshots.length > 1 && (
@@ -447,6 +447,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                                       src={`${API_BASE_URL}/${s.replace(/^\//, '')}`} 
                                       className="w-full h-full object-cover"
                                       alt={`Stage ${idx}`}
+                                      crossOrigin="use-credentials"
                                     />
                                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                                       <span className="text-[8px] font-black text-white">{idx === 0 ? 'START' : idx === allScreenshots.length - 1 ? 'END' : idx}</span>

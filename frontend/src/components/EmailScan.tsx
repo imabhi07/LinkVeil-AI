@@ -15,11 +15,12 @@ interface EmailScanProps {
   onShowPrivacy?: () => void;
   isInitializing?: boolean;
   initError?: string | null;
+  onReinitSession?: () => Promise<any>;
 }
 
 type ScanMode = 'paste' | 'upload';
 
-export function EmailScan({ mapToAnalysisResult, onResult, clientId, initialResult, initialInputData, onShowPrivacy, isInitializing, initError }: EmailScanProps) {
+export function EmailScan({ mapToAnalysisResult, onResult, clientId, initialResult, initialInputData, onShowPrivacy, isInitializing, initError, onReinitSession }: EmailScanProps) {
   const [scanMode, setScanMode] = useState<ScanMode>('paste');
   const [rawEmail, setRawEmail] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -140,6 +141,17 @@ export function EmailScan({ mapToAnalysisResult, onResult, clientId, initialResu
       }
 
       if (!response.ok) {
+        if (response.status === 401) {
+          // Session expired or cookie missing
+          if (onReinitSession) {
+            try {
+              await onReinitSession();
+            } catch (reinitErr) {
+              console.warn("Soft-failure during automatic session re-init:", reinitErr);
+            }
+          }
+          throw new Error("Security session refreshed. Please try your scan again.");
+        }
         const errBody = await response.json().catch(() => ({}));
         throw new Error(errBody.detail || `Server error (${response.status})`);
       }
