@@ -155,6 +155,54 @@ function App() {
     }
     return [];
   });
+
+  // ── Session Isolation: Client ID Persistence (Server-Provisioned) ──
+  const [clientId, setClientId] = useState<string>(() => {
+    if (typeof window === 'undefined') return '';
+    return localStorage.getItem('linkveil_client_id') || '';
+  });
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
+
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
+  // Initialize secure session on mount if missing or to refresh cookie
+  const initSession = useCallback(async () => {
+    setIsInitializing(true);
+    setInitError(null);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/session`, {
+        headers: { 'Accept': 'application/json' },
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.tenant_id) {
+          setClientId(data.tenant_id);
+          localStorage.setItem('linkveil_client_id', data.tenant_id);
+          console.log("Forensic session initialized with server-provisioned Tenant ID.");
+        } else {
+          throw new Error("No tenant ID returned from server.");
+        }
+      } else {
+        throw new Error(`Session initialization failed: ${response.status}`);
+      }
+    } catch (error: any) {
+      console.error("Failed to initialize secure forensic session:", error);
+      setInitError(error.message || "Failed to establish secure forensic session. Network error or server offline.");
+      setClientId(''); // Ensure clientId is reset on error
+    } finally {
+      setIsInitializing(false);
+    }
+  }, [API_BASE_URL]);
+
+  useEffect(() => {
+    // If no client ID exists, we MUST fetch one from the server (Server-Provisioned requirement)
+    if (!clientId) {
+      initSession();
+    }
+  }, [clientId, initSession]);
+
   const [currentTip, setCurrentTip] = useState("");
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
@@ -281,10 +329,12 @@ function App() {
     setCurrentResult(null);
 
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
       const response = await fetch(`${API_BASE_URL}/api/v1/scan`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Client-ID': clientId
+        },
         body: JSON.stringify({ 
           url: targetUrl.includes('://') ? targetUrl : `https://${targetUrl}`,
           force_refresh: forceRefresh
@@ -331,7 +381,7 @@ function App() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [clientId]);
 
   const handleAnalyze = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -598,25 +648,26 @@ function App() {
                           type="text"
                           value={url}
                           onChange={(e) => setUrl(e.target.value)}
-                          placeholder="ENTER TARGET URL..."
-                          className="flex-1 w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 ring-0 shadow-none appearance-none py-2.5 sm:py-3 px-3 sm:px-4 text-cyber-light-heading dark:text-white placeholder-cyber-light-text/60 dark:placeholder-zinc-600 text-xs sm:text-base font-mono tracking-wide"
+                          placeholder={isInitializing ? "INITIALIZING SECURE SESSION..." : initError ? "SESSION INITIALIZATION FAILED" : "ENTER TARGET URL..."}
+                          disabled={loading || isInitializing || !!initError}
+                          className={`flex-1 w-full bg-transparent border-none outline-none focus:outline-none focus:ring-0 ring-0 shadow-none appearance-none py-2.5 sm:py-3 px-3 sm:px-4 text-cyber-light-heading dark:text-white placeholder-cyber-light-text/60 dark:placeholder-zinc-600 text-xs sm:text-base font-mono tracking-wide ${isInitializing || !!initError ? 'cursor-not-allowed opacity-50' : ''}`}
                           autoComplete="off"
                           id="url-input"
                         />
 
                         <button
                           type="submit"
-                          disabled={loading || !url}
+                          disabled={loading || !url || isInitializing || !!initError}
                           id="scan-button"
                           className={`px-4 sm:px-6 md:px-8 py-2.5 sm:py-3 font-black rounded-full transition-all flex items-center gap-2 uppercase tracking-widest text-[10px] sm:text-xs
-                            ${loading
+                            ${loading || isInitializing
                               ? 'bg-[#00C853] dark:bg-ornex-green text-white dark:text-ornex-black cursor-wait shadow-[0_4px_20px_rgba(0,180,80,0.35)]'
-                              : !url
+                              : !url || !!initError
                                 ? 'bg-cyber-light-bg/80 text-cyber-light-text dark:bg-white/10 dark:text-zinc-600 cursor-not-allowed'
                                 : 'bg-gradient-to-br from-[#00C853] to-[#00A846] dark:bg-gradient-to-r dark:from-[#00C853] dark:to-ornex-green text-white dark:text-ornex-black shadow-[0_4px_20px_rgba(0,180,80,0.35)] hover:scale-105 active:scale-95'
                             }`}
                         >
-                          {loading ? (
+                          {loading || isInitializing ? (
                             <div className="w-4 h-4 sm:w-5 h-5 border-[3px] border-white/30 dark:border-black/30 border-t-white dark:border-t-black rounded-full animate-spin" />
                           ) : (
                             <>
@@ -642,24 +693,37 @@ function App() {
                     <EmailScan 
                       mapToAnalysisResult={mapToAnalysisResult} 
                       onResult={handleEmailResult}
+                      clientId={clientId}
                       initialResult={currentEmailResult}
                       initialInputData={currentEmailInput}
                       onShowPrivacy={() => setShowPrivacy(true)}
+                      isInitializing={isInitializing}
+                      initError={initError}
                     />
                   </div>
                 )}
               </div>
 
               {/* Error Message */}
-              {error && (
+              {(error || initError) && (
                 <div className="relative bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-500/30 text-rose-600 dark:text-rose-400 px-6 py-4 rounded-xl flex items-start gap-3 animate-fade-in backdrop-blur-md" role="alert">
                   <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <h3 className="font-semibold uppercase tracking-wider text-xs mb-1">System Alert</h3>
-                    <p className="text-sm opacity-90">{error}</p>
+                    <h3 className="font-semibold uppercase tracking-wider text-xs mb-1">
+                      {initError ? 'Initialization Failure' : 'System Alert'}
+                    </h3>
+                    <p className="text-sm opacity-90">{initError || error}</p>
+                    {initError && (
+                      <button 
+                        onClick={() => initSession()}
+                        className="mt-3 px-4 py-1.5 bg-rose-500 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-rose-600 transition-colors shadow-lg shadow-rose-500/20"
+                      >
+                        Retry Forensic Link
+                      </button>
+                    )}
                   </div>
                   <button
-                    onClick={() => setError(null)}
+                    onClick={() => { setError(null); setInitError(null); }}
                     className="p-1 rounded-md hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors text-lg leading-none"
                     aria-label="Dismiss error"
                   >
@@ -811,6 +875,9 @@ function App() {
         <AnalyticsPanel 
           onClose={() => setShowAnalytics(false)} 
           onReview={handleReview}
+          clientId={clientId}
+          isInitializing={isInitializing}
+          initError={initError}
         />
       )}
 

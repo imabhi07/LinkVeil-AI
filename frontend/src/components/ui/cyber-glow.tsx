@@ -16,10 +16,10 @@ export function CyberGlow() {
 
   useEffect(() => {
     // Generate active grid cells
-    const newCells = Array.from({ length: 60 }, (_, i) => ({
+    const newCells = Array.from({ length: 80 }, (_, i) => ({
       id: i,
-      x: Math.floor(Math.random() * 20),
-      y: Math.floor(Math.random() * 20),
+      x: Math.floor(Math.random() * 40),
+      y: Math.floor(Math.random() * 40),
       delay: Math.random() * 10,
       duration: Math.random() * 4 + 2,
     }));
@@ -39,7 +39,7 @@ export function CyberGlow() {
         className="absolute inset-0 opacity-[0.1] dark:opacity-[0.08]"
         style={{
           backgroundImage: `linear-gradient(var(--color-primary, #059669) 1px, transparent 1px), linear-gradient(90deg, var(--color-primary, #059669) 1px, transparent 1px)`,
-          backgroundSize: '5vw 5vw'
+          backgroundSize: 'min(5vw, 5vh) min(5vw, 5vh)'
         }}
       />
 
@@ -48,8 +48,8 @@ export function CyberGlow() {
         className="absolute inset-0"
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(20, 1fr)',
-          gridAutoRows: '5vw', // Keep cells square by linking height to viewport width
+          gridTemplateColumns: 'repeat(auto-fill, min(5vw, 5vh))',
+          gridAutoRows: 'min(5vw, 5vh)',
         }}
       >
         {cells.map((cell) => (
@@ -74,18 +74,7 @@ export function CyberGlow() {
         ))}
       </div>
 
-      {/* Sweeping Scan Beam - Horizontal (Constrained to clipping) */}
-      <motion.div
-        className="absolute inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-[var(--color-primary,#059669)] to-transparent opacity-40 shadow-[0_0_25px_var(--color-primary,#059669)]"
-        animate={{
-          top: ['-10%', '110%'],
-        }}
-        transition={{
-          duration: 12,
-          repeat: Infinity,
-          ease: "linear",
-        }}
-      />
+    
 
       {/* Ambient Glow Gradient - Anchored to top right */}
       <div className="absolute top-0 right-0 w-[1000px] h-[1000px] bg-[var(--color-primary,#059669)]/[0.12] blur-[160px] rounded-full translate-x-1/3 -translate-y-1/3" />

@@ -209,7 +209,7 @@ function ScanListInline({ scans, loading, riskLevelColor, color, onReview }: Sca
   );
 }
 
-export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onReview?: (scan: ScanListItem) => void }) {
+export function AnalyticsPanel({ onClose, onReview, clientId, isInitializing, initError }: { onClose: () => void; onReview?: (scan: ScanListItem) => void; clientId: string; isInitializing?: boolean; initError?: string | null }) {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -235,7 +235,12 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
     
     try {
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-      const response = await fetch(`${API_BASE_URL}/api/v1/analytics/?days=${days}`);
+      const response = await fetch(`${API_BASE_URL}/api/v1/analytics/?days=${days}`, {
+        headers: {
+          'X-Client-ID': clientId
+        },
+        credentials: 'include'
+      });
       if (response.ok) {
         const json = await response.json();
         setData(json);
@@ -253,8 +258,10 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
   }, [days]);
 
   useEffect(() => {
-    fetchAnalytics();
-  }, [fetchAnalytics]);
+    if (!isInitializing && !initError && clientId) {
+      fetchAnalytics();
+    }
+  }, [fetchAnalytics, isInitializing, initError, clientId]);
 
   // Handle click outside to dismiss popover
   useEffect(() => {
@@ -283,7 +290,12 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
     try {
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
       const endpoint = activeTab === 'url' ? 'scans' : 'email-scans';
-      const res = await fetch(`${API_BASE_URL}/api/v1/analytics/${endpoint}?filter=${filterKey}&days=${days}`);
+      const res = await fetch(`${API_BASE_URL}/api/v1/analytics/${endpoint}?filter=${filterKey}&days=${days}`, {
+        headers: {
+          'X-Client-ID': clientId
+        },
+        credentials: 'include'
+      });
       if (res.ok) {
         const rawList = await res.json();
         // Transform email list to match ScanListItem interface if needed
@@ -344,33 +356,49 @@ export function AnalyticsPanel({ onClose, onReview }: { onClose: () => void; onR
     ];
   }, [data, activeTab]);
 
-  if (loading && !data) {
+  if (isInitializing || (loading && !data)) {
     return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-        <div className="w-12 h-12 border-4 border-ornex-green/20 border-t-ornex-green rounded-full animate-spin"></div>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md">
+        <div className="flex flex-col items-center gap-6 animate-pulse">
+          <div className="w-16 h-16 border-4 border-cyber-light-accent/20 dark:border-ornex-green/20 border-t-cyber-light-accent dark:border-t-ornex-green rounded-full animate-spin"></div>
+          <div className="text-center space-y-2">
+            <h3 className="text-xl font-black text-white uppercase tracking-[0.2em]">Forensic Link Active</h3>
+            <p className="text-zinc-500 font-mono text-xs uppercase tracking-widest">Establishing secure intel tunnel...</p>
+          </div>
+        </div>
       </div>
     );
   }
 
-  if (error || !data) {
+  if (initError || error || !data) {
     return (
       <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md">
         <div className="bg-white dark:bg-black border border-zinc-200 dark:border-ornex-green/20 rounded-3xl p-8 text-center max-w-sm animate-in zoom-in duration-300 shadow-2xl">
           <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2 tracking-tight">Forensic Link Offline</h3>
-          <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-6">Could not establish connection to the intelligence server.</p>
-          <div className="flex gap-3">
+          <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2 tracking-tight">Forensic Link {initError ? 'Initialization Error' : 'Offline'}</h3>
+          <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-6">
+            {initError || "Could not establish connection to the intelligence server."}
+          </p>
+          <div className="flex flex-col gap-3">
             <button 
-              onClick={() => fetchAnalytics()}
-              className="flex-1 px-4 py-2 bg-ornex-green text-black rounded-xl text-sm font-bold hover:bg-ornex-green transition-colors"
+              onClick={() => {
+                if (initError) {
+                  // This should ideally trigger the parent's initSession, 
+                  // but we'll let it try to fetch if clientId magically appeared
+                  fetchAnalytics();
+                } else {
+                  fetchAnalytics();
+                }
+              }}
+              className="w-full px-4 py-2.5 bg-cyber-light-accent dark:bg-ornex-green text-white dark:text-black rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg"
             >
-              Retry Connection
+              {initError ? 'Retry Session Link' : 'Retry Data Sync'}
             </button>
             <button 
               onClick={onClose}
-              className="px-4 py-2 bg-white/5 text-white rounded-xl text-sm font-medium hover:bg-white/10 transition-colors"
+              className="w-full px-4 py-2.5 bg-zinc-100 dark:bg-white/5 text-zinc-500 dark:text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-zinc-200 dark:hover:bg-white/10 transition-all"
             >
-              Close
+              Close Intelligence Console
             </button>
           </div>
         </div>

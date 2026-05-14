@@ -99,7 +99,7 @@ export const PrivacyModal = ({ isOpen, onClose }: PrivacyModalProps) => {
                   {
                     icon: Globe,
                     title: "Third-Party Intelligence",
-                    content: <>We leverage global threat intelligence feeds and AI models (including NVIDIA NIM and Google Gemini) to identify emerging threats. Communication with these services is secured via TLS 1.3 and is restricted to metadata required for classification.</>
+                    content: <>We leverage global threat intelligence feeds and AI models (Google Gemini) to identify emerging threats. Communication with these services is secured via TLS 1.3 and is restricted to metadata required for classification.</>
                   }
                 ].map((section, idx) => (
                   <motion.section 

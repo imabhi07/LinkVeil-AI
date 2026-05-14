@@ -9,14 +9,17 @@ import { EmailForensicInsight } from './EmailForensicInsight';
 interface EmailScanProps {
   onResult?: (result: EmailScanResponse, inputData?: string) => void;
   mapToAnalysisResult: (raw: any) => AnalysisResult;
+  clientId: string;
   initialResult?: EmailScanResponse | null;
   initialInputData?: string;
   onShowPrivacy?: () => void;
+  isInitializing?: boolean;
+  initError?: string | null;
 }
 
 type ScanMode = 'paste' | 'upload';
 
-export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initialInputData, onShowPrivacy }: EmailScanProps) {
+export function EmailScan({ mapToAnalysisResult, onResult, clientId, initialResult, initialInputData, onShowPrivacy, isInitializing, initError }: EmailScanProps) {
   const [scanMode, setScanMode] = useState<ScanMode>('paste');
   const [rawEmail, setRawEmail] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -79,6 +82,10 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initia
         : scanMode;
 
     // Validation
+    if (!clientId || !clientId.trim()) {
+      setError("Client session identifier missing. Please refresh the page.");
+      return;
+    }
     if (effectiveMode === 'paste' && !rawEmail.trim()) {
       setError("Please paste the raw email content.");
       return;
@@ -109,7 +116,11 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initia
         const emlUrl = `${API_BASE_URL}/api/v1/scan/eml${force ? '?force_refresh=true' : ''}`;
         response = await fetch(emlUrl, {
           method: 'POST',
+          headers: {
+            'X-Client-ID': clientId
+          },
           body: uploadData,
+          credentials: 'include'
         });
       } else {
         const payload: EmailScanRequest = { 
@@ -119,8 +130,12 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initia
         const url = `${API_BASE_URL}/api/v1/scan/email${force ? '?force_refresh=true' : ''}`;
         response = await fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-Client-ID': clientId
+          },
           body: JSON.stringify(payload),
+          credentials: 'include'
         });
       }
 
@@ -385,17 +400,18 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initia
               <textarea
                 value={rawEmail}
                 onChange={e => setRawEmail(e.target.value)}
-                placeholder="Paste the full source content (including headers) from your email client..."
+                placeholder={isInitializing ? "INITIALIZING SECURE SESSION..." : initError ? "SESSION INITIALIZATION FAILED" : "Paste the full source content (including headers) from your email client..."}
+                disabled={loading || isInitializing || !!initError}
                 rows={8}
-                className="w-full bg-cyber-light-bg dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl px-4 py-4 text-xs md:text-sm font-mono focus:border-cyber-light-accent/50 dark:focus:border-ornex-green/50 outline-none transition-all resize-none md:rows-[12]"
+                className={`w-full bg-cyber-light-bg dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl px-4 py-4 text-xs md:text-sm font-mono focus:border-cyber-light-accent/50 dark:focus:border-ornex-green/50 outline-none transition-all resize-none md:rows-[12] ${isInitializing || !!initError ? 'cursor-not-allowed opacity-50' : ''}`}
               />
             </div>
           )}
 
           {scanMode === 'upload' && (
             <div 
-              onClick={() => fileInputRef.current?.click()}
-              className="animate-fade-in group cursor-pointer p-8 md:p-12 border-2 border-dashed border-zinc-200 dark:border-white/10 rounded-2xl md:rounded-3xl bg-zinc-50 dark:bg-white/5 hover:border-cyber-light-accent/40 dark:hover:border-ornex-green/40 transition-all flex flex-col items-center justify-center gap-4"
+              onClick={() => { if (!loading && !isInitializing && !initError) fileInputRef.current?.click(); }}
+              className={`animate-fade-in group p-8 md:p-12 border-2 border-dashed border-zinc-200 dark:border-white/10 rounded-2xl md:rounded-3xl bg-zinc-50 dark:bg-white/5 transition-all flex flex-col items-center justify-center gap-4 ${loading || isInitializing || !!initError ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-cyber-light-accent/40 dark:hover:border-ornex-green/40'}`}
             >
               <input 
                 type="file" 
@@ -420,18 +436,20 @@ export function EmailScan({ mapToAnalysisResult, onResult, initialResult, initia
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || isInitializing || !!initError}
             className={`w-full py-3.5 md:py-4 rounded-xl md:rounded-full font-bold uppercase tracking-widest transition-all shadow-lg flex items-center justify-center gap-3
-              ${loading 
+              ${loading || isInitializing
                 ? 'bg-zinc-200 dark:bg-white/10 text-zinc-400 cursor-wait' 
-                : 'bg-cyber-light-accent dark:bg-gradient-to-r dark:from-[#00C853] dark:to-ornex-green text-white dark:text-ornex-black hover:shadow-[0_0_25px_rgba(0,200,83,0.4)] dark:hover:shadow-[0_0_25px_rgba(57,255,20,0.4)] hover:scale-[1.01] active:scale-[0.99]'
+                : !!initError
+                  ? 'bg-zinc-200 dark:bg-white/10 text-zinc-400 cursor-not-allowed'
+                  : 'bg-cyber-light-accent dark:bg-gradient-to-r dark:from-[#00C853] dark:to-ornex-green text-white dark:text-ornex-black hover:shadow-[0_0_25px_rgba(0,200,83,0.4)] dark:hover:shadow-[0_0_25px_rgba(57,255,20,0.4)] hover:scale-[1.01] active:scale-[0.99]'
               }`}
           >
             <div className="relative flex items-center justify-center gap-3">
-              {loading ? (
+              {loading || isInitializing ? (
                 <>
                   <div className="w-4 h-4 md:w-5 md:h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span className="text-xs md:text-sm">Analyzing Forensic Payload...</span>
+                  <span className="text-xs md:text-sm">{isInitializing ? 'Establishing Secure Link...' : 'Analyzing Forensic Payload...'}</span>
                 </>
               ) : (
                 <>

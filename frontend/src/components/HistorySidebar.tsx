@@ -32,7 +32,7 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = memo(({ history, mo
     };
 
   return (
-    <div className="glass-panel w-full h-full min-h-[400px] md:max-h-[800px] rounded-3xl dark:border-white/10 flex flex-col overflow-hidden transition-colors">
+    <div className="glass-panel w-full h-full md:max-h-[800px] rounded-3xl dark:border-white/10 flex flex-col overflow-hidden transition-colors">
       <div className="p-4 sm:p-5 border-b border-cyber-light-border dark:border-white/10 flex justify-between items-center bg-white/50 dark:bg-white/5 shrink-0">
         <h3 className="text-cyber-light-heading dark:text-white font-bold text-xs sm:text-sm uppercase tracking-wider flex items-center gap-2">
           <Clock className="w-3.5 h-3.5 sm:w-4 h-4 text-cyber-light-text" />
@@ -51,7 +51,7 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = memo(({ history, mo
 
       <div className="flex-1 overflow-y-auto p-2 sm:p-3 space-y-2 custom-scrollbar">
         {history.length === 0 ? (
-          <div className="text-center py-12 text-cyber-light-text/70 dark:text-zinc-600 text-[10px] sm:text-sm font-mono border-2 border-dashed border-cyber-light-border dark:border-white/5 rounded-xl mx-2">
+          <div className="text-center py-6 text-cyber-light-text/70 dark:text-zinc-600 text-[10px] sm:text-sm font-mono border-2 border-dashed border-cyber-light-border dark:border-white/5 rounded-xl mx-2">
             NO {mode.toUpperCase()} DATA LOGGED
           </div>
         ) : (
