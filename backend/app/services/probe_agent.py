@@ -278,8 +278,10 @@ def run_probe(url: str) -> ProbeResult:
             initial_screenshot = os.path.join("data/screenshots", initial_screenshot_name)
             os.makedirs("data/screenshots", exist_ok=True)
             page.screenshot(path=initial_screenshot)
-            result.screenshots.append(initial_screenshot)
-            result.screenshot_path = initial_screenshot # Fallback for old UI
+            # Normalize path to forward slashes for cross-platform DB consistency
+            normalized_screenshot = initial_screenshot.replace("\\", "/")
+            result.screenshots.append(normalized_screenshot)
+            result.screenshot_path = normalized_screenshot # Fallback for old UI
             
             # --- Capture Content Snippet ---
             result.content_snippet = page.content()[:2000]
@@ -306,8 +308,10 @@ def run_probe(url: str) -> ProbeResult:
                     screenshot_path = os.path.join("data/screenshots", partial_screenshot_name)
                     os.makedirs("data/screenshots", exist_ok=True)
                     page.screenshot(path=screenshot_path)
-                    result.screenshot_path = screenshot_path
-                    result.screenshots.append(screenshot_path)
+                    # Normalize path to forward slashes for cross-platform DB consistency
+                    normalized_screenshot = screenshot_path.replace("\\", "/")
+                    result.screenshot_path = normalized_screenshot
+                    result.screenshots.append(normalized_screenshot)
                     result.content_snippet = page.content()[:2000]
                     logger.info(f"Probe: Partial recovery for {url}")
                     return result 

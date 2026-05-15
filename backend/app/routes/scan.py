@@ -277,20 +277,22 @@ async def get_screenshot(
         return FileResponse(file_path)
 
     # Otherwise, verify this screenshot belongs to a scan performed for this user's client_id
-    # Note: We look for the filename in both the main screenshot_path and the deeper probe_artifacts JSON blob
-    # Query for ANY scan (URL or Email) that contains this filename and belongs to this user
-    # Safe matching: screenshot_path is an exact match, probe_artifacts is queried for the quoted path string
-    # to avoid false positives from user-controlled fields like page_title.
+    # We match by the unique filename (UUID-based) which is present in both 
+    # ScanResult.screenshot_path (public URL) and ScanResult.probe_artifacts (internal JSON).
+    # We use a LIKE check with strict escaping to ensure no wildcard injection.
     
-    # Escape LIKE special characters to prevent wildcard injection
-    # We use '/' as the escape character
-    escaped_path = file_path.replace("/", "//").replace("%", "/%").replace("_", "/_")
+    # We use '/' as the escape character for the LIKE pattern
+    # Escape filename to prevent % or _ from acting as wildcards
+    escaped_filename = filename.replace("/", "//").replace("%", "/%").replace("_", "/_")
     
     scan = db.query(ScanResult).filter(
         ScanResult.client_id == user.client_id,
         (
-            (ScanResult.screenshot_path == file_path) |
-            (ScanResult.probe_artifacts.like(f"%\"{escaped_path}\"%", escape="/"))
+            # Search in the public URL path
+            ScanResult.screenshot_path.like(f"%{escaped_filename}%", escape="/") |
+            # Search in the deeper probe_artifacts JSON blob
+            # We wrap in quotes to ensure we match the full string in the JSON array
+            ScanResult.probe_artifacts.like(f"%\"{escaped_filename}\"%", escape="/")
         )
     ).first()
     
