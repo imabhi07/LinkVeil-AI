@@ -34,8 +34,6 @@ export function EmailScan({ mapToAnalysisResult, onResult, clientId, initialResu
     if (initialResult) {
       setResult(initialResult);
       setError(null);
-      // Clear selected file when loading a result to avoid UI confusion
-      setSelectedFile(null);
     }
     
     // Always sync rawEmail with initialInputData, even if it's undefined (clears stale data)
@@ -143,14 +141,19 @@ export function EmailScan({ mapToAnalysisResult, onResult, clientId, initialResu
       if (!response.ok) {
         if (response.status === 401) {
           // Session expired or cookie missing
+          let reinitSucceeded = false;
           if (onReinitSession) {
             try {
-              await onReinitSession();
+              const res = await onReinitSession();
+              reinitSucceeded = (res !== false);
             } catch (reinitErr) {
               console.warn("Soft-failure during automatic session re-init:", reinitErr);
             }
           }
-          throw new Error("Security session refreshed. Please try your scan again.");
+          throw new Error(reinitSucceeded 
+            ? "Security session refreshed. Please try your scan again."
+            : "Session re-initialization failed; please sign in again."
+          );
         }
         const errBody = await response.json().catch(() => ({}));
         throw new Error(errBody.detail || `Server error (${response.status})`);
@@ -704,7 +707,7 @@ export function EmailScan({ mapToAnalysisResult, onResult, clientId, initialResu
                   { key: 'dkim', title: 'DKIM (DomainKeys Identified Mail)', content: 'A cryptographic signature that ensures the email content was not tampered with and truly originated from the domain.' },
                   { key: 'dmarc', title: 'DMARC Policy', content: 'A protocol that uses SPF and DKIM to tell receiving servers how to handle emails that fail authentication.' }
                 ].map(({ key, title, content }) => (
-                  <InfoTip key={key} title={title} content={content} className="w-full relative flex items-center">
+                  <InfoTip key={key} title={title} content={content} fillWidth className="relative flex items-center">
                     <div className={`flex items-center justify-between p-3.5 rounded-2xl border w-full transition-all duration-300 ${getAuthColor(result.auth?.[key as keyof typeof result.auth] as string || 'none')}`}>
                       <span className="text-[10px] font-bold font-tektur uppercase tracking-[0.3em]">{key}</span>
                       <span className="text-[10px] font-bold font-tektur uppercase opacity-80">{result.auth?.[key as keyof typeof result.auth] as string || 'none'}</span>
