@@ -389,6 +389,7 @@ export const ResultDetails: React.FC<ResultDetailsProps> = memo(({ result, hideH
                                 <img 
                                   src={`${API_BASE_URL}/${screenshotPath.replace(/^\//, '')}`} 
                                   alt={`Phishing Page Screenshot ${activeScreenshotIndex + 1}`}
+                                  crossOrigin="use-credentials"
                                   className="w-full h-full object-cover object-top opacity-90 hover:opacity-100 transition-opacity cursor-zoom-in"
                                   onClick={() => setIsImageModalOpen(true)}
                                   onError={(e) => {

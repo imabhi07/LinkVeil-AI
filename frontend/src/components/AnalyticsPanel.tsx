@@ -1,8 +1,9 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import { InfoTip } from './InfoTip';
 import { 
   BarChart3, TrendingUp, ShieldAlert, ShieldCheck, Activity, 
   Globe, X, RefreshCw, AlertTriangle, Fingerprint, Layers, Microscope,
-  Info, CreditCard, User, Terminal,
+  CreditCard, User, Terminal,
   Zap, Gift, Search
 } from 'lucide-react';
 
@@ -15,36 +16,18 @@ interface ScanListItem {
 }
 
 const SectionTooltip = ({ text }: { text: string }) => (
-  <div className="group relative inline-flex items-center ml-1">
-    <Info className="w-3.5 h-3.5 text-zinc-400 cursor-help transition-colors hover:text-cyber-light-accent dark:hover:text-ornex-green" />
-    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 px-4 sm:px-5 py-3 sm:py-4 bg-white/98 dark:bg-zinc-900/98 backdrop-blur-xl border border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-100 text-[10px] sm:text-xs rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0 pointer-events-none whitespace-normal min-w-[200px] sm:min-w-[280px] max-w-[calc(100vw-40px)] sm:max-w-[320px] shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)] z-[110] font-medium leading-relaxed">
-      <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-white/98 dark:border-t-zinc-900/98" />
-      <div className="relative">
-        <div className="absolute -left-1 top-0 w-0.5 h-full bg-cyber-light-accent/30 dark:bg-ornex-green/30 rounded-full" />
-        <p className="pl-3">{text}</p>
-      </div>
-    </div>
-  </div>
+  <InfoTip title="Insight" content={text} className="inline-flex ml-1.5" />
 );
 
-const InfoTooltip = ({ text, children, className = "inline-flex items-center" }: { text: string, children: React.ReactNode, className?: string }) => (
-  <div className={`group relative ${className}`}>
-    {children}
-    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 px-3 py-2.5 bg-white/98 dark:bg-zinc-900/98 backdrop-blur-xl border border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-100 text-[10px] rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0 pointer-events-none whitespace-normal w-max max-w-[140px] shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)] z-[110] font-medium leading-tight">
-      <div className="absolute top-full left-1/2 -translate-x-1/2 border-6 border-transparent border-t-white/98 dark:border-t-zinc-900/98" />
-      <div className="relative">
-        <div className="absolute -left-1 top-0 w-0.5 h-full bg-cyber-light-accent dark:bg-ornex-green/30 rounded-full" />
-        <div className="pl-2 flex flex-col gap-0.5">
-          {text.split('|').map((part, i) => (
-            <span key={i} className={i === 0 ? 'text-zinc-500 dark:text-zinc-400 text-[10px] font-black uppercase tracking-widest' : 'text-[11px] font-black text-cyber-light-accent-deep dark:text-ornex-green uppercase tracking-tight'}>
-              {part.trim()}
-            </span>
-          ))}
-        </div>
-      </div>
-    </div>
-  </div>
-);
+const InfoTooltip = ({ text, children, className = "inline-flex items-center" }: { text: string, children: React.ReactNode, className?: string }) => {
+  const index = text.indexOf('|');
+  const [title, content] = index !== -1 ? [text.slice(0, index), text.slice(index + 1)] : ['', text];
+  return (
+    <InfoTip title={title.trim() || 'Protocols'} content={content.trim()} className={className}>
+      {children}
+    </InfoTip>
+  );
+};
 
 interface AnalyticsData {
   url: {
@@ -81,24 +64,27 @@ interface AnalyticsData {
 interface ScanListInlineProps {
   scans: ScanListItem[];
   loading: boolean;
+  error?: string | null;
   color: string;
   riskLevelColor: string;
   onReview?: (scan: ScanListItem) => void;
 }
 
-function ScanListInline({ scans, loading, riskLevelColor, color, onReview }: ScanListInlineProps) {
+function ScanListInline({ scans, loading, error, riskLevelColor, color, onReview }: ScanListInlineProps) {
   // Use a local state to keep the previous scans during the collapse animation
   const [displayScans, setDisplayScans] = useState<ScanListItem[]>(scans);
   
   useEffect(() => {
     if (scans.length > 0) {
       setDisplayScans(scans);
-    } else if (!loading) {
+    } else if (!loading && !error) {
       // Small delay before clearing display scans to allow collapse animation to finish
       const timer = setTimeout(() => setDisplayScans([]), 600);
       return () => clearTimeout(timer);
+    } else if (error) {
+      setDisplayScans([]);
     }
-  }, [scans, loading]);
+  }, [scans, loading, error]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [severityFilter, setSeverityFilter] = useState<'all' | 'high' | 'safe'>('all');
@@ -157,6 +143,15 @@ function ScanListInline({ scans, loading, riskLevelColor, color, onReview }: Sca
           <div className="flex flex-col items-center justify-center py-12 gap-3">
             <RefreshCw className="w-6 h-6 text-cyber-light-accent/20 dark:text-ornex-green/20 animate-spin" />
             <span className="text-[10px] text-zinc-600 font-mono animate-pulse uppercase tracking-[0.2em]">Syncing...</span>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-10 px-4 text-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-rose-500/10 flex items-center justify-center">
+              <AlertTriangle className="w-4 h-4 text-rose-500" />
+            </div>
+            <p className="text-[10px] text-rose-600 dark:text-rose-400 font-medium uppercase tracking-wider max-w-[200px]">
+              {error}
+            </p>
           </div>
         ) : filteredScans.length === 0 ? (
           <div className="py-12 text-center">
@@ -221,6 +216,7 @@ export function AnalyticsPanel({ onClose, onReview, clientId, isInitializing, in
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [scanList, setScanList] = useState<ScanListItem[]>([]);
   const [scanListLoading, setScanListLoading] = useState(false);
+  const [scanListError, setScanListError] = useState<string | null>(null);
   const hasDataRef = useRef(false);
 
   // Sync ref with data state to avoid stale closures in useCallback
@@ -228,7 +224,7 @@ export function AnalyticsPanel({ onClose, onReview, clientId, isInitializing, in
     hasDataRef.current = !!data;
   }, [data]);
 
-  const fetchAnalytics = useCallback(async (isSilent = false) => {
+  const fetchAnalytics = useCallback(async (isSilent = false, isRetry = false) => {
     if (!hasDataRef.current && !isSilent) setLoading(true);
     if (!isSilent) setIsRefreshing(true);
     setError(false);
@@ -246,11 +242,10 @@ export function AnalyticsPanel({ onClose, onReview, clientId, isInitializing, in
         setData(json);
         hasDataRef.current = true;
       } else {
-        if (response.status === 401) {
+        if (response.status === 401 && !isRetry) {
           if (onReinitSession) await onReinitSession();
-          // After refreshing, try one more time
-          fetchAnalytics(isSilent);
-          return;
+          // After refreshing, try one more time and await it so finally block doesn't run prematurely
+          return await fetchAnalytics(isSilent, true);
         }
         if (!isSilent) setError(true);
       }
@@ -261,7 +256,7 @@ export function AnalyticsPanel({ onClose, onReview, clientId, isInitializing, in
       setLoading(false);
       setIsRefreshing(false);
     }
-  }, [days]);
+  }, [days, clientId, onReinitSession]);
 
   useEffect(() => {
     if (!isInitializing && !initError && clientId) {
@@ -284,7 +279,7 @@ export function AnalyticsPanel({ onClose, onReview, clientId, isInitializing, in
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [activeFilter]);
 
-  const handleCardClick = async (filterKey: string) => {
+  const handleCardClick = async (filterKey: string, isRetry = false) => {
     if (activeFilter === filterKey) {
       setActiveFilter(null);
       return;
@@ -313,13 +308,19 @@ export function AnalyticsPanel({ onClose, onReview, clientId, isInitializing, in
           timestamp: s.timestamp
         }));
         setScanList(list);
-      } else if (res.status === 401) {
+        setScanListError(null);
+      } else if (res.status === 401 && !isRetry) {
         if (onReinitSession) await onReinitSession();
-        handleCardClick(filterKey);
-        return;
+        return await handleCardClick(filterKey, true);
+      } else {
+        const errorText = await res.text();
+        setScanListError(`Error ${res.status}: ${errorText || 'Failed to fetch forensic logs'}`);
+        setScanList([]);
       }
     } catch (err) {
       console.error("Failed to fetch scan list:", err);
+      setScanListError("Network error: Unable to connect to forensic service");
+      setScanList([]);
     } finally {
       setScanListLoading(false);
     }
@@ -585,6 +586,7 @@ export function AnalyticsPanel({ onClose, onReview, clientId, isInitializing, in
                           <ScanListInline 
                             scans={isActive ? scanList : []}
                             loading={isActive ? scanListLoading : false}
+                            error={isActive ? scanListError : null}
                             color={stat.color}
                             riskLevelColor={riskColor}
                             onReview={onReview}
@@ -1040,9 +1042,9 @@ export function AnalyticsPanel({ onClose, onReview, clientId, isInitializing, in
                           const nonePct = (stats.none / total) * 100;
 
                           const tooltips = {
-                            spf: "Sender Policy Framework: Validates authorized mail servers for a domain.",
-                            dkim: "DomainKeys Identified Mail: Cryptographic signature to prevent email tampering.",
-                            dmarc: "DMARC: Orchestrates SPF/DKIM to provide a unified authentication verdict."
+                            spf: "Sender Policy Framework | Validates authorized mail servers for a domain.",
+                            dkim: "DomainKeys Identified Mail | Cryptographic signature to prevent email tampering.",
+                            dmarc: "DMARC Policy | Orchestrates SPF/DKIM to provide a unified authentication verdict."
                           };
 
                           return (

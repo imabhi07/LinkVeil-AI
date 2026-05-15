@@ -61,6 +61,14 @@ export function EmailForensicInsight({ result }: EmailForensicInsightProps) {
       };
     }
     
+    if ((ls ?? 0) === 0) {
+      return {
+        type: 'Email Intent Only',
+        formula: 'Result = Email Score (No Links Extracted)',
+        math: `Intent[${emailMathStr}] = ${es.toFixed(1)}`
+      };
+    }
+
     const weightL = (ls > 30 && es > 30) ? 0.5 : 0.6;
     const weightE = (ls > 30 && es > 30) ? 0.5 : 0.4;
     const total = (ls * weightL) + (es * weightE);

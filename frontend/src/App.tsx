@@ -196,7 +196,7 @@ function App() {
     } catch (error: any) {
       console.error("Failed to initialize secure forensic session:", error);
       setInitError(error.message || "Failed to establish secure forensic session. Network error or server offline.");
-      setClientId(''); // Ensure clientId is reset on error
+      setClientId('');
       return false;
     } finally {
       setIsInitializing(false);
@@ -222,10 +222,8 @@ function App() {
 
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
-  // ── AbortController ref to cancel stale requests ──
   const abortRef = useRef<AbortController | null>(null);
 
-  // Apply theme class to document
   useEffect(() => {
     const root = window.document.documentElement;
     if (theme === 'dark') {
@@ -236,7 +234,6 @@ function App() {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  // Mouse tracking for active glow with rAF throttling
   useEffect(() => {
     let rafId: number;
     let lastEvent: MouseEvent;
@@ -258,7 +255,6 @@ function App() {
     };
   }, []);
 
-  // Set random tip on mount and cycle every 10 seconds
   useEffect(() => {
     const updateTip = () => setCurrentTip(SECURITY_TIPS[Math.floor(Math.random() * SECURITY_TIPS.length)]);
     updateTip();
@@ -266,7 +262,6 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Agent Loading Animation
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
     if (loading) {
@@ -282,7 +277,6 @@ function App() {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   }, []);
 
-  // Save histories on update
   useEffect(() => {
     const id = requestIdleCallback(() => {
       localStorage.setItem('linkveil_history', JSON.stringify(history));
@@ -292,11 +286,6 @@ function App() {
 
   useEffect(() => {
     const id = requestIdleCallback(() => {
-      // Privacy: Strip raw email payload and reduce PII in persisted history.
-      // NOTE: result.identity.subject and result.identity.from.email are
-      // intentionally retained — the HistorySidebar requires them to render
-      // meaningful card titles and subtitles. This reduces but does NOT
-      // eliminate PII from localStorage. Rescanning requires the current session.
       const stripped = emailHistory.map(({ inputData, ...rest }) => ({
         ...rest,
         result: rest.result ? {
@@ -352,12 +341,17 @@ function App() {
         if (response.status === 401) {
           // Session might have expired or cookie was missing. 
           // Re-init session to get a fresh cookie/tenant pair.
-          const refreshed = await initSession();
-          if (refreshed) {
-            throw new Error("Security session refreshed. Please try your scan again.");
-          } else {
-            throw new Error("Security session expired and could not be refreshed. Please reload the page.");
+          let reinitSucceeded = false;
+          try {
+            const res = await initSession();
+            reinitSucceeded = (res !== false);
+          } catch (reinitErr) {
+            console.warn("Soft-failure during automatic session re-init:", reinitErr);
           }
+          throw new Error(reinitSucceeded 
+            ? "Security session refreshed. Please try your scan again."
+            : "Session re-initialization failed; please sign in again."
+          );
         }
 
         const errBody = await response.json().catch(() => ({}));
@@ -392,12 +386,12 @@ function App() {
         element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 100);
     } catch (err: any) {
-      if (err.name === 'AbortError') return; // Silently ignore cancelled requests
+      if (err.name === 'AbortError') return;
       setError(err.message || "An error occurred during analysis.");
     } finally {
       setLoading(false);
     }
-  }, [clientId]);
+  }, [clientId, initSession, API_BASE_URL]);
 
   const handleAnalyze = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -438,7 +432,6 @@ function App() {
     }
   }, [scanMode, selectedResultId, selectedEmailId]);
 
-  // Memoize the onSelect handler
   const handleSelectHistory = useCallback((item: HistoryItem) => {
     if (!item) return;
     
@@ -457,44 +450,9 @@ function App() {
       setSelectedEmailId(null);
     }
 
-    // Automatically scroll to the results
     setTimeout(() => {
       const id = item.type === 'email' ? 'email-results' : 'url-results';
       const element = document.getElementById(id);
-      element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
-  }, []);
-
-  const handleEmailResult = useCallback((res: EmailScanResponse, inputData?: string) => {
-    const historyItem: EmailScanHistoryItem = {
-      id: generateId(),
-      type: 'email',
-      timestamp: Date.now(),
-      result: res,
-      inputData: inputData
-    };
-    
-    setEmailHistory(prev => {
-      // Deduplicate emails by subject + sender (like URL dedupe)
-      const filtered = prev.filter(item => {
-        const itemSub = (item.result as any)?.identity?.subject || (item.result as any)?.parsed_email?.subject;
-        const resSub = res.identity?.subject || (res as any).parsed_email?.subject;
-        const itemFrom = (item.result as any)?.identity?.from?.email || (item.result as any)?.parsed_email?.from_email;
-        const resFrom = res.identity?.from?.email || (res as any).parsed_email?.from_email;
-        
-        const sameSubject = itemSub === resSub;
-        const sameSender = itemFrom === resFrom;
-        return !(sameSubject && sameSender);
-      });
-      return [historyItem, ...filtered].slice(0, 50);
-    });
-
-    // Automatically focus on the new forensic result
-    setCurrentEmailResult(res);
-    setCurrentEmailInput(inputData);
-    setSelectedEmailId(historyItem.id);
-    setTimeout(() => {
-      const element = document.getElementById('email-results');
       element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);
   }, []);
@@ -510,13 +468,43 @@ function App() {
     }
   }, [history]);
 
+  const handleEmailResult = useCallback((res: EmailScanResponse, inputData?: string) => {
+    const historyItem: EmailScanHistoryItem = {
+      id: generateId(),
+      type: 'email',
+      timestamp: Date.now(),
+      result: res,
+      inputData: inputData
+    };
+    
+    setEmailHistory(prev => {
+      const filtered = prev.filter(item => {
+        const itemSub = (item.result as any)?.identity?.subject || (item.result as any)?.parsed_email?.subject;
+        const resSub = res.identity?.subject || (res as any).parsed_email?.subject;
+        const itemFrom = (item.result as any)?.identity?.from?.email || (item.result as any)?.parsed_email?.from_email;
+        const resFrom = res.identity?.from?.email || (res as any).parsed_email?.from_email;
+        
+        const sameSubject = itemSub === resSub;
+        const sameSender = itemFrom === resFrom;
+        return !(sameSubject && sameSender);
+      });
+      return [historyItem, ...filtered].slice(0, 50);
+    });
+
+    setCurrentEmailResult(res);
+    setCurrentEmailInput(inputData);
+    setSelectedEmailId(historyItem.id);
+    setTimeout(() => {
+      const element = document.getElementById('email-results');
+      element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  }, []);
+
   return (
     <div className={`min-h-screen ${theme === 'light' ? 'light-hero-gradient' : 'bg-black'} transition-colors duration-500 overflow-x-hidden relative text-cyber-light-heading dark:text-zinc-100 font-sans`}>
 
-      {/* 4K Grain Texture Overlay */}
       <div className="fixed inset-0 pointer-events-none z-[100] opacity-[0.03] mix-blend-overlay bg-[url('/noise.svg')]"></div>
 
-      {/* Interactive Mouse Glow */}
       <div 
         className="fixed inset-0 pointer-events-none z-0 opacity-40 dark:opacity-20"
         style={{
@@ -524,21 +512,17 @@ function App() {
         }}
       />
 
-      {/* Background Neural Glows - Layered below paths */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden h-[730px] z-[2]">
         <CyberGlow />
       </div>
 
-      {/* Animated SVG paths - Layered above grid but below content */}
       <div className="absolute inset-x-0 top-0 h-[1000px] pointer-events-none overflow-hidden opacity-50 dark:opacity-35 z-[5]">
         <BackgroundPaths />
         <div className="absolute inset-x-0 bottom-0 h-96 bg-gradient-to-t from-cyber-light-bg dark:from-black to-transparent" />
       </div>
 
-      {/* Top scroll mask */}
       <div className="fixed top-0 inset-x-0 h-24 bg-gradient-to-b from-cyber-light-bg dark:from-black to-transparent z-40 pointer-events-none"></div>
 
-      {/* Navbar */}
       <nav className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
         <div className="w-full max-w-7xl frosted-nav dark:bg-ornex-panel dark:border-white/10 rounded-full px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between shadow-2xl shadow-black/5 dark:shadow-black/20 pointer-events-auto">
           <div className="flex items-center gap-3 group/logo cursor-pointer">
@@ -587,12 +571,9 @@ function App() {
         <ErrorBoundary>
           <div className="w-full mx-auto flex flex-col gap-20">
 
-            {/* Main Content */}
             <div className="w-full space-y-8">
 
-              {/* Hero Section */}
               <div className="text-center space-y-6 sm:space-y-8 flex flex-col items-center relative z-10 border-b border-[#00C853]/5 pb-8 sm:pb-12">
-                {/* Decorative Side Label - Right Side */}
                 <div className="hidden xl:block absolute right-[-5%] top-[75%] select-none z-20">
                   <div className="flex flex-col gap-3 text-cyber-light-text dark:text-zinc-200/50 text-[12px] font-light uppercase tracking-[1.2em] text-left" style={{ fontFamily: "'Outfit', sans-serif" }}>
                     <span>Adaptive</span>
@@ -619,9 +600,7 @@ function App() {
                 </p>
               </div>
 
-              {/* Scan Container */}
               <div className="flex flex-col items-center w-full space-y-12 relative z-20">
-                {/* Mode Toggle Tabs */}
                 <div className="flex p-1 bg-cyber-light-bg/50 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-zinc-200 dark:border-white/10 relative z-20">
                   <button
                     onClick={() => {
