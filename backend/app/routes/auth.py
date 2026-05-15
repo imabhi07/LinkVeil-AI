@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Response, Depends, HTTPException, Cookie, Header
+from fastapi import APIRouter, Response, Depends, HTTPException, Cookie
 from typing import Optional
 import secrets
 import logging
@@ -14,8 +14,7 @@ router = APIRouter()
 @router.post("/session")
 async def initialize_session(
     response: Response, 
-    db: Session = Depends(get_db),
-    x_client_id: Optional[str] = Header(None, alias="X-Client-ID")
+    db: Session = Depends(get_db)
 ):
     """
     Server-side session provisioning.

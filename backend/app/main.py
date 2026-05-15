@@ -18,6 +18,14 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
 )
 
+# Startup assertion: prevent dev mode in production environments
+env = os.getenv("ENV", "production")
+deployment_stage = os.getenv("DEPLOYMENT_STAGE", "").lower()
+if env == "development" and deployment_stage in {"staging", "production", "prod"}:
+    msg = f"Security Violation: Cannot start in development mode when DEPLOYMENT_STAGE is '{deployment_stage}'"
+    logger.error(msg)
+    raise RuntimeError(msg)
+
 # Create DB tables synchronously on startup for MVP
 Base.metadata.create_all(bind=engine)
 
@@ -55,7 +63,7 @@ app = FastAPI(
 app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # ── CORS configuration ──
-allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",")
+allowed_origins = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if o.strip()]
 # Safety: prevent wildcard origins with credentials in production
 if "*" in allowed_origins and os.getenv("ENV", "production") == "production":
     logger.warning("Wildcard '*' in ALLOWED_ORIGINS is insecure with allow_credentials=True. Removing wildcard.")

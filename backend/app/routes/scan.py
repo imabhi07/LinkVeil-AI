@@ -278,15 +278,19 @@ async def get_screenshot(
 
     # Otherwise, verify this screenshot belongs to a scan performed for this user's client_id
     # Note: We look for the filename in both the main screenshot_path and the deeper probe_artifacts JSON blob
-    # Sanitize for SQL LIKE to prevent wildcard injection (e.g., % and _ in filename)
-    escaped_filename = clean_filename.replace("/", "//").replace("%", "/%").replace("_", "/_")
-    
     # Query for ANY scan (URL or Email) that contains this filename and belongs to this user
+    # Safe matching: screenshot_path is an exact match, probe_artifacts is queried for the quoted path string
+    # to avoid false positives from user-controlled fields like page_title.
+    
+    # Escape LIKE special characters to prevent wildcard injection
+    # We use '/' as the escape character
+    escaped_path = file_path.replace("/", "//").replace("%", "/%").replace("_", "/_")
+    
     scan = db.query(ScanResult).filter(
         ScanResult.client_id == user.client_id,
         (
-            (ScanResult.screenshot_path.like(f"%{escaped_filename}", escape="/")) |
-            (ScanResult.probe_artifacts.like(f"%{escaped_filename}%", escape="/"))
+            (ScanResult.screenshot_path == file_path) |
+            (ScanResult.probe_artifacts.like(f"%\"{escaped_path}\"%", escape="/"))
         )
     ).first()
     

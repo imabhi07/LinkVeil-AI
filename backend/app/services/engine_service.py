@@ -13,7 +13,7 @@ import tldextract
 from backend.app.services.xgb_service import xgb_service
 from backend.app.services.dl_service import dl_service
 from backend.app.services.llm_service import analyze_url
-from backend.app.services.probe_agent import run_probe_async, probe_result_to_dict, to_secure_url, refresh_probe_urls, FAKE_USER
+from backend.app.services.probe_agent import run_probe_async, probe_result_to_dict, to_secure_url, refresh_probe_urls
 from backend.app.services.threat_intel_service import threat_intel_service
 from backend.app.services.whois_service import whois_service
 from backend.app.services.brand_service import detect_brand_mismatch, get_legit_domains
@@ -41,6 +41,7 @@ KNOWN_SAFE_DOMAINS = frozenset({
     "hdfcbank.com", "icicibank.com", "sbi.co.in", "irctc.co.in",
     "discord.com", "discord.gg", "coderabbit.ai", "customer.io", "customeriomail.com",
     "trello.com", "canva.com", "notion.so", "figma.com", "intercom.com", "intercom-mail.com",
+    "leetcode.com",
     "atlassian.com", "jira.com", "bitbucket.org", "gitlab.com",
     "adobe.com", "salesforce.com", "okta.com", "auth0.com",
     "inflection.io", "vercel.com", "netlify.com",
@@ -727,6 +728,9 @@ async def evaluate_url(url: str, db: Session, auth_context: Optional[dict] = Non
         risk_score += 20
         logger.info(f"Probe Timed Out for {url}: Adding +20 Inconclusive penalty. Final Score: {risk_score}")
             
+    # Prepare probe result dict once to avoid redundant processing
+    probe_result_dict = probe_result_to_dict(probe_result, tenant_id=client_id) if probe_result is not None and probe_result != "SKIPPED" else None
+
     # Construct Verdict via FusionEngine
     verdict = fusion_engine.create_verdict(
         url=url,
@@ -738,7 +742,7 @@ async def evaluate_url(url: str, db: Session, auth_context: Optional[dict] = Non
             "brand": brand_result,
             "threat": threat_result,
             "visual": visual_result,
-            "probe": probe_result_to_dict(probe_result, tenant_id=client_id) if probe_result is not None and probe_result != "SKIPPED" else None
+            "probe": probe_result_dict
         },
         forensic_errors=forensic_errors,
         degraded_engines=degraded_engines,
@@ -768,11 +772,11 @@ async def evaluate_url(url: str, db: Session, auth_context: Optional[dict] = Non
             "outcome": "Skipped for trusted domain."
         })
     elif probe_result:
-        # Map probe_result to dict and merge into agentReport's activeProbing sub-object
-        probe_data = probe_result_to_dict(probe_result, tenant_id=client_id)
+        # Reuse pre-computed probe_result_dict and merge into agentReport's activeProbing sub-object
         if "activeProbing" not in verdict["agentReport"]:
             verdict["agentReport"]["activeProbing"] = {}
-        verdict["agentReport"]["activeProbing"].update(probe_data)
+        if probe_result_dict:
+            verdict["agentReport"]["activeProbing"].update(probe_result_dict)
         
         verdict["probe_artifacts"] = {
             "redirect_chain": getattr(probe_result, "redirect_chain", []),

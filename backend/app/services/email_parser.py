@@ -10,19 +10,28 @@ from bs4 import BeautifulSoup
 import tldextract
 import hashlib
 from typing import List, Dict, Any, Optional
+from urllib.parse import urlparse, parse_qs, unquote
+import binascii
 
 from backend.app.utils.url_utils import is_safe_url, _normalize_url
 from backend.app.utils.forensics import Sanitizer
+from backend.app.utils.unwrapper import resolve_shortener
 
 logger = logging.getLogger(__name__)
 
 # URL Regex for plain text extraction
 URL_REGEX = re.compile(r'https?://[^\s<>"]+|www\.[^\s<>"]+')
 
-from urllib.parse import urlparse, parse_qs, unquote, urlunparse
-import base64
-import binascii
-from backend.app.utils.unwrapper import resolve_shortener
+def _root_domain(email_addr: str) -> str:
+    """Extracts the registered organizational domain (e.g., leetcode.com) from an email address."""
+    if not email_addr or '@' not in email_addr:
+        return ""
+    domain = email_addr.split('@')[-1].lower()
+    ext = tldextract.extract(domain)
+    if not ext.domain or not ext.suffix:
+        return domain
+    return f"{ext.domain}.{ext.suffix}"
+
 
 def unwrap_redirect(url: str) -> Optional[str]:
     """Tries to find a destination URL within query parameters."""
@@ -365,12 +374,35 @@ async def parse_email_message(msg: email.message.Message) -> dict:
     link_data = await extract_links_forensic(html_part, norm_text)
     html_data = extract_html_forensics(html_part)
     
-    # Identify mismatches
+    # Identify mismatches with organizational domain alignment and subdomain spoofing detection
+    # 1. Basic syntax validation to prevent malformed address bypass
+    def is_valid(e): return e and "@" in e
+    
+    from_valid = is_valid(from_email)
+    rp_valid = is_valid(rp_email)
+    rt_valid = is_valid(reply_email)
+
+    from_root = _root_domain(from_email) if from_valid else ""
+    rp_root = _root_domain(rp_email) if rp_valid else ""
+    rt_root = _root_domain(reply_email) if rt_valid else ""
+
     mismatches = []
-    if reply_email and from_email and reply_email.lower() != from_email.lower():
-        mismatches.append("reply_to_mismatch")
-    if rp_email and from_email and rp_email.lower() != from_email.lower():
-        mismatches.append("return_path_mismatch")
+    
+    # 2. Reply-To Forensic Check
+    if rt_valid and from_valid:
+        if rt_root != from_root:
+            mismatches.append("reply_to_mismatch")
+        elif reply_email.split('@')[-1].lower() != from_email.split('@')[-1].lower():
+            # Root domains match, but full domains differ (Subdomain Spoofing Risk)
+            mismatches.append("reply_to_subdomain_mismatch")
+            
+    # 3. Return-Path Forensic Check
+    if rp_valid and from_valid:
+        if rp_root != from_root:
+            mismatches.append("return_path_mismatch")
+        elif rp_email.split('@')[-1].lower() != from_email.split('@')[-1].lower():
+            # Potential intra-organizational spoofing
+            mismatches.append("return_path_subdomain_mismatch")
         
     return {
         "identity": {

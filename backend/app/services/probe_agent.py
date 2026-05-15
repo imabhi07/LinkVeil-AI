@@ -650,8 +650,11 @@ async def run_probe_async(url: str) -> ProbeResult:
 
 def to_secure_url(path: Optional[str], tenant_id: Optional[str] = None) -> Optional[str]:
     """
-    Security Note: Converts local file paths to authenticated API URLs.
-    Extracts only the filename to prevent path traversal.
+    Security Note: Converts local file paths to authenticated API URLs OR refreshes 
+    tenant_id on existing API URLs. 
+    Strips query params, extracts the basename to prevent path traversal, and 
+    appends/overwrites the 'cid' query param when tenant_id is provided.
+    Intended for use in probe_result_to_dict and refresh_probe_urls.
     """
     if not path:
         return None
@@ -667,7 +670,7 @@ def to_secure_url(path: Optional[str], tenant_id: Optional[str] = None) -> Optio
     # Return the authenticated API path with tenant ID as query param for image tag compatibility
     url = f"/api/v1/screenshots/{filename}"
     if tenant_id:
-        url += f"?cid={quote(tenant_id)}"
+        url += f"?cid={quote(tenant_id, safe='')}"
     return url
 
 
@@ -716,7 +719,7 @@ def refresh_probe_urls(probe_dict: Optional[dict], tenant_id: str) -> Optional[d
     
     # Refresh individual screenshot URLs
     if "screenshotPath" in new_probe and new_probe["screenshotPath"]:
-        new_probe["screenshotPath"] = to_secure_url(new_probe["screenshotPath"], tenant_id)
+        new_probe["screenshotPath"] = to_secure_url(probe_dict.get("screenshotPath"), tenant_id)
         
     if "screenshots" in new_probe and new_probe["screenshots"]:
         new_probe["screenshots"] = [to_secure_url(s, tenant_id) for s in probe_dict.get("screenshots", []) if s]

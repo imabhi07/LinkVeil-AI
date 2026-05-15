@@ -26,6 +26,7 @@ from datetime import datetime, timezone
 
 def get_current_user(
     x_client_id: Optional[str] = Header(None),
+    x_dev_secret: Optional[str] = Header(None, alias="X-Dev-Secret"),
     cid: Optional[str] = Query(None),
     linkveil_session: Optional[str] = Cookie(None),
     db: Session = Depends(get_db)
@@ -39,24 +40,31 @@ def get_current_user(
     client_id = x_client_id or cid
     
     # 1. Define environment mode (Fail-closed: treat unset/ambiguous as production)
-    is_dev = os.getenv("ENV") in {"development", "dev"} or os.getenv("NODE_ENV") in {"development", "dev"}
-    is_prod = not is_dev
+    is_dev = os.getenv("ENV") in {"development", "dev"}
     
+    dev_secret = os.getenv("DEV_MODE_SECRET")
+    is_dev_authorized = is_dev and dev_secret and x_dev_secret == dev_secret
+
     if not linkveil_session:
         # If no cookie, we MUST have a client ID to even try to talk about sessions
         if not client_id:
             raise HTTPException(status_code=401, detail="Authentication required: Missing session cookie and Client ID")
             
-        # In development, we allow the Client ID as a fallback if the cookie is blocked
-        if is_dev:
-            logger.info(f"Dev Fallback: Authenticating via Client ID for {client_id}")
+        # In development, we allow the Client ID as a fallback if the cookie is blocked,
+        # but only if a secondary dev-only safeguard is met (e.g. DEV_MODE_SECRET).
+        if is_dev_authorized:
+            logger.info(f"Dev Fallback: Authenticating via Client ID for {client_id} (Secret Verified)")
+        elif is_dev:
+            logger.warning(f"Dev Fallback Denied: Client ID provided for {client_id} but dev secret is missing or invalid.")
+            raise HTTPException(status_code=401, detail="Development mode requires valid dev credentials")
         else:
             logger.warning(f"Unauthorized access attempt for client {client_id}: Missing session cookie")
             raise HTTPException(status_code=401, detail="Secure forensic session cookie required")
 
     # 2. Validate session in database
     # In dev fallback (no cookie), we find the most recent active session for this tenant
-    if not linkveil_session and is_dev:
+    # Strictly gated behind is_dev_authorized to prevent tenant impersonation.
+    if not linkveil_session and is_dev_authorized:
         validate_client_id_pattern(client_id)
         session_record = db.query(ForensicSession).filter(
             ForensicSession.tenant_id == client_id,
